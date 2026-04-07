@@ -131,4 +131,5 @@ class MotherAgent(Agent):
     def update_state(self, hunger_rate: float) -> None:
         self.hunger = min(1.0, self.hunger + hunger_rate)
         self.energy = max(0.0, self.energy - self.hunger * 0.01)
+        self.stress = max(0.0, 1.0 - self.energy)
         self.tick_cooldown()

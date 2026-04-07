@@ -1,0 +1,11 @@
+{
+  "phase": "phase1_survival",
+  "timestamp": "20260408_000903",
+  "seed": 42,
+  "num_agents": 12,
+  "grid_size": [
+    30,
+    30
+  ],
+  "description": "Survival-only gate: no children, care, plasticity, or reproduction"
+}
