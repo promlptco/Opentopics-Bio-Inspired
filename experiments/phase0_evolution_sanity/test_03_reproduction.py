@@ -6,7 +6,9 @@ Test 03: Reproduction mechanics work
 - Cooldown is applied
 """
 import sys
-sys.path.append("../..")
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from agents.mother import MotherAgent
 from evolution.genome import Genome

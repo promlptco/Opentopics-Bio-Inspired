@@ -1,11 +1,14 @@
 # experiments/phase3_maternal/run.py
 """Phase 3: Maternal Evolution"""
 import sys
-sys.path.append("../..")
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from config import Config
 from simulation.simulation import Simulation
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
+from utils.plotting import generate_all_plots
 
 PHASE_NAME = "phase3_maternal"
 
@@ -46,6 +49,7 @@ def run(seed: int = 42):
     sim.logger.save_all(output_dir)
     
     # 8. Print summary
+    generate_all_plots(output_dir)
     print(f"Output saved to: {output_dir}")
     print(f"Surviving mothers: {len([m for m in sim.mothers if m.alive])}")
     print(f"Surviving children: {len([c for c in sim.children if c.alive])}")

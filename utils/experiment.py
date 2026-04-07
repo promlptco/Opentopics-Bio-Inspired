@@ -4,7 +4,7 @@ import os
 import json
 import random
 from datetime import datetime
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from typing import Any
 
 
@@ -35,10 +35,10 @@ def set_seed(seed: int) -> None:
 def save_config(config: Any, output_dir: str) -> None:
     """Save config as JSON."""
     path = os.path.join(output_dir, "config.json")
-    if hasattr(config, "__dict__"):
-        data = vars(config)
-    elif hasattr(config, "__dataclass_fields__"):
+    if hasattr(config, "__dataclass_fields__"):
         data = asdict(config)
+    elif hasattr(config, "__dict__"):
+        data = vars(config)
     else:
         data = dict(config)
     

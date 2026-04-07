@@ -5,7 +5,9 @@ Test 04: Population stability
 - Deterministic with seed
 """
 import sys
-sys.path.append("../..")
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 import random
 from config import Config

@@ -6,11 +6,13 @@ Measure zero-shot performance improvement.
 import sys
 import os
 import json
-sys.path.append("../..")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from config import Config
 from simulation.simulation import Simulation
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
+from utils.plotting import generate_all_plots
 
 PHASE_NAME = "phase4_plasticity"
 
@@ -77,6 +79,7 @@ def run(seed: int = 42):
         json.dump(metrics, f, indent=2)
     
     # 10. Print summary
+    generate_all_plots(output_dir)
     print(f"Output saved to: {output_dir}")
     print(f"Generation snapshots: {len(generation_snapshots)}")
     print(f"Final avg learning_rate: {metrics.get('final_avg_learning_rate', 'N/A')}")

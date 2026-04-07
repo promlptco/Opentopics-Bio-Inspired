@@ -5,7 +5,9 @@ Test 01: Mutation works correctly
 - Distribution is reasonable
 """
 import sys
-sys.path.append("../..")
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from evolution.genome import Genome
 import statistics

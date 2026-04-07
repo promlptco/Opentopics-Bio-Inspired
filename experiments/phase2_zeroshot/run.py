@@ -6,12 +6,14 @@ Test if agents perform care at all.
 import sys
 import os
 import json
-sys.path.append("../..")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from config import Config
 from simulation.simulation import Simulation
 from evolution.genome import Genome
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
+from utils.plotting import generate_all_plots
 
 PHASE_NAME = "phase2_zeroshot"
 
@@ -109,6 +111,7 @@ def run(seed: int = 42, phase1_run_dir: str = None):
         json.dump(metrics, f, indent=2)
     
     # 10. Print summary
+    generate_all_plots(output_dir)
     print(f"Output saved to: {output_dir}")
     print(f"Zero-shot care events: {successful_care}")
     print(f"Surviving children: {surviving_children}")

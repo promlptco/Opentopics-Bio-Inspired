@@ -1,12 +1,15 @@
 # experiments/phase1_survival/run.py
 """Phase 1: Survival-Only Evolution (no children)"""
 import sys
-sys.path.append("../..")
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from dataclasses import dataclass
 from config import Config
 from simulation.simulation import Simulation
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
+from utils.plotting import generate_all_plots
 
 PHASE_NAME = "phase1_survival"
 
@@ -49,6 +52,7 @@ def run(seed: int = 42):
     
     # 6. Run simulation
     # TODO: Implement survival-only simulation variant
+    generate_all_plots(output_dir)
     print(f"Phase 1 not fully implemented yet")
     print(f"Output dir created: {output_dir}")
 

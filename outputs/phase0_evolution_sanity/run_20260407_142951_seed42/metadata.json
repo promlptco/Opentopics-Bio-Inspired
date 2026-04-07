@@ -1,0 +1,10 @@
+{
+  "phase": "phase0_evolution_sanity",
+  "timestamp": "20260407_142951",
+  "seed": 42,
+  "num_agents": 10,
+  "grid_size": [
+    30,
+    30
+  ]
+}
