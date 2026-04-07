@@ -1,8 +1,7 @@
-# main.py
 from config import Config
 from simulation.simulation import Simulation
 
-USE_VISUAL = True  # Change False to disable visualization and run faster without rendering overhead.
+USE_VISUAL = True  # Change to False to disable visualization
 if __name__ == "__main__":
     config = Config()
     sim = Simulation(config)

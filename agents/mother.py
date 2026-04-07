@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from agents import child
 from agents.agent import Agent
 from evolution.genome import Genome
 from simulation import world
@@ -17,6 +18,34 @@ class MotherAgent(Agent):
         self.held_food: int = 0
         self.own_child_id: int | None = None
         self.cooldown: int = 0
+        self.target_child_id: int | None = None
+        self.commit_ticks: int = 0
+        self.pending_move_cost: float = 0.0
+        
+    # === Tracking Movement Cost ===
+    
+    def add_move_cost(self, cost: float) -> None:
+        self.pending_move_cost += cost
+    
+    def get_total_cost(self, feed_cost: float) -> float:
+        total = self.pending_move_cost + feed_cost
+        self.pending_move_cost = 0.0
+        return total
+        
+    # === Commitment ===
+    
+    def set_target(self, child_id: int, duration: int = 5) -> None:
+        self.target_child_id = child_id
+        self.commit_ticks = duration
+    
+    def tick_commit(self) -> None:
+        if self.commit_ticks > 0:
+            self.commit_ticks -= 1
+        else:
+            self.target_child_id = None
+    
+    def has_commitment(self) -> bool:
+        return self.commit_ticks > 0 and self.target_child_id is not None
     
     # === Motivation ===
     
@@ -65,8 +94,9 @@ class MotherAgent(Agent):
             self.energy = min(1.0, self.energy + eat_gain)
     
     def feed_child(self, child: ChildAgent, feed_cost: float, world: GridWorld) -> tuple[bool, float]:
-        """Return (success, hunger_reduced)"""
-        if world.get_distance(self.pos, child.pos) > 1:
+        """Feed child if adjacent (dist = 1), not same cell"""
+        dist = world.get_distance(self.pos, child.pos)
+        if dist != 1:  # adjacent to the cell
             return False, 0.0
         
         self.energy -= feed_cost

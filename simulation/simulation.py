@@ -56,16 +56,43 @@ class Simulation:
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
             self.world.place_food(x, y)
+            
+    def _spawn_with_spacing(self, min_dist: int = 3) -> tuple[int, int]:
+        """Find position at least min_dist from all agents."""
+        for _ in range(50):  # max attempts
+            x = random.randint(0, self.config.width - 1)
+            y = random.randint(0, self.config.height - 1)
+            if not self.world.is_free((x, y)):
+                continue
+            
+            too_close = False
+            for entity in self.world.entities.values():
+                if self.world.get_distance((x, y), entity.pos) < min_dist:
+                    too_close = True
+                    break
+            
+            if not too_close:
+                return x, y
+        
+        # Fallback: random free cell
+        return self._random_free_pos()
+    
+    def _random_free_pos(self) -> tuple[int, int]:
+        for _ in range(100):
+            x = random.randint(0, self.config.width - 1)
+            y = random.randint(0, self.config.height - 1)
+            if self.world.is_free((x, y)):
+                return x, y
+        return 0, 0
     
     def run(self) -> None:
         self.initialize()
         while self.tick < self.config.max_ticks:
             self.step()
             self.tick += 1
-        self._export_logs()
     
     def step(self) -> None:
-        # 1. Spawn food if needed
+        # 1. Spawn food
         if len(self.world.food_positions) < self.config.init_food // 2:
             self._spawn_food(5)
         
@@ -75,7 +102,7 @@ class Simulation:
                 continue
             child.update_hunger(self.config.hunger_rate)
             mother = self._get_mother_by_id(child.mother_id)
-            if mother:
+            if mother and mother.alive:
                 steps = self.world.get_distance(child.pos, mother.pos)
             else:
                 steps = self.config.perception_radius
@@ -84,36 +111,41 @@ class Simulation:
             child.tick_age()
             child.check_death()
         
-        # 3. Update mothers
-        for mother in self.mothers:
-            if not mother.alive:
-                continue
+        # 3. Shuffle mothers (randomize order)
+        alive_mothers = [m for m in self.mothers if m.alive]
+        random.shuffle(alive_mothers)
+        
+        # 4. Update mothers
+        for mother in alive_mothers:
             mother.update_state(self.config.hunger_rate)
             mother.tick_age()
+            mother.tick_commit()
             
             # Perceive
             visible_children = self._get_visible_children(mother)
             
-            # Log choice if any distressed child
-            if any(c.distress > 0.1 for c in visible_children):
+            # Log choice if distressed child exists
+            if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
                 self._log_choice(mother, visible_children)
             
-            # Choose domain
-            domain = mother.choose_domain(visible_children)
+            # Check commitment or choose new
+            if mother.has_commitment():
+                domain = "care"
+            else:
+                domain = mother.choose_domain(visible_children)
             
-            # Execute action
+            # Execute
             self._execute_action(mother, domain, visible_children)
             
-            # Check death
             mother.check_death()
         
-        # 4. Check maturation
+        # 5. Check maturation
         self._check_maturation()
         
-        # 5. Check reproduction
+        # 6. Check reproduction
         self._check_reproduction()
         
-        # 6. Cleanup dead
+        # 7. Cleanup
         self.mothers = [m for m in self.mothers if m.alive]
         self.children = [c for c in self.children if c.alive]
     
@@ -141,13 +173,21 @@ class Simulation:
     
     def _execute_action(self, mother: MotherAgent, domain: str, visible_children: list[ChildAgent]) -> None:
         if domain == "care":
-            target = mother.choose_child(visible_children)
+            # Get target (committed or new)
+            target = None
+            if mother.has_commitment():
+                target = self._get_child_by_id(mother.target_child_id)
+            if target is None or not target.alive:
+                target = mother.choose_child(visible_children)
+                if target:
+                    mother.set_target(target.id, duration=5)
+            
             if target:
                 dist = self.world.get_distance(mother.pos, target.pos)
-                if dist <= 1:
-                    # Feed
+                if dist == 1:
+                    # Feed (adjacent)
+                    total_cost = mother.get_total_cost(self.config.feed_cost)
                     success, benefit = mother.feed_child(target, self.config.feed_cost, self.world)
-                    cost = self.config.feed_cost
                     r = self.lineage.get_relatedness(mother.id, target.id)
                     self.logger.log_care(CareRecord(
                         tick=self.tick,
@@ -155,15 +195,18 @@ class Simulation:
                         child_id=target.id,
                         r=r,
                         benefit=benefit,
-                        cost=cost,
+                        cost=total_cost,
                         success=success
                     ))
                     if success:
                         mother.plastic_update(benefit, self.config.plastic_gain)
+                    mother.commit_ticks = 0  # done
                 else:
-                    # Move toward child
-                    mother.move_toward(target.pos, self.world)
-                    mother.energy -= self.config.move_cost
+                    # Move toward
+                    new_pos = self.world.get_step_toward(mother.pos, target.pos)
+                    if self.world.update_position(mother, new_pos):
+                        mother.add_move_cost(self.config.move_cost)
+                        mother.energy -= self.config.move_cost
         
         elif domain == "forage":
             if mother.held_food > 0:
@@ -171,11 +214,11 @@ class Simulation:
             elif mother.pos in self.world.food_positions:
                 mother.pick_food(self.world)
             else:
-                # Move toward nearest food
                 nearest = self._nearest_food(mother.pos)
                 if nearest:
-                    mother.move_toward(nearest, self.world)
-                    mother.energy -= self.config.move_cost
+                    new_pos = self.world.get_step_toward(mother.pos, nearest)
+                    if self.world.update_position(mother, new_pos):
+                        mother.energy -= self.config.move_cost
         
         elif domain == "self":
             mother.rest(self.config.rest_recovery)
@@ -244,7 +287,3 @@ class Simulation:
             mother.own_child_id = child.id
             mother.energy -= self.config.reproduction_cost
             mother.cooldown = self.config.reproduction_cooldown
-    
-    def _export_logs(self) -> None:
-        self.logger.export_choices("choice_log.csv")
-        self.logger.export_cares("care_log.csv")

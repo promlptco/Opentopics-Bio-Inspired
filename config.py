@@ -3,16 +3,16 @@ from dataclasses import dataclass
 @dataclass
 class Config:
     # World
-    width: int = 20
-    height: int = 20
+    width: int = 30
+    height: int = 30
     
     # Population
-    init_mothers: int = 30
-    init_food: int = 20
+    init_mothers: int = 10
+    init_food: int = 30
     max_population: int = 100
     
     # Perception
-    perception_radius: int = 5
+    perception_radius: int = 6
     
     # Energy
     initial_energy: float = 1.0
