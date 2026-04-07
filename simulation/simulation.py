@@ -34,13 +34,14 @@ class Simulation:
             self.world.place_entity(mother)
             self.lineage.register_mother(mother.id, i, 0)
             
-            # Spawn child nearby
-            cx, cy = self._nearby_pos(x, y)
-            child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
-            self.children.append(child)
-            self.world.place_entity(child)
-            self.lineage.register_birth(child.id, mother.id, i, 1)
-            mother.own_child_id = child.id
+            # Spawn child nearby (only if children enabled)
+            if self.config.children_enabled:
+                cx, cy = self._nearby_pos(x, y)
+                child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
+                self.children.append(child)
+                self.world.place_entity(child)
+                self.lineage.register_birth(child.id, mother.id, i, 1)
+                mother.own_child_id = child.id
         
         # Spawn food
         self._spawn_food(self.config.init_food)
@@ -49,7 +50,7 @@ class Simulation:
         neighbors = self.world.get_neighbors(x, y)
         if neighbors:
             return random.choice(neighbors)
-        return x, y
+        return self._random_free_pos()
     
     def _spawn_food(self, count: int) -> None:
         for _ in range(count):
@@ -96,20 +97,21 @@ class Simulation:
         if len(self.world.food_positions) < self.config.init_food // 2:
             self._spawn_food(5)
         
-        # 2. Update children
-        for child in self.children:
-            if not child.alive:
-                continue
-            child.update_hunger(self.config.hunger_rate)
-            mother = self._get_mother_by_id(child.mother_id)
-            if mother and mother.alive:
-                steps = self.world.get_distance(child.pos, mother.pos)
-            else:
-                steps = self.config.perception_radius
-            child.update_separation(steps, self.config.perception_radius)
-            child.update_distress()
-            child.tick_age()
-            child.check_death()
+        # 2. Update children (only if enabled)
+        if self.config.children_enabled:
+            for child in self.children:
+                if not child.alive:
+                    continue
+                child.update_hunger(self.config.hunger_rate)
+                mother = self._get_mother_by_id(child.mother_id)
+                if mother and mother.alive:
+                    steps = self.world.get_distance(child.pos, mother.pos)
+                else:
+                    steps = self.config.perception_radius
+                child.update_separation(steps, self.config.perception_radius)
+                child.update_distress()
+                child.tick_age()
+                child.check_death()
         
         # 3. Shuffle mothers (randomize order)
         alive_mothers = [m for m in self.mothers if m.alive]
@@ -121,33 +123,36 @@ class Simulation:
             mother.tick_age()
             mother.tick_commit()
             
-            # Perceive
-            visible_children = self._get_visible_children(mother)
+            # Perceive (empty if care disabled)
+            visible_children = self._get_visible_children(mother) if self.config.care_enabled else []
             
-            # Log choice if distressed child exists
-            if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
-                self._log_choice(mother, visible_children)
-            
-            # Check commitment or choose new
+            # Determine domain first
             if mother.has_commitment():
                 domain = "care"
             else:
                 domain = mother.choose_domain(visible_children)
-            
+
+            # Log choice if distressed child exists
+            if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
+                self._log_choice(mother, visible_children, domain)
+
             # Execute
             self._execute_action(mother, domain, visible_children)
             
             mother.check_death()
         
-        # 5. Check maturation
-        self._check_maturation()
-        
-        # 6. Check reproduction
-        self._check_reproduction()
-        
+        # 5. Check maturation (only if children enabled)
+        if self.config.children_enabled:
+            self._check_maturation()
+
+        # 6. Check reproduction (only if enabled)
+        if self.config.reproduction_enabled:
+            self._check_reproduction()
+
         # 7. Cleanup
         self.mothers = [m for m in self.mothers if m.alive]
-        self.children = [c for c in self.children if c.alive]
+        if self.config.children_enabled:
+            self.children = [c for c in self.children if c.alive]
     
     def _get_mother_by_id(self, mother_id: int) -> MotherAgent | None:
         for m in self.mothers:
@@ -180,7 +185,7 @@ class Simulation:
             if target is None or not target.alive:
                 target = mother.choose_child(visible_children)
                 if target:
-                    mother.set_target(target.id, duration=5)
+                    mother.set_target(target.id, duration=random.randint(3, 5))
             
             if target:
                 dist = self.world.get_distance(mother.pos, target.pos)
@@ -198,7 +203,7 @@ class Simulation:
                         cost=total_cost,
                         success=success
                     ))
-                    if success:
+                    if success and self.config.plasticity_enabled:
                         mother.plastic_update(benefit, self.config.plastic_gain)
                     mother.commit_ticks = 0  # done
                 else:
@@ -228,8 +233,7 @@ class Simulation:
             return None
         return min(self.world.food_positions, key=lambda f: self.world.get_distance(pos, f))
     
-    def _log_choice(self, mother: MotherAgent, visible_children: list[ChildAgent]) -> None:
-        domain = mother.choose_domain(visible_children)
+    def _log_choice(self, mother: MotherAgent, visible_children: list[ChildAgent], domain: str) -> None:
         target = mother.choose_child(visible_children) if domain == "care" else None
         
         record = ChoiceRecord(
@@ -251,10 +255,19 @@ class Simulation:
     def _check_maturation(self) -> None:
         for child in self.children[:]:
             if child.check_maturity(self.config.maturity_age):
-                # Convert to mother
-                genome = Genome()  # inherit from lineage later
+                # Inherit genome from mother with mutation
+                birth_mother = self._get_mother_by_id(child.mother_id)
+                genome = birth_mother.genome.mutate() if birth_mother and birth_mother.alive else Genome()
+
+                pos = child.pos  # save before removal
+
+                # Remove child FIRST to free its position in occupied
+                child.die()
+                self.world.remove_entity(child.id)
+
+                # Then place new mother at same position
                 new_mother = MotherAgent(
-                    child.x, child.y,
+                    pos[0], pos[1],
                     lineage_id=child.lineage_id,
                     generation=child.generation,
                     genome=genome
@@ -262,10 +275,6 @@ class Simulation:
                 self.mothers.append(new_mother)
                 self.world.place_entity(new_mother)
                 self.lineage.register_mother(new_mother.id, child.lineage_id, child.generation)
-                
-                # Remove child
-                child.die()
-                self.world.remove_entity(child.id)
     
     def _check_reproduction(self) -> None:
         for mother in self.mothers:
