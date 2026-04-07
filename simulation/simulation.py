@@ -22,13 +22,13 @@ class Simulation:
         
         random.seed(config.seed)
     
-    def initialize(self) -> None:
+    def initialize(self, genomes: list[Genome] | None = None) -> None:
         # Spawn initial mothers with children
         for i in range(self.config.init_mothers):
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
-            
-            genome = Genome()  # default values
+
+            genome = genomes[i % len(genomes)].copy() if genomes else Genome()
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
             self.mothers.append(mother)
             self.world.place_entity(mother)
@@ -86,6 +86,9 @@ class Simulation:
                 return x, y
         return 0, 0
     
+    def initialize_with_genomes(self, genomes: list[Genome]) -> None:
+        self.initialize(genomes)
+
     def run(self) -> None:
         self.initialize()
         while self.tick < self.config.max_ticks:

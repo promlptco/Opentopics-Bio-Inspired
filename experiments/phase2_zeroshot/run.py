@@ -18,12 +18,12 @@ from utils.plotting import generate_all_plots
 PHASE_NAME = "phase2_zeroshot"
 
 
-def load_survival_genomes(phase1_run_dir: str) -> list[Genome]:
-    """Load top genomes from Phase 1 output."""
-    genome_path = os.path.join(phase1_run_dir, "top_genomes.json")
+def load_evolved_genomes(phase3_run_dir: str) -> list[Genome]:
+    """Load top genomes from Phase 3 (maternal evolution) output."""
+    genome_path = os.path.join(phase3_run_dir, "top_genomes.json")
     
     if not os.path.exists(genome_path):
-        print(f"Warning: {genome_path} not found, using default genomes")
+        print(f"Warning: {genome_path} not found. Run phase3_maternal evolution stage first.")
         return [Genome() for _ in range(10)]
     
     with open(genome_path, "r") as f:
@@ -41,27 +41,30 @@ def load_survival_genomes(phase1_run_dir: str) -> list[Genome]:
     return genomes
 
 
-def run(seed: int = 42, phase1_run_dir: str = None):
+def run(seed: int = 42, phase3_run_dir: str = None):
     # 1. Load config
     config = Config()
     config.seed = seed
     config.init_mothers = 30
     config.init_food = 25
     config.max_ticks = 1000
-    
-    # Disable plasticity for zero-shot test
-    config.plastic_gain = 0.0
-    
+
+    # Zero-shot: children+care on, plasticity+reproduction off
+    config.children_enabled = True
+    config.care_enabled = True
+    config.plasticity_enabled = False
+    config.reproduction_enabled = False
+
     # 2. Set seed
     set_seed(config.seed)
-    
+
     # 3. Create output dir
     output_dir = create_run_dir(PHASE_NAME, config.seed)
-    
-    # 4. Load survival genomes (if available)
-    if phase1_run_dir:
-        genomes = load_survival_genomes(phase1_run_dir)
-        source_genomes = phase1_run_dir
+
+    # 4. Load evolved genomes from phase3 (if available)
+    if phase3_run_dir:
+        genomes = load_evolved_genomes(phase3_run_dir)
+        source_genomes = phase3_run_dir
     else:
         genomes = None
         source_genomes = "default"
@@ -78,14 +81,12 @@ def run(seed: int = 42, phase1_run_dir: str = None):
         grid_size=[config.width, config.height],
         plasticity_enabled=False,
         source_genomes=source_genomes,
+        note="Genomes loaded from phase3 maternal evolution run",
     )
-    
+
     # 7. Run simulation
     sim = Simulation(config)
-    if genomes:
-        sim.initialize_with_genomes(genomes)
-    else:
-        sim.initialize()
+    sim.initialize(genomes)
     
     while sim.tick < config.max_ticks:
         sim.step()
@@ -118,4 +119,6 @@ def run(seed: int = 42, phase1_run_dir: str = None):
 
 
 if __name__ == "__main__":
+    # Pass phase3 evolution output dir to load evolved genomes, e.g.:
+    # run(seed=42, phase3_run_dir="outputs/phase3_maternal/run_xxx")
     run(seed=42)
