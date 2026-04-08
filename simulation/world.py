@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from simulation.pathfinding import astar_octile
 
 if TYPE_CHECKING:
     from agents.entity import Entity
@@ -64,27 +65,5 @@ class GridWorld:
         return neighbors
     
     def get_step_toward(self, from_pos: tuple[int, int], to_pos: tuple[int, int]) -> tuple[int, int]:
-        """Return next free position toward target, or stay."""
-        fx, fy = from_pos
-        tx, ty = to_pos
-        
-        dx = 0 if tx == fx else (1 if tx > fx else -1)
-        dy = 0 if ty == fy else (1 if ty > fy else -1)
-        
-        # Try primary direction
-        primary = (fx + dx, fy + dy)
-        if self.is_free(primary):
-            return primary
-        
-        # Try secondary (only dx or only dy)
-        if dx != 0:
-            alt1 = (fx + dx, fy)
-            if self.is_free(alt1):
-                return alt1
-        if dy != 0:
-            alt2 = (fx, fy + dy)
-            if self.is_free(alt2):
-                return alt2
-        
-        # Stuck
-        return from_pos
+        """Return next step toward to_pos using A* with octile heuristic."""
+        return astar_octile(from_pos, to_pos, self.is_free, self.in_bounds)

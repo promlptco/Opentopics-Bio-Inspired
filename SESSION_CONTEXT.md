@@ -47,6 +47,42 @@ Pipeline: survival → maternal → plasticity → Hamilton-like analysis.
 | 10 | Phase3 never saved `top_genomes.json` | phase3_maternal/run.py |
 | 11 | Phase3 had no stage support | phase3_maternal/run.py |
 | 12 | `stress` never updated — M_self half-broken | agents/mother.py |
+| 13 | `population_history.json` never saved → plots silently skipped | phase3_maternal/run.py |
+| 14 | `_log_choice` re-called `choose_child` ignoring commitment → wrong target logged | simulation.py |
+| 15 | `init_mothers=30, init_food=25` → 0.83 food/mother → total extinction | phase3_maternal/run.py |
+| 16 | `reproduction_enabled=False` on baselines → care only in first 100 ticks | phase3_maternal/run.py |
+| 17 | No `mutation_enabled` flag → no way to fix genomes without killing reproduction | config.py, simulation.py |
+| 18 | `get_step_toward` only tried 3 directions → agents froze in crowds | simulation/world.py |
+
+---
+
+## Config Flags (as of this session)
+
+| Flag | baseline_c0 | baseline_r0 | evolution |
+|------|-------------|-------------|-----------|
+| children_enabled | True | True | True |
+| care_enabled | True | True | True |
+| plasticity_enabled | False | False | False* |
+| reproduction_enabled | True | True | True |
+| mutation_enabled | **False** | **False** | True |
+
+*plasticity added in phase4
+
+---
+
+## Pathfinding
+
+`simulation/pathfinding.py` — 5 algorithms with identical signature:
+```
+find_step(from_pos, to_pos, is_free, in_bounds) -> tuple[int, int]
+```
+1. `naive_step` — 3-direction greedy (original, can freeze)
+2. `greedy_step` — all 8 neighbours, pick closest to target
+3. `bfs_step` — BFS shortest hops
+4. `astar_chebyshev` — A* all moves cost 1
+5. `astar_octile` — A* diagonal = √2 ← **active in world.py**
+
+To swap: change the import in `simulation/world.py`.
 
 ---
 
@@ -56,21 +92,33 @@ Pipeline: survival → maternal → plasticity → Hamilton-like analysis.
 |-------|--------|
 | `step1_survival_check` | VALIDATED — 6 runs, all passed |
 | `phase1_survival` | PASSED — 12/12 survive, avg energy 0.910, 2026-04-08 |
-| `phase3_maternal` | Ready — supports `stage=`: `baseline_c0`, `baseline_r0`, `evolution` |
+| `phase3_maternal` | **Baseline-C0 FROZEN** — balanced config, 2026-04-08 |
 | `phase2_zeroshot` | Ready — loads from phase3 `top_genomes.json` |
 | `phase4_plasticity` | Implemented, not yet run |
 
 ---
 
-## Roadmap — Current Position: Step 2
+## Baseline-C0 — FROZEN
+
+**Config:** `care=0.7, forage=0.85, self=0.55`, `seed=42`
+**Run dir:** `outputs/phase3_maternal/run_20260408_191406_seed42`
+**Results:** 24 surviving mothers, 12 children, 1262 care events, 100% success
+**Energy:** avg 0.439, stable oscillation 0.25–0.65
+**Relatedness:** avg_r=0.056 (~87% foreign care, ~10% own-child)
+**Care distance:** flat distribution dist 1–8 (pure distress-driven selection)
+
+To watch live:
+```bash
+python experiments/phase3_maternal/watch.py
+```
+
+---
+
+## Roadmap — Current Position: Step 3
 
 1. ~~Run phase1 survival gate~~ PASSED
-2. **YOU ARE HERE: Baseline-C0** (`phase3_maternal`, `stage="baseline_c0"`):
-   - balanced: `(care=0.7, forage=0.85, self=0.55)`
-   - care-leaning: `(care=0.85, forage=0.75, self=0.5)`
-   - forage-leaning: `(care=0.5, forage=0.9, self=0.65)`
-   - Pick stable, non-trivial config → freeze as Baseline-C0
-3. Baseline-R0 (`phase3_maternal`, `stage="baseline_r0"`)
+2. ~~Baseline-C0~~ FROZEN — balanced `(care=0.7, forage=0.85, self=0.55)`
+3. **YOU ARE HERE: Baseline-R0** (`phase3_maternal`, `stage="baseline_r0"`)
 4. Evolution (`phase3_maternal`, `stage="evolution"`)
 5. Plasticity / Baldwin effect (`phase4_plasticity`)
 6. Hamilton analysis (split):

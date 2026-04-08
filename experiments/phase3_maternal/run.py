@@ -70,20 +70,22 @@ def run(
     # 1. Config
     config = Config()
     config.seed = seed
-    config.init_mothers = 30
-    config.init_food = 25
+    config.init_mothers = 12
+    config.init_food = 45
     config.max_ticks = 5000
 
     if stage in ("baseline_c0", "baseline_r0"):
         config.children_enabled = True
         config.care_enabled = True
         config.plasticity_enabled = False
-        config.reproduction_enabled = False
+        config.reproduction_enabled = True
+        config.mutation_enabled = False     # fixed genomes — no evolution
     elif stage == "evolution":
         config.children_enabled = True
         config.care_enabled = True
         config.plasticity_enabled = False   # plasticity added in phase4
         config.reproduction_enabled = True
+        config.mutation_enabled = True
     else:
         raise ValueError(f"Unknown stage: {stage!r}. Use 'baseline_c0', 'baseline_r0', or 'evolution'.")
 
@@ -108,7 +110,7 @@ def run(
         phase=PHASE_NAME,
         stage=stage,
         seed=config.seed,
-        num_agents=config.init_mothers * 2,
+        num_agents=config.init_mothers * 2,  # 12 mothers + 12 children
         grid_size=[config.width, config.height],
         perception_radius=config.perception_radius,
         care_weight=care_weight if stage == "baseline_c0" else "random" if stage == "baseline_r0" else "evolved",
@@ -118,13 +120,23 @@ def run(
     sim = Simulation(config)
     sim.initialize(genomes)
 
+    population_history = []
+    energy_history = []
+
     while sim.tick < config.max_ticks:
         sim.step()
         sim.tick += 1
+        alive_m = [m for m in sim.mothers if m.alive]
+        population_history.append(len(alive_m))
+        energy_history.append(
+            sum(m.energy for m in alive_m) / len(alive_m) if alive_m else 0.0
+        )
 
     # 7. Save logs + genomes
     sim.logger.save_all(output_dir)
     _save_top_genomes(sim, output_dir)
+    with open(os.path.join(output_dir, "population_history.json"), "w") as f:
+        json.dump({"population": population_history, "energy": energy_history}, f)
 
     # 8. Plots + summary
     generate_all_plots(output_dir)

@@ -237,7 +237,15 @@ class Simulation:
         return min(self.world.food_positions, key=lambda f: self.world.get_distance(pos, f))
     
     def _log_choice(self, mother: MotherAgent, visible_children: list[ChildAgent], domain: str) -> None:
-        target = mother.choose_child(visible_children) if domain == "care" else None
+        if domain == "care":
+            if mother.has_commitment():
+                target = self._get_child_by_id(mother.target_child_id)
+                if target is None or not target.alive:
+                    target = mother.choose_child(visible_children)
+            else:
+                target = mother.choose_child(visible_children)
+        else:
+            target = None
         
         record = ChoiceRecord(
             tick=self.tick,
@@ -260,7 +268,10 @@ class Simulation:
             if child.check_maturity(self.config.maturity_age):
                 # Inherit genome from mother with mutation
                 birth_mother = self._get_mother_by_id(child.mother_id)
-                genome = birth_mother.genome.mutate() if birth_mother and birth_mother.alive else Genome()
+                if self.config.mutation_enabled:
+                    genome = birth_mother.genome.mutate() if birth_mother and birth_mother.alive else Genome()
+                else:
+                    genome = birth_mother.genome.copy() if birth_mother and birth_mother.alive else Genome()
 
                 pos = child.pos  # save before removal
 

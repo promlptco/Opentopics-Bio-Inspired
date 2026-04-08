@@ -1,0 +1,13 @@
+{
+  "phase": "phase3_maternal",
+  "timestamp": "20260408_190359",
+  "seed": 42,
+  "stage": "baseline_c0",
+  "num_agents": 24,
+  "grid_size": [
+    30,
+    30
+  ],
+  "perception_radius": 8,
+  "care_weight": 0.85
+}

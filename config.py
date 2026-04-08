@@ -43,3 +43,4 @@ class Config:
     care_enabled: bool = True
     plasticity_enabled: bool = True
     reproduction_enabled: bool = True
+    mutation_enabled: bool = True
