@@ -47,11 +47,20 @@ def _save_top_genomes(sim: Simulation, output_dir: str) -> None:
             "self_weight": m.genome.self_weight,
             "learning_rate": m.genome.learning_rate,
             "learning_cost": m.genome.learning_cost,
+            "lineage_id": m.lineage_id,
+            "generation": m.generation,
         }
         for m in alive
     ]
     with open(os.path.join(output_dir, "top_genomes.json"), "w") as f:
         json.dump(data, f, indent=2)
+
+
+def _save_surviving_lineages(sim: Simulation, output_dir: str) -> None:
+    """Save per-lineage survivor counts for B_social (inclusive fitness) analysis."""
+    lineages = sim.get_surviving_lineages()
+    with open(os.path.join(output_dir, "surviving_lineages.json"), "w") as f:
+        json.dump(lineages, f, indent=2)
 
 
 def run(
@@ -122,6 +131,8 @@ def run(
 
     population_history = []
     energy_history = []
+    generation_snapshots = []
+    SNAPSHOT_INTERVAL = 100
 
     while sim.tick < config.max_ticks:
         sim.step()
@@ -131,12 +142,28 @@ def run(
         energy_history.append(
             sum(m.energy for m in alive_m) / len(alive_m) if alive_m else 0.0
         )
+        if sim.tick % SNAPSHOT_INTERVAL == 0 and alive_m:
+            generation_snapshots.append({
+                "tick": sim.tick,
+                "avg_care_weight":   sum(m.genome.care_weight  for m in alive_m) / len(alive_m),
+                "min_care_weight":   min(m.genome.care_weight  for m in alive_m),
+                "max_care_weight":   max(m.genome.care_weight  for m in alive_m),
+                "avg_forage_weight": sum(m.genome.forage_weight for m in alive_m) / len(alive_m),
+                "avg_self_weight":   sum(m.genome.self_weight  for m in alive_m) / len(alive_m),
+                "avg_learning_rate": sum(m.genome.learning_rate for m in alive_m) / len(alive_m),
+                "avg_generation":    sum(m.generation          for m in alive_m) / len(alive_m),
+                "max_generation":    max(m.generation          for m in alive_m),
+                "n_mothers":         len(alive_m),
+            })
 
     # 7. Save logs + genomes
     sim.logger.save_all(output_dir)
     _save_top_genomes(sim, output_dir)
+    _save_surviving_lineages(sim, output_dir)
     with open(os.path.join(output_dir, "population_history.json"), "w") as f:
         json.dump({"population": population_history, "energy": energy_history}, f)
+    with open(os.path.join(output_dir, "generation_snapshots.json"), "w") as f:
+        json.dump(generation_snapshots, f, indent=2)
 
     # 8. Plots + summary
     generate_all_plots(output_dir)

@@ -1,0 +1,72 @@
+[
+  {
+    "seed": 42,
+    "n_survivors": 25,
+    "final_care_mean": 0.4197321050379944,
+    "final_forage_mean": 0.5422733884185651,
+    "max_generation": 50
+  },
+  {
+    "seed": 43,
+    "n_survivors": 25,
+    "final_care_mean": 0.45761373086480667,
+    "final_forage_mean": 0.5559292960627157,
+    "max_generation": 50
+  },
+  {
+    "seed": 44,
+    "n_survivors": 25,
+    "final_care_mean": 0.4079882073509505,
+    "final_forage_mean": 0.5645949656987203,
+    "max_generation": 50
+  },
+  {
+    "seed": 45,
+    "n_survivors": 26,
+    "final_care_mean": 0.45344280474411564,
+    "final_forage_mean": 0.5954594427681358,
+    "max_generation": 50
+  },
+  {
+    "seed": 46,
+    "n_survivors": 27,
+    "final_care_mean": 0.41624061523398737,
+    "final_forage_mean": 0.6093927028528747,
+    "max_generation": 50
+  },
+  {
+    "seed": 47,
+    "n_survivors": 26,
+    "final_care_mean": 0.3819158183152921,
+    "final_forage_mean": 0.6021872012002496,
+    "max_generation": 50
+  },
+  {
+    "seed": 48,
+    "n_survivors": 26,
+    "final_care_mean": 0.5668276826077903,
+    "final_forage_mean": 0.5104809853650771,
+    "max_generation": 50
+  },
+  {
+    "seed": 49,
+    "n_survivors": 26,
+    "final_care_mean": 0.4282577093445514,
+    "final_forage_mean": 0.5545181568477415,
+    "max_generation": 50
+  },
+  {
+    "seed": 50,
+    "n_survivors": 27,
+    "final_care_mean": 0.3995183455371069,
+    "final_forage_mean": 0.5345078825682263,
+    "max_generation": 50
+  },
+  {
+    "seed": 51,
+    "n_survivors": 24,
+    "final_care_mean": 0.47824580857357507,
+    "final_forage_mean": 0.5903465151792352,
+    "max_generation": 50
+  }
+]

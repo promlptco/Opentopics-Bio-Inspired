@@ -279,6 +279,163 @@ def plot_chosen_by_distance(choice_records: list[dict], output_dir: str) -> None
 
 
 # =============================================================================
+# HAMILTON ANALYSIS (Split: own-lineage vs foreign-lineage)
+# =============================================================================
+
+def analyze_hamilton_split(output_dir: str) -> dict:
+    """
+    Hamilton's rule split analysis on care_log.csv.
+
+    Own-lineage (is_own_child=True, r > 0):
+      Per-event rB vs C; fraction where rB > C.
+      Produces: scatter rB vs C, histogram of (rB - C).
+
+    Foreign-lineage (is_own_child=False):
+      Frequency count only — NOT Hamilton-analyzed (r ≈ 0,
+      by-product of proximity; see SESSION_CONTEXT for rationale).
+
+    Returns summary dict (also printed to stdout).
+    """
+    care_records = load_csv(os.path.join(output_dir, "care_log.csv"))
+    if not care_records:
+        return {}
+
+    own, foreign = [], []
+    for rec in care_records:
+        try:
+            r_val = float(rec["r"])
+            B = float(rec["benefit"])
+            C = float(rec["cost"])
+            is_own = rec.get("is_own_child", "False").strip() == "True"
+        except (ValueError, TypeError, KeyError):
+            continue
+        entry = {"r": r_val, "B": B, "C": C, "rB": r_val * B}
+        if is_own:
+            own.append(entry)
+        else:
+            foreign.append(entry)
+
+    summary: dict = {
+        "n_own": len(own),
+        "n_foreign": len(foreign),
+        "n_total": len(own) + len(foreign),
+    }
+
+    if own:
+        rB_vals = [e["rB"] for e in own]
+        C_vals = [e["C"] for e in own]
+        rB_minus_C = [e["rB"] - e["C"] for e in own]
+        n_altruistic = sum(1 for x in rB_minus_C if x > 0)
+
+        summary.update({
+            "mean_rB": sum(rB_vals) / len(rB_vals),
+            "mean_C": sum(C_vals) / len(C_vals),
+            "mean_rB_minus_C": sum(rB_minus_C) / len(rB_minus_C),
+            "frac_rB_gt_C": n_altruistic / len(own),
+        })
+
+        if plt is not None:
+            plot_dir = ensure_plot_dir(output_dir)
+
+            # 1. Scatter: rB vs C (own-lineage)
+            plt.figure(figsize=(6, 5))
+            plt.scatter(C_vals, rB_vals, alpha=0.3, s=10, color="steelblue")
+            lim = max(max(C_vals), max(rB_vals)) * 1.05
+            plt.plot([0, lim], [0, lim], "r--", linewidth=1, label="rB = C (break-even)")
+            plt.xlabel("Cost C")
+            plt.ylabel("rB (relatedness × benefit)")
+            plt.title("Hamilton rB vs C — Own-lineage Care")
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(os.path.join(plot_dir, "hamilton_rB_vs_C.png"))
+            plt.close()
+
+            # 2. Histogram: rB - C distribution
+            plt.figure(figsize=(7, 4))
+            plt.hist(rB_minus_C, bins=30, edgecolor="black", alpha=0.7, color="steelblue")
+            plt.axvline(0, color="red", linestyle="--", linewidth=1.5, label="Break-even (rB-C=0)")
+            plt.xlabel("rB − C")
+            plt.ylabel("Count")
+            plt.title("Hamilton (rB − C) Distribution — Own-lineage Care")
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(os.path.join(plot_dir, "hamilton_rB_minus_C.png"))
+            plt.close()
+
+    # 3. Bar: own-lineage vs foreign-lineage counts
+    if plt is not None and (own or foreign):
+        plot_dir = ensure_plot_dir(output_dir)
+        labels = ["Own-lineage\n(r > 0)", "Foreign-lineage\n(r ≈ 0)"]
+        counts = [len(own), len(foreign)]
+        colors = ["steelblue", "lightcoral"]
+        pct_own = 100.0 * len(own) / max(len(own) + len(foreign), 1)
+
+        plt.figure(figsize=(5, 4))
+        bars = plt.bar(labels, counts, color=colors, edgecolor="black", alpha=0.8)
+        for bar, count in zip(bars, counts):
+            plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 5,
+                     str(count), ha="center", va="bottom", fontsize=9)
+        plt.ylabel("Care Events")
+        plt.title(f"Own vs Foreign Lineage Care\n({pct_own:.1f}% own-lineage)")
+        plt.grid(True, alpha=0.3, axis="y")
+        plt.tight_layout()
+        plt.savefig(os.path.join(plot_dir, "hamilton_own_vs_foreign.png"))
+        plt.close()
+
+    # Print summary
+    print("\n=== Hamilton Split Analysis ===")
+    print(f"  Own-lineage events  : {summary.get('n_own', 0)}")
+    print(f"  Foreign-lineage     : {summary.get('n_foreign', 0)}")
+    if "mean_rB" in summary:
+        print(f"  Mean rB (own)       : {summary['mean_rB']:.4f}")
+        print(f"  Mean C  (own)       : {summary['mean_C']:.4f}")
+        print(f"  Mean rB-C (own)     : {summary['mean_rB_minus_C']:.4f}")
+        print(f"  Fraction rB > C     : {summary['frac_rB_gt_C']:.3f}")
+    print("================================\n")
+
+    return summary
+
+
+def plot_lineage_fitness(output_dir: str) -> None:
+    """
+    Bar chart of surviving descendants per founding lineage.
+    B_social = total living descendants at simulation end.
+    Reads surviving_lineages.json saved by run.py.
+    """
+    if plt is None:
+        return
+
+    data = load_json(os.path.join(output_dir, "surviving_lineages.json"))
+    if not data:
+        return
+
+    plot_dir = ensure_plot_dir(output_dir)
+
+    lineage_ids = sorted(data.keys(), key=lambda x: int(x))
+    totals = [data[lid]["total"] for lid in lineage_ids]
+    mothers = [data[lid]["mothers"] for lid in lineage_ids]
+    children = [data[lid]["children"] for lid in lineage_ids]
+    x = list(range(len(lineage_ids)))
+
+    plt.figure(figsize=(max(6, len(x) // 2), 5))
+    plt.bar(x, totals, label="Total (B_social)", color="steelblue", edgecolor="black", alpha=0.8)
+    plt.bar(x, mothers, label="Mothers", color="orange", edgecolor="black", alpha=0.8)
+    plt.bar(x, children, bottom=mothers, label="Children", color="lightgreen",
+            edgecolor="black", alpha=0.8)
+    plt.xticks(x, [f"L{lid}" for lid in lineage_ids], rotation=45, ha="right", fontsize=7)
+    plt.xlabel("Founding Lineage")
+    plt.ylabel("Living Descendants")
+    plt.title("Lineage Fitness (B_social) — Surviving Descendants per Lineage")
+    plt.legend()
+    plt.grid(True, alpha=0.3, axis="y")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, "lineage_fitness.png"))
+    plt.close()
+
+
+# =============================================================================
 # EVOLUTION PLOTS (When evolution enabled)
 # =============================================================================
 
@@ -313,26 +470,51 @@ def plot_weight_vs_survival(genomes: list[dict], output_dir: str) -> None:
 
 
 def plot_generation_trend(snapshots: list[dict], output_dir: str) -> None:
-    """Plot genome trends over generations."""
+    """Plot genome trends over time.
+
+    Top panel  : care_weight mean with min/max shading.
+    Bottom panel: forage_weight mean (rules out hitchhiking).
+    Secondary X-axis label shows avg_generation alongside tick.
+    """
     if plt is None or not snapshots:
         return
-    
+
     plot_dir = ensure_plot_dir(output_dir)
-    
-    ticks = [s.get("tick", 0) for s in snapshots]
-    care = [s.get("avg_care_weight", 0) for s in snapshots]
-    forage = [s.get("avg_forage_weight", 0) for s in snapshots]
-    learning = [s.get("avg_learning_rate", 0) for s in snapshots]
-    
-    plt.figure(figsize=(10, 4))
-    plt.plot(ticks, care, label="care_weight")
-    plt.plot(ticks, forage, label="forage_weight")
-    plt.plot(ticks, learning, label="learning_rate")
-    plt.xlabel("Tick")
-    plt.ylabel("Average Value")
-    plt.title("Genome Trends Over Time")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
+
+    ticks   = [s.get("tick", 0)            for s in snapshots]
+    care    = [s.get("avg_care_weight", 0) for s in snapshots]
+    c_min   = [s.get("min_care_weight", 0) for s in snapshots]
+    c_max   = [s.get("max_care_weight", 0) for s in snapshots]
+    forage  = [s.get("avg_forage_weight", 0) for s in snapshots]
+    avg_gen = [s.get("avg_generation", 0)  for s in snapshots]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+
+    # Top: care_weight
+    ax1.plot(ticks, care, color="steelblue", linewidth=2, label="mean care_weight")
+    ax1.fill_between(ticks, c_min, c_max, alpha=0.2, color="steelblue", label="min/max range")
+    ax1.set_ylabel("care_weight")
+    ax1.set_title("Genome Evolution Over Time (selection vs drift check)")
+    ax1.set_ylim(0, 1)
+    ax1.legend(loc="upper left")
+    ax1.grid(True, alpha=0.3)
+
+    # Annotate avg generation at a few key ticks
+    step = max(1, len(ticks) // 5)
+    for i in range(0, len(ticks), step):
+        ax1.annotate(f"gen~{avg_gen[i]:.1f}",
+                     xy=(ticks[i], care[i]),
+                     xytext=(0, 8), textcoords="offset points",
+                     fontsize=7, color="steelblue", ha="center")
+
+    # Bottom: forage_weight
+    ax2.plot(ticks, forage, color="darkorange", linewidth=2, label="mean forage_weight")
+    ax2.set_xlabel("Tick")
+    ax2.set_ylabel("forage_weight")
+    ax2.set_ylim(0, 1)
+    ax2.legend(loc="upper left")
+    ax2.grid(True, alpha=0.3)
+
     plt.tight_layout()
     plt.savefig(os.path.join(plot_dir, "generation_trend.png"))
     plt.close()
@@ -381,5 +563,12 @@ def generate_all_plots(output_dir: str, **kwargs) -> None:
     # Evolution plots
     if snapshots:
         plot_generation_trend(snapshots, output_dir)
-    
+
+    # Hamilton split analysis (own-lineage vs foreign)
+    if care_records:
+        analyze_hamilton_split(output_dir)
+
+    # Lineage fitness (B_social)
+    plot_lineage_fitness(output_dir)
+
     print("Plots generated.")

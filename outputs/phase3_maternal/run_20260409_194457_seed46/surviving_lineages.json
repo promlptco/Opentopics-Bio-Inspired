@@ -1,0 +1,62 @@
+{
+  "0": {
+    "mothers": 3,
+    "children": 2,
+    "total": 5
+  },
+  "1": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "2": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "3": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "4": {
+    "mothers": 3,
+    "children": 2,
+    "total": 5
+  },
+  "5": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "6": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "7": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "8": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "9": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  },
+  "10": {
+    "mothers": 3,
+    "children": 2,
+    "total": 5
+  },
+  "11": {
+    "mothers": 2,
+    "children": 1,
+    "total": 3
+  }
+}
