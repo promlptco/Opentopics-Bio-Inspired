@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os
 import csv
-from logging_system.records import ChoiceRecord, CareRecord, DeathRecord
+from logging_system.records import ChoiceRecord, CareRecord, DeathRecord, BirthRecord
 
 
 class Logger:
@@ -10,6 +10,7 @@ class Logger:
         self.choice_records: list[ChoiceRecord] = []
         self.care_records: list[CareRecord] = []
         self.death_records: list[DeathRecord] = []
+        self.birth_records: list[BirthRecord] = []
 
     def log_choice(self, record: ChoiceRecord) -> None:
         self.choice_records.append(record)
@@ -19,6 +20,9 @@ class Logger:
 
     def log_death(self, record: DeathRecord) -> None:
         self.death_records.append(record)
+
+    def log_birth(self, record: BirthRecord) -> None:
+        self.birth_records.append(record)
 
     def export_choices(self, output_dir: str) -> None:
         """Save choice log to output directory. Includes all candidate children."""
@@ -72,8 +76,30 @@ class Logger:
                     d.tick, d.agent_id, d.agent_type, d.lineage_id, d.generation, d.cause,
                 ])
 
+    def export_births(self, output_dir: str) -> None:
+        """Save birth log to output directory."""
+        if not self.birth_records:
+            return
+        filepath = os.path.join(output_dir, "birth_log.csv")
+        with open(filepath, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "tick", "mother_id", "child_id",
+                "mother_lineage_id", "mother_generation",
+                "mother_care_weight", "mother_forage_weight", "mother_self_weight",
+            ])
+            for b in self.birth_records:
+                writer.writerow([
+                    b.tick, b.mother_id, b.child_id,
+                    b.mother_lineage_id, b.mother_generation,
+                    f"{b.mother_care_weight:.6f}",
+                    f"{b.mother_forage_weight:.6f}",
+                    f"{b.mother_self_weight:.6f}",
+                ])
+
     def save_all(self, output_dir: str) -> None:
         """Save all logs to output directory."""
         self.export_choices(output_dir)
         self.export_cares(output_dir)
         self.export_deaths(output_dir)
+        self.export_births(output_dir)

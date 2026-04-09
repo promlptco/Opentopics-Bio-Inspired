@@ -31,6 +31,18 @@ class CareRecord:
 
 
 @dataclass
+class BirthRecord:
+    tick: int
+    mother_id: int
+    child_id: int
+    mother_lineage_id: int
+    mother_generation: int
+    mother_care_weight: float
+    mother_forage_weight: float
+    mother_self_weight: float
+
+
+@dataclass
 class DeathRecord:
     tick: int
     agent_id: int

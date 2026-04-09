@@ -5,7 +5,9 @@
       "Bash(python -c \"from utils.plotting import generate_all_plots, analyze_hamilton_split, plot_lineage_fitness; print\\('OK'\\)\")",
       "Bash(python -c \"from experiments.phase3_maternal.run import run; print\\('OK'\\)\")",
       "Bash(python -c \"from experiments.phase3_maternal.run import run; run\\(seed=42, stage='evolution'\\)\")",
-      "Bash(python experiments/phase3_maternal/run_multi_seed.py)"
+      "Bash(python experiments/phase3_maternal/run_multi_seed.py)",
+      "Bash(python3:*)",
+      "Bash(python:*)"
     ]
   }
 }

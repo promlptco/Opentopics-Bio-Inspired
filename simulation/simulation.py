@@ -7,7 +7,7 @@ from agents.child import ChildAgent
 from evolution.genome import Genome
 from evolution.lineage import LineageManager
 from logging_system.logger import Logger
-from logging_system.records import ChoiceRecord, CareRecord, DeathRecord
+from logging_system.records import ChoiceRecord, CareRecord, DeathRecord, BirthRecord
 
 class Simulation:
     def __init__(self, config: Config):
@@ -335,6 +335,17 @@ class Simulation:
             mother.own_child_id = child.id
             mother.energy -= self.config.reproduction_cost
             mother.cooldown = self.config.reproduction_cooldown
+
+            self.logger.log_birth(BirthRecord(
+                tick=self.tick,
+                mother_id=mother.id,
+                child_id=child.id,
+                mother_lineage_id=mother.lineage_id,
+                mother_generation=mother.generation,
+                mother_care_weight=mother.genome.care_weight,
+                mother_forage_weight=mother.genome.forage_weight,
+                mother_self_weight=mother.genome.self_weight,
+            ))
 
     def get_surviving_lineages(self) -> dict[int, dict]:
         """Return per-founding-lineage counts of living descendants.

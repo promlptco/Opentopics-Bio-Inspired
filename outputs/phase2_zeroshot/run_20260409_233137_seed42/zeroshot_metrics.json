@@ -1,0 +1,8 @@
+{
+  "total_care_events": 229,
+  "successful_care_events": 229,
+  "surviving_mothers": 0,
+  "surviving_children": 0,
+  "care_rate": 0.229,
+  "source_genomes": "outputs/phase3_maternal/run_20260409_232012_seed42"
+}

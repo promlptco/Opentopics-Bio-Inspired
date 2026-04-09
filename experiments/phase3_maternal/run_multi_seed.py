@@ -14,6 +14,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, PROJECT_ROOT)
 
 from experiments.phase3_maternal.run import run
+from utils.plotting import plot_start_vs_end_multiseed
 
 try:
     import matplotlib.pyplot as plt
@@ -159,8 +160,9 @@ def run_all(seeds: list[int] = SEEDS, stage: str = STAGE) -> None:
     with open(os.path.join(combined_dir, "summary.json"), "w") as f:
         json.dump(summaries, f, indent=2)
 
-    # CI plot
+    # CI plot + start vs end barchart
     plot_multi_seed_ci(all_snapshots, seeds, combined_dir)
+    plot_start_vs_end_multiseed(summaries, combined_dir)
 
     # Print summary table
     print("\n=== Multi-Seed Summary ===")

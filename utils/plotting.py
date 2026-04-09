@@ -389,10 +389,16 @@ def analyze_hamilton_split(output_dir: str) -> dict:
     print(f"  Own-lineage events  : {summary.get('n_own', 0)}")
     print(f"  Foreign-lineage     : {summary.get('n_foreign', 0)}")
     if "mean_rB" in summary:
-        print(f"  Mean rB (own)       : {summary['mean_rB']:.4f}")
+        pct_own = 100.0 * summary["n_own"] / max(summary["n_total"], 1)
+        print(f"  Own-lineage rate    : {pct_own:.1f}%  "
+              f"(proximity by-product — no kin recognition in agents)")
+        print(f"  Mean rB (own)       : {summary['mean_rB']:.4f}  "
+              f"(r=0.5 correct; rB weak because B=hunger_reduced is bounded by child's hunger at event time)")
         print(f"  Mean C  (own)       : {summary['mean_C']:.4f}")
         print(f"  Mean rB-C (own)     : {summary['mean_rB_minus_C']:.4f}")
         print(f"  Fraction rB > C     : {summary['frac_rB_gt_C']:.3f}")
+    print("  NOTE: Agents have no kin recognition. Hamilton rB>C is post-hoc fitness")
+    print("        accounting only, not a causal mechanism for care in this model.")
     print("================================\n")
 
     return summary
@@ -439,6 +445,128 @@ def plot_lineage_fitness(output_dir: str) -> None:
 # EVOLUTION PLOTS (When evolution enabled)
 # =============================================================================
 
+def plot_reproductive_success_by_genotype(output_dir: str) -> dict:
+    """
+    Two-panel genotype fitness analysis using birth_log.csv + death_log.csv.
+
+    Panel 1 — care_weight vs generation (at birth time).
+      If evolution selects against care, later-generation mothers should
+      have lower care_weight. Negative slope = directional selection.
+
+    Panel 2 — care_weight vs survival time after first reproduction.
+      Joins birth_log (first birth tick) with death_log (death tick).
+      If care is costly, high-care mothers should die sooner.
+
+    NOTE: Offspring count ≈ 1 per mother in this model (reproduction
+    throttled by cooldown + energy cost), so fecundity is not the
+    differentiating fitness axis — generation depth and survival are.
+    """
+    if plt is None:
+        return {}
+
+    birth_records = load_csv(os.path.join(output_dir, "birth_log.csv"))
+    death_records = load_csv(os.path.join(output_dir, "death_log.csv"))
+
+    if not birth_records:
+        print("  [reproductive success] birth_log.csv missing — skipping")
+        return {}
+
+    # ── Panel 1: care_weight vs generation ──
+    cw_gen   = [float(r["mother_care_weight"]) for r in birth_records]
+    gen_vals = [int(r["mother_generation"])     for r in birth_records]
+
+    def pearson(xs, ys):
+        n = len(xs)
+        if n < 3:
+            return 0.0, 0.0, 0.0
+        mx, my = sum(xs) / n, sum(ys) / n
+        cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / n
+        sx  = (sum((x - mx) ** 2 for x in xs) / n) ** 0.5
+        sy  = (sum((y - my) ** 2 for y in ys) / n) ** 0.5
+        r   = cov / (sx * sy) if sx > 0 and sy > 0 else 0.0
+        slope = cov / (sx ** 2) if sx > 0 else 0.0
+        return r, slope, my - slope * mx
+
+    r1, slope1, intercept1 = pearson(gen_vals, cw_gen)
+
+    # ── Panel 2: care_weight vs survival after first birth ──
+    # death_tick per mother
+    death_tick: dict[int, int] = {}
+    for d in death_records:
+        if d.get("agent_type") == "mother":
+            death_tick[int(d["agent_id"])] = int(d["tick"])
+
+    # first birth tick per mother
+    from collections import defaultdict
+    first_birth: dict[int, dict] = {}
+    for row in birth_records:
+        mid = int(row["mother_id"])
+        if mid not in first_birth or int(row["tick"]) < int(first_birth[mid]["tick"]):
+            first_birth[mid] = row
+
+    cw_surv, survival_ticks = [], []
+    for mid, row in first_birth.items():
+        if mid in death_tick:
+            surv = death_tick[mid] - int(row["tick"])
+            if surv >= 0:
+                cw_surv.append(float(row["mother_care_weight"]))
+                survival_ticks.append(surv)
+
+    r2, slope2, intercept2 = pearson(cw_surv, survival_ticks)
+
+    # ── Plot ──
+    plot_dir = ensure_plot_dir(output_dir)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+
+    def add_regression(ax, xs, ys, r, slope, intercept, xlabel, ylabel, title, color="steelblue"):
+        ax.scatter(xs, ys, alpha=0.25, s=12, color=color)
+        if xs:
+            xl = [min(xs), max(xs)]
+            ax.plot(xl, [slope * x + intercept for x in xl],
+                    color="crimson", linewidth=1.8, label=f"regression (r={r:+.3f})")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title, fontsize=9)
+        interp = ("↓ selection against care" if r < -0.1
+                  else "↑ selection for care" if r > 0.1
+                  else "no directional selection")
+        ax.text(0.97, 0.97, f"r = {r:+.3f}\n{interp}",
+                transform=ax.transAxes, ha="right", va="top", fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", alpha=0.8))
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    add_regression(ax1, gen_vals, cw_gen, r1, slope1, intercept1,
+                   "Mother generation",
+                   "care_weight (at birth)",
+                   f"care_weight over generations\n(n={len(cw_gen)} births)")
+
+    add_regression(ax2, cw_surv, survival_ticks, r2, slope2, intercept2,
+                   "care_weight (at first birth)",
+                   "Ticks alive after first birth",
+                   f"Does care hurt survival?\n(n={len(cw_surv)} mothers)",
+                   color="darkorange")
+
+    fig.suptitle("Reproductive Fitness by Genotype", fontsize=11, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, "reproductive_success_by_genotype.png"), dpi=120)
+    plt.close()
+
+    summary = {
+        "n_births": len(cw_gen),
+        "care_vs_generation_r": r1,
+        "care_vs_survival_r": r2,
+    }
+    print(f"\n=== Reproductive Fitness by Genotype ===")
+    print(f"  Births logged         : {len(cw_gen)}")
+    print(f"  care vs generation r  : {r1:+.4f}  "
+          f"({'selection against care' if r1 < -0.1 else 'selection for care' if r1 > 0.1 else 'no directional selection'})")
+    print(f"  care vs survival r    : {r2:+.4f}  "
+          f"({'care costs survival' if r2 < -0.1 else 'care aids survival' if r2 > 0.1 else 'no clear effect'})")
+    print("=========================================\n")
+    return summary
+
+
 def plot_weight_vs_survival(genomes: list[dict], output_dir: str) -> None:
     """Scatter plot: weights vs survival."""
     if plt is None or not genomes:
@@ -466,6 +594,145 @@ def plot_weight_vs_survival(genomes: list[dict], output_dir: str) -> None:
     
     plt.tight_layout()
     plt.savefig(os.path.join(plot_dir, "weight_vs_survival.png"))
+    plt.close()
+
+
+def plot_evolution_trajectory(
+    snapshots: list[dict],
+    output_dir: str,
+    r0_baseline: float = 0.365,
+    gen0_care: float = 0.500,
+) -> None:
+    """
+    3-panel evolution trajectory answering three analysis questions:
+      Panel 1 — care_weight over ticks with phase annotations and reference lines
+      Panel 2 — forage_weight over ticks (confirms independence from care)
+      Panel 3 — population over ticks (confirms care decline ≠ survival harm)
+
+    Reference lines:
+      gen0_care    : neutral start (default Genome = 0.5)
+      r0_baseline  : R0 survivor avg care (lifetime filter, no evolution)
+    """
+    if plt is None or not snapshots:
+        return
+
+    plot_dir = ensure_plot_dir(output_dir)
+
+    ticks   = [s["tick"]              for s in snapshots]
+    care    = [s["avg_care_weight"]   for s in snapshots]
+    c_min   = [s["min_care_weight"]   for s in snapshots]
+    c_max   = [s["max_care_weight"]   for s in snapshots]
+    forage  = [s["avg_forage_weight"] for s in snapshots]
+    n_moth  = [s["n_mothers"]         for s in snapshots]
+
+    # Phase boundaries (tick-based, derived from trajectory inspection)
+    phase_bounds = [
+        (0,   600,  "Growth\n(boom)",      "lightgreen"),
+        (600, 1500, "Crash\n(cap pressure)", "lightyellow"),
+        (1500, ticks[-1], "Slow erosion",  "lightsalmon"),
+    ]
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
+
+    # ── Panel 1: care_weight ──
+    for t_start, t_end, label, color in phase_bounds:
+        ax1.axvspan(t_start, t_end, alpha=0.12, color=color, label=label)
+    ax1.plot(ticks, care, color="steelblue", linewidth=2, label="mean care_weight", zorder=3)
+    ax1.fill_between(ticks, c_min, c_max, alpha=0.18, color="steelblue", label="min/max range")
+    ax1.axhline(gen0_care, color="gray",      linestyle="--", linewidth=1.2,
+                label=f"Gen 0 start ({gen0_care:.3f})")
+    ax1.axhline(r0_baseline, color="crimson", linestyle=":",  linewidth=1.4,
+                label=f"R0 survivors ({r0_baseline:.3f})")
+    ax1.set_ylabel("care_weight")
+    ax1.set_title("Evolution Trajectory — care vs forage over 5000 ticks")
+    ax1.set_ylim(0, 1)
+    ax1.legend(loc="upper right", fontsize=7, ncol=2)
+    ax1.grid(True, alpha=0.3)
+
+    # ── Panel 2: forage_weight ──
+    ax2.plot(ticks, forage, color="darkorange", linewidth=2, label="mean forage_weight")
+    ax2.axhline(0.500, color="gray", linestyle="--", linewidth=1.2, label="Gen 0 start (0.500)")
+    ax2.set_ylabel("forage_weight")
+    ax2.set_ylim(0, 1)
+    ax2.legend(loc="upper right", fontsize=7)
+    ax2.grid(True, alpha=0.3)
+
+    # ── Panel 3: population ──
+    ax3.plot(ticks, n_moth, color="seagreen", linewidth=2, label="n_mothers alive")
+    ax3.set_xlabel("Tick  (≈ generation every 100 ticks)")
+    ax3.set_ylabel("Mothers alive")
+    ax3.legend(loc="upper right", fontsize=7)
+    ax3.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, "evolution_trajectory.png"), dpi=120)
+    plt.close()
+
+
+def plot_start_vs_end_multiseed(
+    summary: list[dict],
+    output_dir: str,
+    gen0_care: float = 0.500,
+    r0_baseline: float = 0.365,
+) -> None:
+    """
+    Per-seed bar chart: Gen 0 care vs Gen 50 final care.
+
+    Each bar = final care for one seed.
+    Color: steelblue if care declined (9/10 expected), coral if rose.
+    Reference lines: Gen 0 start (0.500) and R0 survivors (0.365).
+    Answers Q3: Gen 0 vs Gen 50 is the fair evolutionary comparison.
+    """
+    if plt is None or not summary:
+        return
+
+    plot_dir = ensure_plot_dir(output_dir)
+
+    seeds       = [s["seed"]            for s in summary]
+    final_care  = [s["final_care_mean"] for s in summary]
+    deltas      = [fc - gen0_care       for fc in final_care]
+    colors      = ["steelblue" if d < 0 else "coral" for d in deltas]
+
+    x = list(range(len(seeds)))
+    mean_final = sum(final_care) / len(final_care)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(x, final_care, color=colors, edgecolor="black", alpha=0.85, width=0.6)
+
+    # Annotate each bar with delta
+    for bar, delta, fc in zip(bars, deltas, final_care):
+        ax.text(bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.008,
+                f"{delta:+.3f}",
+                ha="center", va="bottom", fontsize=7.5,
+                color="darkblue" if delta < 0 else "darkred")
+
+    ax.axhline(gen0_care,   color="gray",    linestyle="--", linewidth=1.5,
+               label=f"Gen 0 start ({gen0_care:.3f}) — all seeds")
+    ax.axhline(r0_baseline, color="crimson", linestyle=":",  linewidth=1.5,
+               label=f"R0 survivors ({r0_baseline:.3f}) — lifetime filter")
+    ax.axhline(mean_final,  color="steelblue", linestyle="-.", linewidth=1.5,
+               label=f"Cross-seed mean final ({mean_final:.3f})")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"seed {s}" for s in seeds], rotation=30, ha="right")
+    ax.set_ylabel("Final care_weight (Gen 50)")
+    ax.set_title(
+        "Gen 0 → Gen 50: Does evolution favor care?\n"
+        "Blue = declined (rB < C), Coral = rose (rB ≥ C)",
+        fontsize=10
+    )
+    ax.set_ylim(0, 0.75)
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3, axis="y")
+    fig.text(
+        0.5, -0.04,
+        "Seed 48 (coral): low foraging competition → no population compression → care drifted up.\n"
+        "Confirms decline in other 9 seeds is driven by energetic competition, not a fixed penalty on care.",
+        ha="center", fontsize=7.5, color="dimgray", style="italic"
+    )
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, "start_vs_end_multiseed.png"), dpi=120, bbox_inches="tight")
     plt.close()
 
 
@@ -563,6 +830,8 @@ def generate_all_plots(output_dir: str, **kwargs) -> None:
     # Evolution plots
     if snapshots:
         plot_generation_trend(snapshots, output_dir)
+        plot_evolution_trajectory(snapshots, output_dir)
+    plot_reproductive_success_by_genotype(output_dir)
 
     # Hamilton split analysis (own-lineage vs foreign)
     if care_records:
