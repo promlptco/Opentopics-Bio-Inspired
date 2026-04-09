@@ -25,3 +25,16 @@ class CareRecord:
     benefit: float
     cost: float
     success: bool
+    mother_lineage_id: int = 0
+    child_lineage_id: int = 0
+    is_own_child: bool = False
+
+
+@dataclass
+class DeathRecord:
+    tick: int
+    agent_id: int
+    agent_type: str   # "mother" or "child"
+    lineage_id: int
+    generation: int
+    cause: str        # "starvation" or "hunger"

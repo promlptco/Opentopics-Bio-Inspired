@@ -53,6 +53,11 @@ Pipeline: survival → maternal → plasticity → Hamilton-like analysis.
 | 16 | `reproduction_enabled=False` on baselines → care only in first 100 ticks | phase3_maternal/run.py |
 | 17 | No `mutation_enabled` flag → no way to fix genomes without killing reproduction | config.py, simulation.py |
 | 18 | `get_step_toward` only tried 3 directions → agents froze in crowds | simulation/world.py |
+| 19 | `own_child_id` never cleared on child death/maturation → mothers could only reproduce once | simulation/simulation.py |
+| 20 | `fatigue` never incremented in main sim → `self` domain halved, mothers never rested | simulation/simulation.py, config.py |
+| 21 | `mother_lineage_id`, `child_lineage_id`, `is_own_child` missing from CareRecord | logging_system/records.py, simulation/simulation.py, logging_system/logger.py |
+| 22 | Candidate arrays in ChoiceRecord never exported to CSV | logging_system/logger.py |
+| 23 | No death log → can't compute lifetime reproductive success | logging_system/records.py, logger.py, simulation.py |
 
 ---
 
@@ -92,8 +97,10 @@ To swap: change the import in `simulation/world.py`.
 |-------|--------|
 | `step1_survival_check` | VALIDATED — 6 runs, all passed |
 | `phase1_survival` | PASSED — 12/12 survive, avg energy 0.910, 2026-04-08 |
-| `phase3_maternal` | **Baseline-C0 FROZEN** — balanced config, 2026-04-08 |
-| `phase2_zeroshot` | Ready — loads from phase3 `top_genomes.json` |
+| `phase3_maternal` | **Baseline-C0 FROZEN** — 2026-04-08 |
+| `phase3_maternal` | **Baseline-R0 COMPLETE** — 2026-04-09 |
+| `phase3_maternal` | Evolution — **READY TO RUN** (bugs #19 #20 fixed) |
+| `phase2_zeroshot` | Waiting — needs phase3 evolution `top_genomes.json` |
 | `phase4_plasticity` | Implemented, not yet run |
 
 ---
@@ -104,8 +111,9 @@ To swap: change the import in `simulation/world.py`.
 **Run dir:** `outputs/phase3_maternal/run_20260408_191406_seed42`
 **Results:** 24 surviving mothers, 12 children, 1262 care events, 100% success
 **Energy:** avg 0.439, stable oscillation 0.25–0.65
-**Relatedness:** avg_r=0.056 (~87% foreign care, ~10% own-child)
+**Relatedness:** avg_r=0.056 (~87% foreign care, ~13% own-child)
 **Care distance:** flat distribution dist 1–8 (pure distress-driven selection)
+**Note:** Run pre-bugfix (#19, #20). Valid for relative comparison with R0, absolute numbers suppressed.
 
 To watch live:
 ```bash
@@ -114,11 +122,25 @@ python experiments/phase3_maternal/watch.py
 
 ---
 
-## Roadmap — Current Position: Step 3
+## Baseline-R0 — COMPLETE
+
+**Config:** random genomes `uniform(0,1)`, `seed=42`
+**Run dir:** `outputs/phase3_maternal/run_20260409_125601_seed42`
+**Results:** 24 surviving mothers, 12 children, 829 care events, 100% success
+**Energy:** avg 0.447, stable
+**Relatedness:** avg_r=0.077 (84% foreign care, 16% own-child)
+**Surviving genomes:** care_weight avg=0.365 [0.027–0.500], forage avg=0.500, self avg=0.536
+**Hamilton check (own-lineage):** rB=0.034 < C=0.048 — altruistic cost even with random genomes
+**Note:** Run pre-bugfix (#19, #20). Valid for relative comparison with C0, absolute numbers suppressed.
+
+---
+
+## Roadmap — Current Position: Step 4
 
 1. ~~Run phase1 survival gate~~ PASSED
 2. ~~Baseline-C0~~ FROZEN — balanced `(care=0.7, forage=0.85, self=0.55)`
-3. **YOU ARE HERE: Baseline-R0** (`phase3_maternal`, `stage="baseline_r0"`)
+3. ~~Baseline-R0~~ COMPLETE — random genomes, seed=42
+4. **YOU ARE HERE: Evolution** (`phase3_maternal`, `stage="evolution"`, `seed=42`)
 4. Evolution (`phase3_maternal`, `stage="evolution"`)
 5. Plasticity / Baldwin effect (`phase4_plasticity`)
 6. Hamilton analysis (split):
@@ -129,9 +151,9 @@ python experiments/phase3_maternal/watch.py
 7. Zero-shot (`phase2_zeroshot`, pass `phase3_run_dir=` from step 4 output)
 
 ### Implementation needed before step 6:
-- Extend CareRecord: add `mother_lineage_id`, `child_lineage_id`, `is_own_child`
-- Extend CSV export with new columns
-- Add `get_surviving_lineages()` to Simulation
+- ~~Extend CareRecord: add `mother_lineage_id`, `child_lineage_id`, `is_own_child`~~ DONE
+- ~~Extend CSV export with new columns~~ DONE (care_log, choice_log candidates, death_log)
+- ~~Add `get_surviving_lineages()` to Simulation~~ DONE
 - Add `analyze_hamilton_split()` to utils/plotting.py
 - Add lineage fitness metric (descendants count per lineage)
 

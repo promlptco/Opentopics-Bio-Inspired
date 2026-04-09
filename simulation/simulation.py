@@ -7,7 +7,7 @@ from agents.child import ChildAgent
 from evolution.genome import Genome
 from evolution.lineage import LineageManager
 from logging_system.logger import Logger
-from logging_system.records import ChoiceRecord, CareRecord
+from logging_system.records import ChoiceRecord, CareRecord, DeathRecord
 
 class Simulation:
     def __init__(self, config: Config):
@@ -152,7 +152,23 @@ class Simulation:
         if self.config.reproduction_enabled:
             self._check_reproduction()
 
-        # 7. Cleanup
+        # 7. Cleanup — log deaths and clear stale own_child_id references
+        dead_child_ids = {c.id for c in self.children if not c.alive}
+        for m in self.mothers:
+            if not m.alive:
+                self.logger.log_death(DeathRecord(
+                    tick=self.tick, agent_id=m.id, agent_type="mother",
+                    lineage_id=m.lineage_id, generation=m.generation, cause="starvation",
+                ))
+            elif m.own_child_id in dead_child_ids:
+                # Bug #19 fix: child died — clear so mother can reproduce again
+                m.own_child_id = None
+        for c in self.children:
+            if not c.alive:
+                self.logger.log_death(DeathRecord(
+                    tick=self.tick, agent_id=c.id, agent_type="child",
+                    lineage_id=c.lineage_id, generation=c.generation, cause="hunger",
+                ))
         self.mothers = [m for m in self.mothers if m.alive]
         if self.config.children_enabled:
             self.children = [c for c in self.children if c.alive]
@@ -204,7 +220,10 @@ class Simulation:
                         r=r,
                         benefit=benefit,
                         cost=total_cost,
-                        success=success
+                        success=success,
+                        mother_lineage_id=mother.lineage_id,
+                        child_lineage_id=target.lineage_id,
+                        is_own_child=(target.mother_id == mother.id),
                     ))
                     if success and self.config.plasticity_enabled:
                         mother.plastic_update(benefit, self.config.plastic_gain)
@@ -215,6 +234,7 @@ class Simulation:
                     if self.world.update_position(mother, new_pos):
                         mother.add_move_cost(self.config.move_cost)
                         mother.energy -= self.config.move_cost
+                        mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
         
         elif domain == "forage":
             if mother.held_food > 0:
@@ -227,6 +247,7 @@ class Simulation:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
                         mother.energy -= self.config.move_cost
+                        mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
         
         elif domain == "self":
             mother.rest(self.config.rest_recovery)
@@ -273,6 +294,10 @@ class Simulation:
                 else:
                     genome = birth_mother.genome.copy() if birth_mother and birth_mother.alive else Genome()
 
+                # Bug #19 fix: clear own_child_id so birth mother can reproduce again
+                if birth_mother:
+                    birth_mother.own_child_id = None
+
                 pos = child.pos  # save before removal
 
                 # Remove child FIRST to free its position in occupied
@@ -310,3 +335,27 @@ class Simulation:
             mother.own_child_id = child.id
             mother.energy -= self.config.reproduction_cost
             mother.cooldown = self.config.reproduction_cooldown
+
+    def get_surviving_lineages(self) -> dict[int, dict]:
+        """Return per-founding-lineage counts of living descendants.
+
+        Returns a dict keyed by lineage_id:
+          {lineage_id: {"mothers": int, "children": int, "total": int}}
+        Useful for B_social (inclusive fitness) in Hamilton analysis.
+        """
+        result: dict[int, dict] = {}
+        for m in self.mothers:
+            if m.alive:
+                lid = m.lineage_id
+                if lid not in result:
+                    result[lid] = {"mothers": 0, "children": 0, "total": 0}
+                result[lid]["mothers"] += 1
+                result[lid]["total"] += 1
+        for c in self.children:
+            if c.alive:
+                lid = c.lineage_id
+                if lid not in result:
+                    result[lid] = {"mothers": 0, "children": 0, "total": 0}
+                result[lid]["children"] += 1
+                result[lid]["total"] += 1
+        return result

@@ -31,6 +31,9 @@ class Config:
     maturity_age: int = 100
     starvation_threshold: float = 1.0
 
+    # Fatigue
+    fatigue_rate: float = 0.01
+
     # Plasticity
     plastic_gain: float = 0.1
 

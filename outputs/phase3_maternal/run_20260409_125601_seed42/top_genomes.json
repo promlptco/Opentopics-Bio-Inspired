@@ -1,0 +1,170 @@
+[
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.22321073814882275,
+    "forage_weight": 0.7364712141640124,
+    "self_weight": 0.6766994874229113,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.029797219438070344,
+    "forage_weight": 0.21863797480360336,
+    "self_weight": 0.5053552881033624,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.026535969683863625,
+    "forage_weight": 0.1988376506866485,
+    "self_weight": 0.6498844377795232,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.09671637683346401,
+    "forage_weight": 0.8474943663474598,
+    "self_weight": 0.6037260313668911,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.22321073814882275,
+    "forage_weight": 0.7364712141640124,
+    "self_weight": 0.6766994874229113,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.029797219438070344,
+    "forage_weight": 0.21863797480360336,
+    "self_weight": 0.5053552881033624,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.026535969683863625,
+    "forage_weight": 0.1988376506866485,
+    "self_weight": 0.6498844377795232,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.09671637683346401,
+    "forage_weight": 0.8474943663474598,
+    "self_weight": 0.6037260313668911,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.1,
+    "learning_cost": 0.05
+  }
+]
