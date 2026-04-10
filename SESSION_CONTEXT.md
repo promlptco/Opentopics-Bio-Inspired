@@ -309,3 +309,92 @@ Phase4 v2 genomes care **9.5% more per mother-tick** in the care window of a new
 - Logging must capture both decision (ChoiceRecord) and outcome (CareRecord)
 - Hamilton rB > C applies only to own-lineage care (r > 0). Foreign events = by-product analysis only.
 - B_individual = hunger_reduced. B_social = lineage reproductive success (inclusive fitness).
+
+
+---
+
+All pipeline steps are complete. Here's what's on the table:
+
+  Done:
+  - Phases 1–4 all run (single seed=42)
+  - Phase 3 multi-seed validated (10 seeds)
+  - All 11 thesis plots generated (7 per-run + 4 cross-run comparisons)
+  - SESSION_CONTEXT.md and memory up to date
+
+  Potential next steps (in order of scientific priority):
+
+  1. Multi-seed Phase 4b — Currently the Baldwin Effect claim rests on 1 seed. Phase 3 used 10 seeds and found 9/10 consistent. Same rigor needed here: is the care_weight recovery + learning_rate sweep robust, or is
+  seed 42 an outlier? This is the weakest point in the write-up right now.
+  2. Thesis write-up — Structured document with Introduction, Methods, Results (Phase 3 → 4a → 4b), Discussion. Could be a LaTeX template or markdown draft.
+  3. Code cleanup — Ensure reproducibility: requirements.txt, README.md with run instructions, clean __main__ entry points for each phase.
+  4. Additional analysis — e.g., per-lineage fitness breakdown for Phase 4b, hitchhiking check for learning_rate vs forage_weight correlation.
+
+---
+
+Plan: Multi-Seed Phase 4b (Kin-Conditional Baldwin Effect)
+                                                                                                                                                                                                                           
+     Context
+                                                                                                                                                                                                                           
+     Phase 4b's Baldwin Effect claim (care_weight recovery, learning_rate sweep, +9.5% zero-shot transfer) rests on a single seed (42). Phase 3 validated with 10 seeds (42-51) and found 9/10 consistent. Same rigor is 
+     required here before thesis write-up. If the care_weight recovery or learning_rate sweep is seed-specific, the claim collapses.
+
+     Approach
+
+     Mirror the Phase 3 multi-seed pattern (experiments/phase3_maternal/run_multi_seed.py) adapted for Phase 4b.
+
+     Files to create / modify
+
+     1. Create experiments/phase4_plasticity/run_multi_seed.py
+
+     Modeled on experiments/phase3_maternal/run_multi_seed.py (186 lines). Key adaptations:
+
+     - Import run from experiments.phase4_plasticity.run instead of phase3
+     - Call run(seed=seed, stage="evolution_plastic_kin") for each seed
+     - Seeds 42-51 (same range as Phase 3)
+     - Per-seed summary adds: final_learning_rate_mean, final_learning_cost_mean (from top_genomes.json)
+     - Combined output dir: outputs/phase4_plasticity/multi_seed_evolution/
+
+     CI plot — 3 panels (not 2 like phase3):
+     1. care_weight mean +/- 95% CI (same as phase3, shows if recovery is robust)
+     2. learning_rate mean +/- 95% CI (key Baldwin signal — is the late sweep consistent?)
+     3. forage_weight mean (hitchhiking check — should stay flat)
+
+     Reuse: _ci95() helper, _load_snapshots(), plot_start_vs_end_multiseed() from utils/plotting.py
+
+     2. After evolution: multi-seed zero-shot
+
+     For each seed's evolution output, run zero-shot with kin-conditional plasticity:
+     - run(seed=seed, stage="zeroshot_plastic_kin", source_dir=evo_dir)
+     - Collect care_per_mother_tick_in_window from each seed's zeroshot_metrics.json
+     - Report: mean window rate +/- 95% CI across seeds, compare to Phase 2 baseline (0.09069)
+
+     3. Update outputs/thesis_plots/
+
+     After multi-seed runs, regenerate 2 thesis plots with multi-seed data:
+     - start_vs_end_multiseed_4b.png — Gen 0 vs final care_weight per seed (reuse existing plotting function)
+     - multi_seed_care_weight_ci_4b.png — care + learning_rate + forage CI (new 3-panel)
+     - zeroshot_multiseed_4b.png — per-seed zero-shot window rate bar chart vs Phase 2 baseline
+
+     Execution order
+
+     1. Create experiments/phase4_plasticity/run_multi_seed.py
+     2. Smoke test with 1 seed (200 ticks) to verify imports and summary collection
+     3. Run full 10-seed evolution (seeds 42-51, 5000 ticks each — ~50 min total)
+     4. Run 10-seed zero-shot (1000 ticks each — ~5 min total)
+     5. Generate multi-seed plots into combined dir + thesis_plots
+     6. Print summary table and update SESSION_CONTEXT.md
+
+     Key questions the multi-seed answers
+
+     - Is the care_weight trough + recovery pattern robust or seed-specific?
+     - Is learning_rate late sweep (0.1 -> 0.17) consistent across seeds?
+     - How many seeds show Baldwin Effect (care recovery + LR sweep)? Need >= 7/10 for a strong claim.
+     - Is the +9.5% zero-shot window rate improvement reproducible? Mean +/- CI across seeds.
+
+     Verification
+
+     - Each seed produces top_genomes.json, generation_snapshots.json, population_history.json
+     - Combined summary.json has 10 entries with learning_rate fields
+     - CI plot shows care_weight + learning_rate + forage over 5000 ticks
+     - Zero-shot summary shows per-seed window rates with mean +/- CI
+     - No seed has population extinction (min pop > 0 at all ticks)
