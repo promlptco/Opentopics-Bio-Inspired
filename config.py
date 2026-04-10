@@ -36,6 +36,10 @@ class Config:
 
     # Plasticity
     plastic_gain: float = 0.1
+    # If True, plastic_update fires only on own-child care events (is_own_child=True).
+    # This aligns the learning signal with inclusive fitness — proper Baldwin Effect test.
+    # If False (default), fires on all care events (lineage-blind — null result by design).
+    plasticity_kin_conditional: bool = False
 
     # Simulation
     max_ticks: int = 300

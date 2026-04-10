@@ -597,6 +597,53 @@ def plot_weight_vs_survival(genomes: list[dict], output_dir: str) -> None:
     plt.close()
 
 
+def plot_learning_rate_trajectory(
+    snapshots: list[dict],
+    output_dir: str,
+    gen0_lr: float = 0.1,
+) -> None:
+    """
+    Plot avg_learning_rate over ticks (phase4 Baldwin effect signature plot).
+
+    If learning_rate is selected upward, it means plasticity provides real fitness
+    benefit and the population is evolving to exploit it — classic Baldwin effect.
+    If flat/declining, plasticity is neutral or costly.
+    """
+    if plt is None or not snapshots:
+        return
+    if not any("avg_learning_rate" in s for s in snapshots):
+        return
+
+    plot_dir = ensure_plot_dir(output_dir)
+
+    valid = [s for s in snapshots if s.get("avg_learning_rate") is not None]
+    if not valid:
+        return
+
+    ticks = [s["tick"]                                    for s in valid]
+    lr    = [s["avg_learning_rate"]                       for s in valid]
+    lr_lo = [s.get("min_learning_rate", s["avg_learning_rate"]) for s in valid]
+    lr_hi = [s.get("max_learning_rate", s["avg_learning_rate"]) for s in valid]
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(ticks, lr, color="mediumpurple", linewidth=2,
+            label="mean learning_rate", zorder=3)
+    ax.fill_between(ticks, lr_lo, lr_hi, alpha=0.18, color="mediumpurple",
+                    label="min/max range")
+    ax.axhline(gen0_lr, color="gray", linestyle="--", linewidth=1.2,
+               label=f"Gen 0 start ({gen0_lr:.2f})")
+    ax.set_xlabel("Tick  (≈ generation every 100 ticks)")
+    ax.set_ylabel("learning_rate")
+    ax.set_title("Learning Rate Evolution — Baldwin Effect Signature\n"
+                 "(rising = plasticity fitness benefit selected; flat/falling = neutral/costly)")
+    ax.set_ylim(0, 1)
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, "learning_rate_trajectory.png"), dpi=120)
+    plt.close()
+
+
 def plot_evolution_trajectory(
     snapshots: list[dict],
     output_dir: str,
@@ -831,6 +878,7 @@ def generate_all_plots(output_dir: str, **kwargs) -> None:
     if snapshots:
         plot_generation_trend(snapshots, output_dir)
         plot_evolution_trajectory(snapshots, output_dir)
+        plot_learning_rate_trajectory(snapshots, output_dir)  # phase4 Baldwin evidence
     plot_reproductive_success_by_genotype(output_dir)
 
     # Hamilton split analysis (own-lineage vs foreign)
