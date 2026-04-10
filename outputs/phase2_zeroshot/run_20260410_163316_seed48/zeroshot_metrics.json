@@ -1,0 +1,12 @@
+{
+  "total_care_events": 243,
+  "successful_care_events": 243,
+  "surviving_mothers": 0,
+  "surviving_children": 0,
+  "care_rate_per_tick": 0.243,
+  "care_per_mother_tick": 0.012277067650179356,
+  "total_mother_ticks": 19793,
+  "last_alive_tick": 674,
+  "source_genomes": "outputs\\phase3_maternal\\run_20260409_194810_seed48",
+  "note": "Extinction is expected: no reproduction -> 50 mothers post-maturation with no replacement. Key metric is care_per_mother_tick."
+}

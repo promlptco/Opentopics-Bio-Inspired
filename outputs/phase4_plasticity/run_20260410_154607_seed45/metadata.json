@@ -1,0 +1,15 @@
+{
+  "phase": "phase4_plasticity",
+  "timestamp": "20260410_154607",
+  "seed": 45,
+  "stage": "evolution_plastic_kin",
+  "num_agents": 24,
+  "grid_size": [
+    30,
+    30
+  ],
+  "plasticity_enabled": true,
+  "plasticity_kin_conditional": true,
+  "plastic_gain": 0.1,
+  "note": "Kin-conditional plasticity: plastic_update fires only on own-child care events. Proper Baldwin Effect test \u2014 signal aligned with inclusive fitness."
+}

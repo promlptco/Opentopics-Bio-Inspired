@@ -1,0 +1,227 @@
+[
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.5,
+    "learning_rate": 0.10612546259531917,
+    "learning_cost": 0.05,
+    "lineage_id": 0,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.6604275773831296,
+    "forage_weight": 0.4132203669785318,
+    "self_weight": 0.5,
+    "learning_rate": 0.10115899704661441,
+    "learning_cost": 0.03325622764290624,
+    "lineage_id": 1,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.4140280402092869,
+    "forage_weight": 0.6345072828488938,
+    "self_weight": 0.12809089359935114,
+    "learning_rate": 0.2018657590459191,
+    "learning_cost": 0.0,
+    "lineage_id": 2,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.6882943622595704,
+    "forage_weight": 0.47189949869449793,
+    "self_weight": 0.9121399329301758,
+    "learning_rate": 0.4182550070660903,
+    "learning_cost": 0.009594366931867626,
+    "lineage_id": 3,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.3205594502077166,
+    "forage_weight": 0.7516797427091184,
+    "self_weight": 0.578031292849332,
+    "learning_rate": 0.042101242587776984,
+    "learning_cost": 0.0,
+    "lineage_id": 4,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5476731744726719,
+    "self_weight": 0.7118221059382726,
+    "learning_rate": 0.1,
+    "learning_cost": 0.13445988407815995,
+    "lineage_id": 5,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.4890826718051716,
+    "learning_rate": 0.3092646849500963,
+    "learning_cost": 0.07083508974277694,
+    "lineage_id": 6,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.18156807569628586,
+    "forage_weight": 0.6750545201442982,
+    "self_weight": 0.41621105703858224,
+    "learning_rate": 0.0,
+    "learning_cost": 0.12749687874391338,
+    "lineage_id": 7,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.5109298137511855,
+    "forage_weight": 0.6036344583623408,
+    "self_weight": 0.4081049442224716,
+    "learning_rate": 0.13488984455051214,
+    "learning_cost": 0.05,
+    "lineage_id": 8,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.31260444052138825,
+    "forage_weight": 0.5022981249987638,
+    "self_weight": 0.29147389244017896,
+    "learning_rate": 0.29965343682230755,
+    "learning_cost": 0.11867157464972003,
+    "lineage_id": 9,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.24026535951693787,
+    "forage_weight": 0.3214900661548731,
+    "self_weight": 0.6349724801258827,
+    "learning_rate": 0.11591322166685049,
+    "learning_cost": 0.30700351613865523,
+    "lineage_id": 10,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.5194361744884792,
+    "forage_weight": 0.9209656784768259,
+    "self_weight": 0.44006993677884626,
+    "learning_rate": 0.26593748920689375,
+    "learning_cost": 0.0,
+    "lineage_id": 11,
+    "generation": 49
+  },
+  {
+    "care_weight": 0.313276602089403,
+    "forage_weight": 0.598210890859324,
+    "self_weight": 0.44106313704381966,
+    "learning_rate": 0.11236023634765396,
+    "learning_cost": 0.06456592887561752,
+    "lineage_id": 4,
+    "generation": 48
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.33103786078573605,
+    "learning_rate": 0.10612546259531917,
+    "learning_cost": 0.05,
+    "lineage_id": 0,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.6604275773831296,
+    "forage_weight": 0.4132203669785318,
+    "self_weight": 0.6336840845797743,
+    "learning_rate": 0.21476812975169568,
+    "learning_cost": 0.048704391571055064,
+    "lineage_id": 1,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.4140280402092869,
+    "forage_weight": 0.6345072828488938,
+    "self_weight": 0.12809089359935114,
+    "learning_rate": 0.2018657590459191,
+    "learning_cost": 0.0,
+    "lineage_id": 2,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.6882943622595704,
+    "forage_weight": 0.47189949869449793,
+    "self_weight": 0.9121399329301758,
+    "learning_rate": 0.4182550070660903,
+    "learning_cost": 0.009594366931867626,
+    "lineage_id": 3,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.3205594502077166,
+    "forage_weight": 0.7516797427091184,
+    "self_weight": 0.578031292849332,
+    "learning_rate": 0.042101242587776984,
+    "learning_cost": 0.0,
+    "lineage_id": 4,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.6980685455820327,
+    "self_weight": 0.5559152527662617,
+    "learning_rate": 0.1,
+    "learning_cost": 0.0,
+    "lineage_id": 5,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.5,
+    "forage_weight": 0.5,
+    "self_weight": 0.4890826718051716,
+    "learning_rate": 0.3092646849500963,
+    "learning_cost": 0.07083508974277694,
+    "lineage_id": 6,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.18156807569628586,
+    "forage_weight": 0.6750545201442982,
+    "self_weight": 0.41621105703858224,
+    "learning_rate": 0.0,
+    "learning_cost": 0.12749687874391338,
+    "lineage_id": 7,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.5109298137511855,
+    "forage_weight": 0.6036344583623408,
+    "self_weight": 0.4081049442224716,
+    "learning_rate": 0.13488984455051214,
+    "learning_cost": 0.05,
+    "lineage_id": 8,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.31260444052138825,
+    "forage_weight": 0.4861927979162376,
+    "self_weight": 0.29147389244017896,
+    "learning_rate": 0.29965343682230755,
+    "learning_cost": 0.11867157464972003,
+    "lineage_id": 9,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.24026535951693787,
+    "forage_weight": 0.3214900661548731,
+    "self_weight": 0.7538026182391285,
+    "learning_rate": 0.14778034336655577,
+    "learning_cost": 0.30700351613865523,
+    "lineage_id": 10,
+    "generation": 50
+  },
+  {
+    "care_weight": 0.5194361744884792,
+    "forage_weight": 0.9209656784768259,
+    "self_weight": 0.44006993677884626,
+    "learning_rate": 0.26593748920689375,
+    "learning_cost": 0.0,
+    "lineage_id": 11,
+    "generation": 50
+  }
+]

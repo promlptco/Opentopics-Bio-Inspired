@@ -1,0 +1,15 @@
+{
+  "phase": "phase4_plasticity",
+  "timestamp": "20260410_155703",
+  "seed": 48,
+  "stage": "zeroshot_plastic_kin",
+  "num_agents": 54,
+  "grid_size": [
+    30,
+    30
+  ],
+  "plasticity_enabled": true,
+  "plasticity_kin_conditional": true,
+  "source_dir": "outputs\\phase4_plasticity\\run_20260410_155035_seed48",
+  "note": "Zero-shot with kin-conditional plasticity \u2014 Baldwin transfer test. Compare care_window rate to phase2 baseline (0.076)."
+}

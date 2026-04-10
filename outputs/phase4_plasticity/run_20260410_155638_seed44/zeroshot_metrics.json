@@ -1,0 +1,23 @@
+{
+  "stage": "zeroshot_plastic_kin",
+  "source_dir": "outputs\\phase4_plasticity\\run_20260410_154418_seed44",
+  "kin_conditional": true,
+  "total_care_events": 203,
+  "successful_care_events": 203,
+  "surviving_mothers": 0,
+  "surviving_children": 0,
+  "care_per_mother_tick_all": 0.009994584215449756,
+  "total_mother_ticks": 20311,
+  "last_alive_tick": 843,
+  "care_window": {
+    "care_window_end_tick": 100,
+    "care_events_in_window": 203,
+    "mother_ticks_in_window": 2518,
+    "care_per_mother_tick_in_window": 0.08061953931691819,
+    "phase2_window_baseline": 0.076,
+    "note": "Window metric removes dormancy confound (ticks after children mature, no reproduction)."
+  },
+  "phase2_baseline_all": 0.0144,
+  "phase2_baseline_window": 0.076,
+  "note": "Use care_window metrics for fair comparison \u2014 removes dormancy confound. Phase2 window baseline (no plasticity): 0.076/mother-tick in ticks 0\u2013100."
+}

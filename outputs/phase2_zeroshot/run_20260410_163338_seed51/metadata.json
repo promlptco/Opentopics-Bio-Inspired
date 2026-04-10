@@ -1,0 +1,13 @@
+{
+  "phase": "phase2_zeroshot",
+  "timestamp": "20260410_163338",
+  "seed": 51,
+  "num_agents": 48,
+  "grid_size": [
+    30,
+    30
+  ],
+  "plasticity_enabled": false,
+  "source_genomes": "outputs\\phase3_maternal\\run_20260409_195238_seed51",
+  "note": "Evolved genomes from phase3 maternal evolution \u2014 zero-shot transfer test"
+}

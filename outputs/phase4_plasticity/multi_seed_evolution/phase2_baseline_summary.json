@@ -1,0 +1,52 @@
+[
+  {
+    "seed": 42,
+    "window_rate": 0.09069306930693069,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163239_seed42"
+  },
+  {
+    "seed": 43,
+    "window_rate": 0.07207920792079207,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163245_seed43"
+  },
+  {
+    "seed": 44,
+    "window_rate": 0.07142857142857142,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163250_seed44"
+  },
+  {
+    "seed": 45,
+    "window_rate": 0.0672782874617737,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163256_seed45"
+  },
+  {
+    "seed": 46,
+    "window_rate": 0.10377704437110377,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163303_seed46"
+  },
+  {
+    "seed": 47,
+    "window_rate": 0.07768469154607768,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163309_seed47"
+  },
+  {
+    "seed": 48,
+    "window_rate": 0.09271270507439909,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163316_seed48"
+  },
+  {
+    "seed": 49,
+    "window_rate": 0.06564885496183206,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163325_seed49"
+  },
+  {
+    "seed": 50,
+    "window_rate": 0.09497616428309498,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163332_seed50"
+  },
+  {
+    "seed": 51,
+    "window_rate": 0.09053156146179402,
+    "run_dir": "outputs\\phase2_zeroshot\\run_20260410_163338_seed51"
+  }
+]

@@ -3,14 +3,16 @@
 Run Phase 4b (kin-conditional Baldwin Effect) across 10 seeds and produce:
   - Per-seed full outputs (generation_snapshots, top_genomes, logs, plots)
   - Per-seed zero-shot transfer (zeroshot_plastic_kin stage)
-  - Multi-seed CI plots: care_weight + learning_rate + forage over 5000 ticks
-  - Summary table: final care_weight, learning_rate, forage per seed
-  - Multi-seed zero-shot bar chart vs Phase 2 baseline
+  - Phase 2 baselines: Phase 3 genomes + no plasticity, per-seed (for paired stats)
+  - Multi-seed CI plots: care_weight + learning_rate + forage, with Phase 3 overlay
+  - Paired statistical tests (t-test + Wilcoxon) comparing Phase 4b vs Phase 2 window rates
+  - Summary table with Baldwin Effect classification per seed
 
-Key questions:
-  - Is the care_weight trough + recovery robust (>= 7/10 seeds)?
-  - Is the learning_rate late sweep (0.1 -> 0.17) consistent across seeds?
-  - Is the +9.5% zero-shot window rate improvement reproducible?
+Hardened against:
+  - Data loss: checkpoint saved after every seed
+  - High variance: mean+CI plus per-seed Baldwin classification annotation
+  - Baseline isolation: Phase 3 mean overlaid on CI plot panels
+  - Statistical weakness: formal paired tests with p-value and Cohen's d
 """
 import sys
 import os
@@ -20,7 +22,8 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase4_plasticity.run import run
+from experiments.phase4_plasticity.run import run as run_p4b
+from experiments.phase2_zeroshot.run import run as run_p2zs
 from utils.plotting import plot_start_vs_end_multiseed
 
 try:
@@ -28,9 +31,27 @@ try:
 except ImportError:
     plt = None
 
-SEEDS = list(range(42, 52))   # seeds 42-51 (10 runs, matches Phase 3)
+try:
+    from scipy import stats as _scipy_stats
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+    print("Warning: scipy not available — statistical tests will be skipped.")
+
+SEEDS        = list(range(42, 52))
 COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase4_plasticity", "multi_seed_evolution")
-PHASE2_WINDOW_BASELINE = 0.09069   # Phase 2 zero-shot care-window rate (actual, ticks 0-100)
+CHECKPOINT   = os.path.join(COMBINED_DIR, "checkpoint.json")
+
+# Phase 3 multi-seed manifest (for baseline overlay + Phase 2 paired baselines)
+P3_RUN_DIRS_JSON = os.path.join(
+    PROJECT_ROOT, "outputs", "phase3_maternal", "multi_seed_evolution", "run_dirs.json"
+)
+
+# Baldwin Effect classification thresholds
+BALDWIN_RECOVERY_MIN = 0.03   # care_weight must recover >= 0.03 from trough to final
+BALDWIN_LR_MIN       = 0.03   # learning_rate must increase >= 0.03 from start to final
+
+MATURITY_AGE = 100            # config.maturity_age
 
 
 # =============================================================================
@@ -53,8 +74,14 @@ def _load_zeroshot_metrics(run_dir: str) -> dict:
         return json.load(f)
 
 
+def _care_window_rate_from_dir(run_dir: str) -> float:
+    """Extract care-window rate from a zero-shot run dir."""
+    m = _load_zeroshot_metrics(run_dir)
+    w = m.get("care_window", {})
+    return w.get("care_per_mother_tick_in_window", 0.0)
+
+
 def _ci95(values: list[float]) -> float:
-    """95% CI half-width assuming normal distribution."""
     n = len(values)
     if n < 2:
         return 0.0
@@ -63,105 +90,246 @@ def _ci95(values: list[float]) -> float:
     return 1.96 * math.sqrt(variance / n)
 
 
+def _mean(values: list[float]) -> float:
+    return sum(values) / len(values) if values else 0.0
+
+
+def _classify_baldwin(snaps: list[dict]) -> dict:
+    """
+    Classify a seed as showing Baldwin Effect based on:
+      - care_weight recovered: min(care) to final(care) >= BALDWIN_RECOVERY_MIN
+      - learning_rate swept: final(lr) - first(lr) >= BALDWIN_LR_MIN
+    Returns dict with classification details.
+    """
+    if not snaps:
+        return {"is_baldwin": False, "reason": "no snapshots"}
+
+    care_vals = [s["avg_care_weight"]   for s in snaps]
+    lr_vals   = [s["avg_learning_rate"] for s in snaps]
+
+    trough        = min(care_vals)
+    final_care    = care_vals[-1]
+    recovery      = final_care - trough
+    lr_start      = lr_vals[0]
+    lr_final      = lr_vals[-1]
+    lr_delta      = lr_final - lr_start
+
+    care_recovered = recovery >= BALDWIN_RECOVERY_MIN
+    lr_swept       = lr_delta >= BALDWIN_LR_MIN
+
+    return {
+        "is_baldwin":     care_recovered and lr_swept,
+        "care_trough":    trough,
+        "care_final":     final_care,
+        "care_recovery":  recovery,
+        "lr_start":       lr_start,
+        "lr_final":       lr_final,
+        "lr_delta":       lr_delta,
+        "care_recovered": care_recovered,
+        "lr_swept":       lr_swept,
+    }
+
+
 # =============================================================================
-# Multi-seed CI plot (3 panels: care_weight, learning_rate, forage)
+# Checkpoint helpers
+# =============================================================================
+
+def _load_checkpoint() -> dict:
+    if os.path.exists(CHECKPOINT):
+        with open(CHECKPOINT) as f:
+            return json.load(f)
+    return {
+        "completed_evo": [],
+        "evo_run_dirs":  {},
+        "evo_summaries": [],
+        "completed_zs":  [],
+        "zs_run_dirs":   {},
+        "zs_summaries":  [],
+    }
+
+
+def _save_checkpoint(cp: dict) -> None:
+    os.makedirs(COMBINED_DIR, exist_ok=True)
+    with open(CHECKPOINT, "w") as f:
+        json.dump(cp, f, indent=2)
+
+
+# =============================================================================
+# Load Phase 3 baselines for overlay
+# =============================================================================
+
+def _load_phase3_baselines() -> dict:
+    """
+    Load Phase 3 multi-seed snapshots and return mean trajectories per tick.
+    Returns {tick: avg_care_weight} and {tick: avg_learning_rate}.
+    """
+    if not os.path.exists(P3_RUN_DIRS_JSON):
+        return {}, {}
+
+    with open(P3_RUN_DIRS_JSON) as f:
+        rd = json.load(f)
+
+    all_snaps = []
+    for d in rd.get("run_dirs", []):
+        snaps = _load_snapshots(d)
+        if snaps:
+            all_snaps.append(snaps)
+
+    if not all_snaps:
+        return {}, {}
+
+    tick_sets    = [set(s["tick"] for s in snaps) for snaps in all_snaps]
+    common_ticks = sorted(set.intersection(*tick_sets))
+
+    care_by_tick = {}
+    lr_by_tick   = {}
+    for t in common_ticks:
+        c_vals = [
+            next(s["avg_care_weight"]   for s in snaps if s["tick"] == t)
+            for snaps in all_snaps
+        ]
+        l_vals = [
+            next(s.get("avg_learning_rate", 0.1) for s in snaps if s["tick"] == t)
+            for snaps in all_snaps
+        ]
+        care_by_tick[t] = _mean(c_vals)
+        lr_by_tick[t]   = _mean(l_vals)
+
+    return care_by_tick, lr_by_tick
+
+
+# =============================================================================
+# Multi-seed CI plot (3 panels + Phase 3 overlay + Baldwin annotation)
 # =============================================================================
 
 def plot_multi_seed_ci(
     all_snapshots: list[list[dict]],
     seeds: list[int],
     output_dir: str,
+    baldwin_classifications: list[dict] = None,
 ) -> None:
     """
-    3-panel CI plot:
-      Panel 1 — care_weight mean +/- 95% CI (is recovery robust?)
-      Panel 2 — learning_rate mean +/- 95% CI (is late sweep consistent?)
-      Panel 3 — forage_weight mean (hitchhiking check — should stay flat)
+    3-panel CI plot with Phase 3 baseline overlay and Baldwin annotation.
+      Panel 1 — care_weight: mean +/- 95% CI + Phase 3 mean dashed
+      Panel 2 — learning_rate: mean +/- 95% CI + Phase 3 mean dashed
+      Panel 3 — forage_weight: mean (hitchhiking check)
     """
     if plt is None or not all_snapshots:
         return
 
     os.makedirs(output_dir, exist_ok=True)
 
-    tick_sets = [set(s["tick"] for s in snaps) for snaps in all_snapshots]
+    tick_sets    = [set(s["tick"] for s in snaps) for snaps in all_snapshots]
     common_ticks = sorted(set.intersection(*tick_sets))
     if not common_ticks:
         print("No common ticks across seeds — skipping CI plot.")
         return
 
-    def get_series(snaps: list[dict], key: str) -> dict:
-        return {s["tick"]: s.get(key, 0.0) for s in snaps}
+    def get_val(snaps: list[dict], t: int, key: str) -> float:
+        for s in snaps:
+            if s["tick"] == t:
+                return s.get(key, 0.0)
+        return 0.0
 
-    care_by_seed   = [get_series(s, "avg_care_weight")   for s in all_snapshots]
-    lr_by_seed     = [get_series(s, "avg_learning_rate") for s in all_snapshots]
-    forage_by_seed = [get_series(s, "avg_forage_weight") for s in all_snapshots]
+    care_by_seed   = [[get_val(snaps, t, "avg_care_weight")   for t in common_ticks] for snaps in all_snapshots]
+    lr_by_seed     = [[get_val(snaps, t, "avg_learning_rate") for t in common_ticks] for snaps in all_snapshots]
+    forage_by_seed = [[get_val(snaps, t, "avg_forage_weight") for t in common_ticks] for snaps in all_snapshots]
 
-    care_mean, care_ci = [], []
-    lr_mean, lr_ci     = [], []
-    forage_mean        = []
+    care_mean  = [_mean([s[i] for s in care_by_seed])   for i in range(len(common_ticks))]
+    lr_mean    = [_mean([s[i] for s in lr_by_seed])     for i in range(len(common_ticks))]
+    forage_mean= [_mean([s[i] for s in forage_by_seed]) for i in range(len(common_ticks))]
+    care_ci    = [_ci95([s[i] for s in care_by_seed])   for i in range(len(common_ticks))]
+    lr_ci      = [_ci95([s[i] for s in lr_by_seed])     for i in range(len(common_ticks))]
 
-    for t in common_ticks:
-        c_vals = [d[t] for d in care_by_seed]
-        l_vals = [d[t] for d in lr_by_seed]
-        f_vals = [d[t] for d in forage_by_seed]
-        care_mean.append(sum(c_vals) / len(c_vals));   care_ci.append(_ci95(c_vals))
-        lr_mean.append(sum(l_vals) / len(l_vals));     lr_ci.append(_ci95(l_vals))
-        forage_mean.append(sum(f_vals) / len(f_vals))
+    care_lo = [m - c for m, c in zip(care_mean, care_ci)]
+    care_hi = [m + c for m, c in zip(care_mean, care_ci)]
+    lr_lo   = [m - c for m, c in zip(lr_mean, lr_ci)]
+    lr_hi   = [m + c for m, c in zip(lr_mean, lr_ci)]
 
-    care_lo = [m - ci for m, ci in zip(care_mean, care_ci)]
-    care_hi = [m + ci for m, ci in zip(care_mean, care_ci)]
-    lr_lo   = [m - ci for m, ci in zip(lr_mean, lr_ci)]
-    lr_hi   = [m + ci for m, ci in zip(lr_mean, lr_ci)]
+    # Phase 3 baseline overlay
+    p3_care_by_tick, p3_lr_by_tick = _load_phase3_baselines()
+    p3_ticks = [t for t in common_ticks if t in p3_care_by_tick]
+    p3_care  = [p3_care_by_tick[t] for t in p3_ticks]
+    p3_lr    = [p3_lr_by_tick.get(t, 0.1) for t in p3_ticks]
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+    # Baldwin classification counts
+    n_care_recovered = n_lr_swept = n_baldwin = 0
+    if baldwin_classifications:
+        n_care_recovered = sum(1 for c in baldwin_classifications if c.get("care_recovered"))
+        n_lr_swept       = sum(1 for c in baldwin_classifications if c.get("lr_swept"))
+        n_baldwin        = sum(1 for c in baldwin_classifications if c.get("is_baldwin"))
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 11), sharex=True)
     fig.suptitle(
-        f"Phase 4b (Kin-Conditional Plasticity) — {len(seeds)} Seeds, Evolution over 5000 Ticks\n"
-        "Baldwin Effect: is care_weight recovery + learning_rate sweep robust across seeds?",
+        f"Phase 4b (Kin-Conditional Plasticity) vs Phase 3 (No Plasticity)\n"
+        f"{len(seeds)} Seeds — Baldwin Effect: care_weight recovery + learning_rate sweep",
         fontsize=10,
     )
 
     # ── Panel 1: care_weight ──
-    for snaps in all_snapshots:
-        ticks_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
-        care_i  = [get_series(snaps, "avg_care_weight")[t] for t in ticks_i]
-        ax1.plot(ticks_i, care_i, color="seagreen", alpha=0.15, linewidth=1)
+    for i, snaps in enumerate(all_snapshots):
+        t_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
+        c_i = [get_val(snaps, t, "avg_care_weight") for t in t_i]
+        ax1.plot(t_i, c_i, color="seagreen", alpha=0.12, linewidth=1)
+
     ax1.plot(common_ticks, care_mean, color="seagreen", linewidth=2.5,
-             label=f"mean care_weight (n={len(seeds)})")
-    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.3, color="seagreen",
-                     label="95% CI")
-    ax1.axhline(0.500, color="gray",    linestyle="--", linewidth=1.0, label="Gen 0 start (0.500)")
-    ax1.axhline(0.365, color="crimson", linestyle=":",  linewidth=1.2, label="R0 survivors (0.365)")
+             label=f"Phase 4b mean (n={len(seeds)})")
+    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.25, color="seagreen",
+                     label="Phase 4b 95% CI")
+    if p3_ticks:
+        ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.8,
+                 linestyle="--", label="Phase 3 mean (no plasticity)", zorder=4)
+    ax1.axhline(0.500, color="gray",    linestyle="--", linewidth=0.9, alpha=0.7,
+                label="Gen 0 start (0.500)")
+    ax1.axhline(0.365, color="crimson", linestyle=":",  linewidth=1.2,
+                label="R0 survivors (0.365)")
     ax1.set_ylabel("care_weight")
     ax1.set_ylim(0, 1)
-    ax1.legend(loc="upper right", fontsize=8)
-    ax1.grid(True, alpha=0.25)
+    ax1.legend(loc="upper right", fontsize=8, ncol=2)
+    ax1.grid(True, alpha=0.2)
+    if baldwin_classifications:
+        ax1.annotate(
+            f"Care recovery: {n_care_recovered}/{len(seeds)} seeds",
+            xy=(0.02, 0.06), xycoords="axes fraction", fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", edgecolor="gray"),
+        )
 
     # ── Panel 2: learning_rate ──
     for snaps in all_snapshots:
-        ticks_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
-        lr_i    = [get_series(snaps, "avg_learning_rate")[t] for t in ticks_i]
-        ax2.plot(ticks_i, lr_i, color="mediumpurple", alpha=0.15, linewidth=1)
+        t_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
+        l_i = [get_val(snaps, t, "avg_learning_rate") for t in t_i]
+        ax2.plot(t_i, l_i, color="mediumpurple", alpha=0.12, linewidth=1)
+
     ax2.plot(common_ticks, lr_mean, color="mediumpurple", linewidth=2.5,
-             label=f"mean learning_rate (n={len(seeds)})")
-    ax2.fill_between(common_ticks, lr_lo, lr_hi, alpha=0.3, color="mediumpurple",
-                     label="95% CI")
-    ax2.axhline(0.100, color="gray", linestyle="--", linewidth=1.0,
+             label=f"Phase 4b mean (n={len(seeds)})")
+    ax2.fill_between(common_ticks, lr_lo, lr_hi, alpha=0.25, color="mediumpurple",
+                     label="Phase 4b 95% CI")
+    if p3_ticks:
+        ax2.plot(p3_ticks, p3_lr, color="gray", linewidth=1.8,
+                 linestyle="--", label="Phase 3 mean (fixed near 0.1)", zorder=4)
+    ax2.axhline(0.100, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
                 label="Gen 0 start (0.100)")
     ax2.set_ylabel("learning_rate")
     ax2.set_ylim(0, 0.5)
-    ax2.legend(loc="upper left", fontsize=8)
-    ax2.grid(True, alpha=0.25)
+    ax2.legend(loc="upper left", fontsize=8, ncol=2)
+    ax2.grid(True, alpha=0.2)
+    if baldwin_classifications:
+        ax2.annotate(
+            f"LR sweep: {n_lr_swept}/{len(seeds)} seeds  |  Full Baldwin: {n_baldwin}/{len(seeds)}",
+            xy=(0.02, 0.06), xycoords="axes fraction", fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", edgecolor="gray"),
+        )
 
     # ── Panel 3: forage (hitchhiking check) ──
     ax3.plot(common_ticks, forage_mean, color="darkorange", linewidth=2.5,
-             label="mean forage_weight")
-    ax3.axhline(0.500, color="gray", linestyle="--", linewidth=1.0,
+             label="Phase 4b mean forage_weight")
+    ax3.axhline(0.500, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
                 label="Gen 0 start (0.500)")
     ax3.set_xlabel("Tick  (approx. 1 generation per 100 ticks)")
     ax3.set_ylabel("forage_weight")
     ax3.set_ylim(0, 1)
     ax3.legend(loc="upper left", fontsize=8)
-    ax3.grid(True, alpha=0.25)
+    ax3.grid(True, alpha=0.2)
 
     plt.tight_layout()
     path = os.path.join(output_dir, "multi_seed_care_weight_ci.png")
@@ -171,46 +339,52 @@ def plot_multi_seed_ci(
 
 
 # =============================================================================
-# Zero-shot multi-seed bar chart
+# Zero-shot bar chart
 # =============================================================================
 
 def plot_zeroshot_multiseed(
     zs_summaries: list[dict],
+    p2_summaries: list[dict],
     output_dir: str,
 ) -> None:
-    """Per-seed bar chart of zero-shot care-window rate vs Phase 2 baseline."""
+    """Per-seed bar chart: Phase 4b vs Phase 2 window rates side by side."""
     if plt is None or not zs_summaries:
         return
 
     os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
 
-    seeds  = [s["seed"] for s in zs_summaries]
-    rates  = [s["window_rate"] for s in zs_summaries]
-    colors = ["seagreen" if r >= PHASE2_WINDOW_BASELINE else "coral" for r in rates]
-    mean_r = sum(rates) / len(rates)
+    p4b_by_seed = {s["seed"]: s["window_rate"] for s in zs_summaries}
+    p2_by_seed  = {s["seed"]: s["window_rate"] for s in p2_summaries}
+    seeds       = sorted(p4b_by_seed.keys())
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    bars = ax.bar([str(s) for s in seeds], rates, color=colors,
-                  edgecolor="white", linewidth=1.2)
-    ax.axhline(PHASE2_WINDOW_BASELINE, color="steelblue", linestyle="--", linewidth=1.5,
-               label=f"Phase 2 baseline ({PHASE2_WINDOW_BASELINE:.5f})")
-    ax.axhline(mean_r, color="black", linestyle="-", linewidth=1.2,
-               label=f"Phase 4b mean ({mean_r:.5f})")
+    p4b_rates = [p4b_by_seed[s] for s in seeds]
+    p2_rates  = [p2_by_seed.get(s, 0.0) for s in seeds]
 
-    for bar, rate in zip(bars, rates):
-        ax.text(bar.get_x() + bar.get_width() / 2, rate + 0.001,
-                f"{rate:.4f}", ha="center", va="bottom", fontsize=8)
+    x      = list(range(len(seeds)))
+    width  = 0.38
+    p4b_colors = ["seagreen" if p4b_by_seed[s] >= p2_by_seed.get(s, 0) else "coral"
+                  for s in seeds]
 
-    n_above = sum(1 for r in rates if r >= PHASE2_WINDOW_BASELINE)
-    ax.set_xlabel("Seed")
+    fig, ax = plt.subplots(figsize=(12, 5))
+    b1 = ax.bar([xi - width/2 for xi in x], p2_rates,  width, label="Phase 2 (no plasticity)",
+                color="steelblue", alpha=0.8, edgecolor="white")
+    b2 = ax.bar([xi + width/2 for xi in x], p4b_rates, width, label="Phase 4b (kin-cond. plasticity)",
+                color=p4b_colors, alpha=0.9, edgecolor="white")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"seed {s}" for s in seeds], fontsize=8)
     ax.set_ylabel("Care / mother-tick (ticks 0-100)")
     ax.set_title(
-        f"Phase 4b Zero-Shot Care-Window Rate vs Phase 2 Baseline — {len(seeds)} Seeds\n"
-        f"Green = above baseline ({n_above}/{len(seeds)} seeds improved)",
+        "Zero-Shot Care-Window Rate: Phase 4b vs Phase 2 Baseline — Per Seed\n"
+        "Green = Phase 4b above Phase 2 for that seed | Coral = below",
     )
     ax.legend(fontsize=9)
-    ax.set_ylim(0, max(rates) * 1.2)
+    ax.set_ylim(0, max(max(p4b_rates), max(p2_rates)) * 1.3)
     ax.grid(True, axis="y", alpha=0.3)
+
+    for bar, val in zip(b2, p4b_rates):
+        ax.text(bar.get_x() + bar.get_width()/2, val + 0.002,
+                f"{val:.4f}", ha="center", va="bottom", fontsize=7)
 
     plt.tight_layout()
     path = os.path.join(output_dir, "zeroshot_multiseed.png")
@@ -220,28 +394,137 @@ def plot_zeroshot_multiseed(
 
 
 # =============================================================================
+# Statistical tests
+# =============================================================================
+
+def compute_statistical_tests(
+    p4b_rates: list[float],
+    p2_rates: list[float],
+    seeds: list[int],
+) -> dict:
+    """
+    Paired t-test + Wilcoxon signed-rank + Cohen's d.
+    p4b_rates[i] vs p2_rates[i] are matched by seed.
+    """
+    if not HAS_SCIPY:
+        return {"error": "scipy not available"}
+
+    diffs = [b - a for b, a in zip(p4b_rates, p2_rates)]
+    n     = len(diffs)
+    mean_diff = _mean(diffs)
+    ci_diff   = _ci95(diffs)
+
+    t_result = _scipy_stats.ttest_rel(p4b_rates, p2_rates)
+    w_result = _scipy_stats.wilcoxon(diffs) if n >= 6 else None
+
+    # Cohen's d for paired design
+    sd_diffs  = math.sqrt(sum((d - mean_diff)**2 for d in diffs) / (n - 1)) if n > 1 else 0
+    cohens_d  = mean_diff / sd_diffs if sd_diffs > 0 else 0.0
+
+    return {
+        "n_pairs":           n,
+        "mean_difference":   mean_diff,
+        "ci95_difference":   [mean_diff - ci_diff, mean_diff + ci_diff],
+        "paired_ttest": {
+            "t_stat":  float(t_result.statistic),
+            "p_value": float(t_result.pvalue),
+            "df":      n - 1,
+        },
+        "wilcoxon": {
+            "W_stat":  float(w_result.statistic) if w_result else None,
+            "p_value": float(w_result.pvalue)    if w_result else None,
+        },
+        "cohens_d": cohens_d,
+        "effect_size_label": (
+            "large" if abs(cohens_d) >= 0.8 else
+            "medium" if abs(cohens_d) >= 0.5 else
+            "small"
+        ),
+        "per_seed": [
+            {"seed": s, "p4b_rate": b, "p2_rate": a, "diff": b - a}
+            for s, b, a in zip(seeds, p4b_rates, p2_rates)
+        ],
+    }
+
+
+# =============================================================================
+# Phase 2 multi-seed baseline runner
+# =============================================================================
+
+def run_phase2_baselines(seeds: list[int], phase3_run_dirs: dict) -> list[dict]:
+    """
+    For each seed, run Phase 2 zero-shot using Phase 3 evolved genomes (no plasticity).
+    Returns per-seed window rates for paired statistical test.
+    """
+    import csv
+
+    summaries = []
+    for seed in seeds:
+        p3_dir = phase3_run_dirs.get(str(seed))
+        if not p3_dir or not os.path.exists(p3_dir):
+            print(f"  [p2 baseline] seed={seed}: Phase 3 dir not found, skipping")
+            continue
+
+        print(f"--- [p2 baseline] seed={seed} ---")
+        zs_dir = run_p2zs(seed=seed, phase3_run_dir=p3_dir)
+
+        # Compute window rate from care_log.csv + population_history.json
+        care_log = os.path.join(zs_dir, "care_log.csv")
+        pop_file = os.path.join(zs_dir, "population_history.json")
+
+        window_rate = 0.0
+        if os.path.exists(care_log) and os.path.exists(pop_file):
+            with open(care_log) as f:
+                care = list(csv.DictReader(f))
+            with open(pop_file) as f:
+                pop = json.load(f)["population"]
+            w_care = [r for r in care
+                      if r.get("success", "True") in ("True", "1")
+                      and int(r["tick"]) <= MATURITY_AGE]
+            w_mt   = sum(p for t, p in enumerate(pop) if t < MATURITY_AGE)
+            window_rate = len(w_care) / w_mt if w_mt > 0 else 0.0
+
+        summaries.append({
+            "seed":        seed,
+            "window_rate": window_rate,
+            "run_dir":     zs_dir,
+        })
+        print(f"    window_rate={window_rate:.5f}\n")
+
+    return summaries
+
+
+# =============================================================================
 # Main runner
 # =============================================================================
 
 def run_all(seeds: list[int] = SEEDS) -> None:
     os.makedirs(COMBINED_DIR, exist_ok=True)
 
-    evo_run_dirs  = []
-    all_snapshots = []
-    evo_summaries = []
-    zs_run_dirs   = []
-    zs_summaries  = []
+    # ── Load checkpoint (resume if crash recovery) ─────────────────────────
+    cp = _load_checkpoint()
+    done_evo = set(cp["completed_evo"])
+    done_zs  = set(cp["completed_zs"])
 
-    print(f"Phase 4b multi-seed: {len(seeds)} seeds {seeds}\n")
+    evo_run_dirs  = dict(cp["evo_run_dirs"])
+    evo_summaries = list(cp["evo_summaries"])
+    zs_run_dirs   = dict(cp["zs_run_dirs"])
+    zs_summaries  = list(cp["zs_summaries"])
+
+    print(f"Phase 4b multi-seed: {len(seeds)} seeds {seeds}")
+    if done_evo:
+        print(f"  [checkpoint] Resuming. Completed evo seeds: {sorted(done_evo)}")
+    print()
 
     # ── Evolution pass ─────────────────────────────────────────────────────
     for seed in seeds:
-        print(f"--- [evolution] seed={seed} ---")
-        evo_dir = run(seed=seed, stage="evolution_plastic_kin")
-        evo_run_dirs.append(evo_dir)
+        if seed in done_evo:
+            print(f"  [checkpoint] seed={seed} evo already done, skipping.")
+            continue
 
-        snaps = _load_snapshots(evo_dir)
-        all_snapshots.append(snaps)
+        print(f"--- [evolution] seed={seed} ---")
+        evo_dir = run_p4b(seed=seed, stage="evolution_plastic_kin")
+        evo_run_dirs[str(seed)] = evo_dir
 
         top_path = os.path.join(evo_dir, "top_genomes.json")
         if os.path.exists(top_path):
@@ -252,83 +535,151 @@ def run_all(seeds: list[int] = SEEDS) -> None:
             lr   = [g["learning_rate"] for g in genomes]
             lc   = [g["learning_cost"] for g in genomes]
             gens = [g.get("generation", 0) for g in genomes]
+
+            snaps = _load_snapshots(evo_dir)
+            bald  = _classify_baldwin(snaps)
+
             evo_summaries.append({
                 "seed":                    seed,
                 "n_survivors":             len(genomes),
-                "final_care_mean":         sum(cw) / len(cw)   if cw else 0,
-                "final_forage_mean":       sum(fw) / len(fw)   if fw else 0,
-                "final_learning_rate_mean":sum(lr) / len(lr)   if lr else 0,
-                "final_learning_cost_mean":sum(lc) / len(lc)   if lc else 0,
-                "max_generation":          max(gens)            if gens else 0,
+                "final_care_mean":         _mean(cw),
+                "final_forage_mean":       _mean(fw),
+                "final_learning_rate_mean":_mean(lr),
+                "final_learning_cost_mean":_mean(lc),
+                "max_generation":          max(gens) if gens else 0,
+                "is_baldwin":              bald["is_baldwin"],
+                "care_recovery":           bald.get("care_recovery", 0),
+                "lr_delta":                bald.get("lr_delta", 0),
             })
-        print()
+
+        cp["completed_evo"].append(seed)
+        cp["evo_run_dirs"]  = evo_run_dirs
+        cp["evo_summaries"] = evo_summaries
+        _save_checkpoint(cp)
+        print(f"  [checkpoint] seed={seed} evo saved.\n")
 
     # ── Zero-shot pass ────────────────────────────────────────────────────
-    print("=" * 50)
-    print("Starting zero-shot pass...")
-    print("=" * 50 + "\n")
+    print("=" * 55)
+    print("Starting Phase 4b zero-shot pass...")
+    print("=" * 55 + "\n")
 
-    for seed, evo_dir in zip(seeds, evo_run_dirs):
-        print(f"--- [zeroshot] seed={seed} ---")
-        zs_dir = run(seed=seed, stage="zeroshot_plastic_kin", source_dir=evo_dir)
-        zs_run_dirs.append(zs_dir)
+    for seed in seeds:
+        if seed in done_zs:
+            print(f"  [checkpoint] seed={seed} zero-shot already done, skipping.")
+            continue
 
-        m = _load_zeroshot_metrics(zs_dir)
+        evo_dir = evo_run_dirs.get(str(seed))
+        if not evo_dir:
+            print(f"  seed={seed}: no evo dir found, skipping zero-shot.")
+            continue
+
+        print(f"--- [zeroshot_plastic_kin] seed={seed} ---")
+        zs_dir = run_p4b(seed=seed, stage="zeroshot_plastic_kin", source_dir=evo_dir)
+        zs_run_dirs[str(seed)] = zs_dir
+
+        m      = _load_zeroshot_metrics(zs_dir)
         window = m.get("care_window", {})
         zs_summaries.append({
             "seed":        seed,
             "window_rate": window.get("care_per_mother_tick_in_window", 0.0),
             "window_care": window.get("care_events_in_window", 0),
             "last_alive":  m.get("last_alive_tick", 0),
+            "run_dir":     zs_dir,
         })
-        print()
+
+        cp["completed_zs"].append(seed)
+        cp["zs_run_dirs"]  = zs_run_dirs
+        cp["zs_summaries"] = zs_summaries
+        _save_checkpoint(cp)
+        print(f"  [checkpoint] seed={seed} zero-shot saved.\n")
+
+    # ── Phase 2 baseline pass (for paired stats) ──────────────────────────
+    print("=" * 55)
+    print("Running Phase 2 baselines (Phase 3 genomes, no plasticity)...")
+    print("=" * 55 + "\n")
+
+    p3_phase3_run_dirs = {}
+    if os.path.exists(P3_RUN_DIRS_JSON):
+        with open(P3_RUN_DIRS_JSON) as f:
+            rd = json.load(f)
+        for s, d in zip(rd["seeds"], rd["run_dirs"]):
+            p3_phase3_run_dirs[str(s)] = d
+
+    p2_summaries = run_phase2_baselines(seeds, p3_phase3_run_dirs)
 
     # ── Save manifests ────────────────────────────────────────────────────
     with open(os.path.join(COMBINED_DIR, "run_dirs.json"), "w") as f:
-        json.dump({"seeds": seeds, "evo_run_dirs": evo_run_dirs,
-                   "zs_run_dirs": zs_run_dirs}, f, indent=2)
+        json.dump({
+            "seeds": seeds,
+            "evo_run_dirs": evo_run_dirs,
+            "zs_run_dirs":  zs_run_dirs,
+        }, f, indent=2)
+
     with open(os.path.join(COMBINED_DIR, "summary.json"), "w") as f:
         json.dump(evo_summaries, f, indent=2)
+
     with open(os.path.join(COMBINED_DIR, "zeroshot_summary.json"), "w") as f:
         json.dump(zs_summaries, f, indent=2)
 
+    with open(os.path.join(COMBINED_DIR, "phase2_baseline_summary.json"), "w") as f:
+        json.dump(p2_summaries, f, indent=2)
+
+    # ── Statistical tests ─────────────────────────────────────────────────
+    p4b_rates = [s["window_rate"] for s in zs_summaries]
+    p2_rates  = [s["window_rate"] for s in p2_summaries]
+    test_seeds = [s["seed"] for s in zs_summaries]
+
+    if len(p4b_rates) == len(p2_rates) and len(p4b_rates) > 0:
+        stat_results = compute_statistical_tests(p4b_rates, p2_rates, test_seeds)
+        with open(os.path.join(COMBINED_DIR, "statistical_tests.json"), "w") as f:
+            json.dump(stat_results, f, indent=2)
+    else:
+        stat_results = {}
+        print("Warning: mismatched Phase 4b / Phase 2 sample sizes — skipping stats.")
+
     # ── Plots ─────────────────────────────────────────────────────────────
-    plot_multi_seed_ci(all_snapshots, seeds, COMBINED_DIR)
+    all_snapshots = [_load_snapshots(evo_run_dirs[str(s)]) for s in seeds if str(s) in evo_run_dirs]
+    bald_class    = [s for s in evo_summaries]  # already have is_baldwin per seed
+
+    plot_multi_seed_ci(all_snapshots, seeds, COMBINED_DIR, bald_class)
     plot_start_vs_end_multiseed(evo_summaries, COMBINED_DIR)
-    plot_zeroshot_multiseed(zs_summaries, COMBINED_DIR)
+    if p2_summaries:
+        plot_zeroshot_multiseed(zs_summaries, p2_summaries, COMBINED_DIR)
 
     # ── Summary table ─────────────────────────────────────────────────────
     print("\n=== Phase 4b Multi-Seed Evolution Summary ===")
-    print(f"{'Seed':>5}  {'Surv':>5}  {'care_w':>7}  {'forage':>7}  {'lr':>7}  {'max_gen':>7}")
-    print("-" * 50)
+    print(f"{'Seed':>5}  {'Surv':>5}  {'care_w':>7}  {'forage':>7}  {'lr':>7}  {'Baldwin?':>9}")
+    print("-" * 55)
     for s in evo_summaries:
+        tag = "YES" if s.get("is_baldwin") else "no"
         print(f"{s['seed']:>5}  {s['n_survivors']:>5}  "
               f"{s['final_care_mean']:>7.4f}  {s['final_forage_mean']:>7.4f}  "
-              f"{s['final_learning_rate_mean']:>7.4f}  {s['max_generation']:>7}")
+              f"{s['final_learning_rate_mean']:>7.4f}  {tag:>9}")
 
-    care_finals = [s["final_care_mean"] for s in evo_summaries]
+    care_finals = [s["final_care_mean"]          for s in evo_summaries]
     lr_finals   = [s["final_learning_rate_mean"] for s in evo_summaries]
-    print("-" * 50)
-    print(f"  Mean care_weight : {sum(care_finals)/len(care_finals):.4f}"
-          f"  +/- {_ci95(care_finals):.4f} (95% CI)")
-    print(f"  Mean learn_rate  : {sum(lr_finals)/len(lr_finals):.4f}"
-          f"  +/- {_ci95(lr_finals):.4f} (95% CI)")
+    n_baldwin   = sum(1 for s in evo_summaries if s.get("is_baldwin"))
+    print("-" * 55)
+    print(f"  Mean care_weight : {_mean(care_finals):.4f} +/- {_ci95(care_finals):.4f} (95% CI)")
+    print(f"  Mean learn_rate  : {_mean(lr_finals):.4f} +/- {_ci95(lr_finals):.4f} (95% CI)")
+    print(f"  Baldwin Effect   : {n_baldwin}/{len(evo_summaries)} seeds")
 
-    print("\n=== Phase 4b Zero-Shot Window Rate ===")
-    print(f"{'Seed':>5}  {'window_rate':>12}  {'vs baseline':>12}  {'last_alive':>10}")
-    print("-" * 47)
-    for s in zs_summaries:
-        delta = s["window_rate"] - PHASE2_WINDOW_BASELINE
-        pct   = delta / PHASE2_WINDOW_BASELINE * 100
-        print(f"{s['seed']:>5}  {s['window_rate']:>12.5f}  "
-              f"{pct:>+11.1f}%  {s['last_alive']:>10}")
-    wrates = [s["window_rate"] for s in zs_summaries]
-    print("-" * 47)
-    print(f"  Mean window rate : {sum(wrates)/len(wrates):.5f}"
-          f"  +/- {_ci95(wrates):.5f} (95% CI)")
-    print(f"  Phase 2 baseline : {PHASE2_WINDOW_BASELINE:.5f}")
-    n_above = sum(1 for r in wrates if r >= PHASE2_WINDOW_BASELINE)
-    print(f"  Seeds above baseline: {n_above}/{len(wrates)}")
+    print("\n=== Zero-Shot Statistical Test (Phase 4b vs Phase 2, paired) ===")
+    if stat_results and "paired_ttest" in stat_results:
+        pt = stat_results["paired_ttest"]
+        wt = stat_results["wilcoxon"]
+        print(f"  Mean difference  : {stat_results['mean_difference']:+.5f}")
+        print(f"  95% CI of diff   : [{stat_results['ci95_difference'][0]:.5f}, {stat_results['ci95_difference'][1]:.5f}]")
+        print(f"  Paired t-test    : t={pt['t_stat']:.4f}, p={pt['p_value']:.4f}, df={pt['df']}")
+        print(f"  Wilcoxon         : W={wt['W_stat']}, p={wt['p_value']:.4f}" if wt["W_stat"] else "  Wilcoxon: n too small")
+        print(f"  Cohen's d        : {stat_results['cohens_d']:.4f} ({stat_results['effect_size_label']})")
+
+        p = pt["p_value"]
+        if p < 0.05:
+            print(f"  Result: SIGNIFICANT (p={p:.4f} < 0.05) — Phase 4b window rate reliably higher")
+        else:
+            print(f"  Result: NOT significant (p={p:.4f} >= 0.05) — difference not reliable")
+
     print(f"\nCombined output: {COMBINED_DIR}")
 
 
