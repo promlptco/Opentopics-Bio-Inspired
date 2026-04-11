@@ -51,6 +51,24 @@ class Simulation:
         if neighbors:
             return random.choice(neighbors)
         return self._random_free_pos()
+
+    def _birth_pos(self, x: int, y: int) -> tuple[int, int]:
+        """Find a free birth position within birth_scatter_radius of (x, y).
+        Phase 5: tight radius keeps newborns near kin (natal philopatry).
+        Falls back to _random_free_pos only if the radius is fully occupied.
+        """
+        radius = self.config.birth_scatter_radius
+        candidates = []
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if self.world.in_bounds(nx, ny) and self.world.is_free((nx, ny)):
+                    candidates.append((nx, ny))
+        if candidates:
+            return random.choice(candidates)
+        return self._random_free_pos()
     
     def _spawn_food(self, count: int) -> None:
         for _ in range(count):
@@ -105,7 +123,11 @@ class Simulation:
             for child in self.children:
                 if not child.alive:
                     continue
-                child.update_hunger(self.config.hunger_rate)
+                # Phase 5: infants hunger faster, making B existential (not marginal)
+                hunger_rate = self.config.hunger_rate
+                if self.config.infant_starvation_multiplier != 1.0 and child.age < self.config.maturity_age:
+                    hunger_rate *= self.config.infant_starvation_multiplier
+                child.update_hunger(hunger_rate)
                 mother = self._get_mother_by_id(child.mother_id)
                 if mother and mother.alive:
                     steps = self.world.get_distance(child.pos, mother.pos)
@@ -326,8 +348,8 @@ class Simulation:
             if len(self.mothers) + len(self.children) >= self.config.max_population:
                 continue
             
-            # Spawn child
-            cx, cy = self._nearby_pos(mother.x, mother.y)
+            # Spawn child — birth_scatter_radius controls natal philopatry (Phase 5)
+            cx, cy = self._birth_pos(mother.x, mother.y)
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
             self.children.append(child)

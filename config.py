@@ -51,3 +51,13 @@ class Config:
     plasticity_enabled: bool = True
     reproduction_enabled: bool = True
     mutation_enabled: bool = True
+
+    # Phase 5 — Ecological Emergence
+    # infant_starvation_multiplier: infants hunger this many times faster than adults
+    #   during [0, maturity_age]. B becomes existential (alive/dead) instead of marginal.
+    #   Phase 5 sets this to 3.0; default 1.0 = Phase 3/4 behaviour.
+    infant_starvation_multiplier: float = 1.0
+    # birth_scatter_radius: Chebyshev radius searched for a free cell at birth.
+    #   Tighter radius keeps kin spatially clustered (natal philopatry).
+    #   Phase 5 sets this to 2; default 8 ~ random placement (current Phase 3/4 behaviour).
+    birth_scatter_radius: int = 8

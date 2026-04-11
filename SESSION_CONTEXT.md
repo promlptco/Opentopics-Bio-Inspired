@@ -150,48 +150,62 @@ python experiments/phase3_maternal/watch.py
 6. ~~Hamilton post-hoc~~ COMPLETE — rB−C≈0, 90% foreign, proximity kin bias confirmed
 7. ~~Zero-shot baseline~~ COMPLETE — seed=42, 0.09069/mother-tick
 
-### Part 1 Wrap-Up (NEXT SESSION)
-- **Phase 0:** Write conclusion — does maternal instinct emerge? (draft in NEXT SESSION PLAN below)
-- **Phase A:** Code cleanup
-- **Phase B:** Full pipeline recheck
-- **Phase C:** First draft report
+### Part 1 Wrap-Up — DEFERRED (after Phase 5)
+- Phase A: Code cleanup
+- Phase B: Full pipeline recheck
+- Phase C: First draft report
+*Conclusion reframing deferred — see Scientific Reframe below. Phase 5 results will determine final conclusion.*
 
 ---
 
-### Part 2 — Extended Plasticity (Future Chapter)
-*Motivation: Part 1 showed partial Baldwin Effect — plasticity evolves learning capacity but fails to genetically assimilate care. Can more complex plasticity mechanisms complete the loop?*
+### Part 2 — Phase 5: Ecological Emergence (IN PROGRESS — 2026-04-11)
+*Motivation: Phase 3–4 showed care is evolutionarily unstable when B is weak and r is diluted. Phase 5 tests whether infant dependency + natal philopatry can REVERSE the selection gradient.*
 
-**Phase 5a: Stronger Kin-Conditional Plasticity**
-- Increase plastic_gain range (currently fixed 0.05). Let it evolve as a genome parameter.
-- Hypothesis: if plastic_gain is evolvable, assimilation should follow faster.
-- Expected output: care_weight recovery in > 2/10 seeds, possible full assimilation.
+**Calibration findings (2026-04-11):**
+- `infant_starvation_multiplier=3.0` (original design): evolutionary trap — selection works but population crashes during bottleneck (all runs extinct within 400–900 ticks)
+- The model's decision model (`choose_domain` = argmax) requires care_weight > ~0.075 for care to ever fire at typical energy levels. True near-zero init (0–0.05) is below the operative threshold
+- `mult=1.15` (calibrated): infants die at tick ~108 without care (maturity_age=100), B near-existential. Population survives, selection gradient turns POSITIVE (+24% over 5000 ticks)
+- Confirmed via scan: mult=1.0→flat/slight decline, mult=1.10→slight upward, mult=1.15→clear upward (+24%)
 
-**Phase 5b: Epigenetic Inheritance**
-- Offspring inherit a weighted average of mother's *current* (plastic-updated) care_weight, not just the genetic baseline.
-- Lamarckian-style soft inheritance — direct transmission of learned behavior.
-- Hypothesis: epigenetic channel is the missing piece for full Baldwin assimilation.
-- Key comparison: Phase 4b (no epigenetics) vs Phase 5b (epigenetics) zero-shot rates.
+**Phase 5 scientific claim (revised):**
+- Init: care_weight = uniform(0, 0.50), **mean=0.25** (half of Phase 3 start, below Phase 3 eroded equilibrium 0.42)
+- This is "depleted care" not "zero care" — the model cannot support literal zero due to decision mechanics
+- KEY FINDING: same ecological setup as Phase 3 but with mult=1.15 **REVERSES** the selection gradient
+  - Phase 3 (mult=1.0): care declines 0.500→0.420, r=−0.178
+  - Phase 5 (mult=1.15): care BUILDS 0.250→0.355+, r=POSITIVE (target)
 
-**Phase 5c: Social Learning (Copy Successful Mothers)**
-- Mothers observe neighbors' care outcomes and copy high-fitness neighbors' genome weights.
-- Cultural transmission layer on top of genetic evolution.
-- Hypothesis: social learning accelerates convergence to stable high-care equilibrium.
+**Phase 5a: evolution** — 5000 ticks, seeds 42–51, mult=1.15, scatter=2, plasticity=OFF
+**Phase 5b: control** — same but scatter=8 (standard dispersal). Tests natal philopatry contribution.
+**Phase 5c: zero-shot** — evolved genomes, no reproduction/mutation, care_window rate vs Phase 3 baseline
 
-**Phase 5d: Kin Recognition Evolution**
-- Add a `kin_sensitivity` genome parameter (0–1). At 1.0, mother only cares for own children. At 0.0, distress-based as now.
-- Hypothesis: kin recognition evolves to reduce wasted care on foreign children (r=0), reducing cost → stable care equilibrium.
-- Tests whether Hamilton's rule can be satisfied endogenously.
+**Implementation status (2026-04-11):**
+- Config: `infant_starvation_multiplier` + `birth_scatter_radius` added ✓
+- Simulation: infant hunger multiplier + birth_pos scatter ✓
+- `experiments/phase5_emergence/run.py` ✓ (survival_gate / evolution / control / zeroshot)
+- `experiments/phase5_emergence/run_multi_seed.py` ✓
+- Survival gate seed=42: PASSED (32 mothers at tick 1000)
+- Full single-seed run: IN PROGRESS
 
-### Part 3 — Final Thesis Synthesis (Future Chapter)
-- Compare all plasticity mechanisms: Phase 4 (kin-conditional) vs 5a–5d
-- Which mechanism(s) allow full genetic assimilation?
-- Which produces the most stable maternal care across generations?
-- Multi-mechanism combination experiment (best of 5a+5b together)
-- Final thesis conclusion: minimal conditions for stable maternal instinct emergence
+**Expected outcomes (updated):**
+| Metric | Phase 3 | Phase 4b | Phase 5 (calibrated) |
+|--------|---------|----------|----------------------|
+| Init care_weight | 0.500 | 0.500 | **0.25 (mean)** |
+| Final care_weight | 0.420 | 0.441 | **> 0.350 (RISING)** |
+| Selection gradient r | −0.178 | −0.1887 | **> 0 (positive — key result)** |
+| Zero-shot assimilation | p=0.815 | p=0.815 | **TBD (pending run)** |
 
 ---
 
-**YOU ARE HERE: Part 1 Wrap-Up — Conclude → Clean → Recheck → First Draft Report**
+### Part 3 — Extended Plasticity (Future Chapter, if needed)
+*Revisit only if Phase 5 demonstrates emergence — these become "refinement" experiments, not "fix the broken system" experiments.*
+- Epigenetic inheritance (Lamarckian soft transmission)
+- Social learning (copy successful mothers)
+- Evolvable kin sensitivity genome parameter
+- Multi-mechanism combinations
+
+---
+
+**YOU ARE HERE: Phase 5 — Ecological Emergence (care from zero)**
 
 ---
 
@@ -429,59 +443,141 @@ Phase 2 baseline = same Phase 3 genomes tested without plasticity (matched by se
 
 ---
 
-## NEXT SESSION PLAN — Conclude → Cleanup → Recheck → Report
+## Scientific Reframe — 2026-04-11
 
-### Phase 0: Conclude (Do This First)
+### The Problem with the Original Conclusion
 
-Answer the core hypothesis before touching code. Review each question against the data, then write a 1-paragraph scientific conclusion.
+The Phase 0 draft claimed: *"maternal instinct CAN emerge from evolutionary dynamics."*
 
-**Core Question: Can maternal instinct emerge from a bio-inspired evolutionary simulation?**
+**This is incorrect framing.** In evolutionary game theory, "emerge from evolutionary dynamics" implies the population started near zero care and selection built it upward. That is not what happened:
 
-| Hypothesis | Data | Verdict |
-|------------|------|---------|
-| H1: Care can emerge from random genomes (not hard-coded) | Phase 1 survival gate: care_weight survivors avg 0.365 (vs 0.5 fixed). Agents CHOSE to care from random start. | PARTIAL — emerges initially, then erodes |
-| H2: Evolution selects AGAINST care (fitness cost exists) | Phase 3: care 0.500→0.420, selection r=−0.178 (n=648 births). Cost is pre-reproductive. 9/10 seeds decline. | CONFIRMED |
-| H3: Kin-conditional plasticity (Baldwin Effect) can buffer the decline | Phase 4b: care 0.441 vs Phase 3's 0.420 (+10pp). LR swept 8/10 seeds. Assimilation absent (p=0.815). | PARTIAL — buffered but not reversed |
-| H4: Kin bias emerges from proximity (no kin recognition needed) | 10.5% own-child care by proximity alone. Hamilton rB−C≈−0.0004 (near break-even). | CONFIRMED |
-| H5: Foreign care is by-product, not altruism toward non-kin | 89.5% foreign events (r=0) — spatial proximity artifact, not selection target. | CONFIRMED |
+1. Random initialization → mean care_weight ≈ 0.500 (given by chance, not selection)
+2. Survival gate → passively filtered agents that already had care
+3. Evolution (Phase 3 onward) → immediately and consistently **eroded** care (r=−0.178, 9/10 seeds)
 
-**Synthesis to write (draft):**
-> Maternal care emerged as a phenotypic behavior from random genomes — agents with moderate care weights survived the survival filter and produced offspring. However, sustained selection pressure eroded care (r=−0.178, 9/10 seeds declining), because care costs are paid before reproduction. Kin-conditional phenotypic plasticity partially arrested this erosion: genomes evolved greater learning capacity (learning_rate 0.100→0.155, 8/10 seeds) under kin-aligned feedback, and mean care_weight stabilized 10 percentage points higher than Phase 3. However, genetic assimilation was absent — removing within-lifetime learning collapsed performance to Phase 3 levels (paired t-test p=0.815). Kin bias emerged purely from birth-proximity without any kin recognition mechanism, consistent with Hamilton's rule operating at r≈0 (foreign care) with rB−C≈0 for own-lineage events. Conclusion: maternal instinct CAN emerge from evolutionary dynamics, but pure selection erodes it — phenotypic plasticity is necessary (though not sufficient alone) to maintain it across generations.
+Evolution was never the constructive force. It was the destructive one. Calling that "emergence" misrepresents the mechanism.
 
-**Action for this phase:** Read the synthesis draft above, adjust if needed, and save final version to SESSION_CONTEXT.md before proceeding to Phase A.
+### What Phases 1–4 Actually Tested
+
+*Given care initialized at moderate levels by random sampling + survival filtering, can natural selection maintain it?*
+
+**Answer: No.** Selection erodes it. Plasticity buffers erosion but cannot reverse it (assimilation absent p=0.815).
+
+Phases 1–4 establish the **maintenance conditions problem** — not emergence. They show:
+- Care is evolutionarily unstable without sufficient ecological pressure (Hamilton violated for 89.5% of events)
+- Plasticity is a stabilizing force but not sufficient for genetic assimilation
+- Kin bias emerges from birth-proximity (confirmed), but effective r too low to satisfy rB > C
+
+### Why Care Won't Emerge from Zero in the Current Design
+
+| Term | Value | Block |
+|------|-------|-------|
+| r | ~0.1 (90% foreign) | Care benefit diluted across unrelated offspring |
+| B | Hunger reduction | Marginal — children survive without care, just hungrier |
+| C | Energy cost | Real, paid every event |
+
+A rare care mutant (care_weight = 0.1) in a zero-care population pays real cost but captures near-zero inclusive fitness gain. Selected out before spreading.
+
+### The Fix: Infant Dependency Ecology
+
+**Make infant survival depend on receiving care.** B becomes existential (alive/dead) instead of marginal (less hungry). Even with diluted r, rB >> C when infant_survival_value is large enough.
+
+This is the mammalian analogy: infants are physiologically helpless → without care they die → care genes spread via offspring survival → maternal instinct evolves.
+
+No kin recognition. No hard-coded targets. Mothers still pick highest-distress child from ALL visible. The ecology creates the selection pressure.
+
+### Corrected Research Question (for Phase 5)
+
+**Old question:** Can maternal instinct emerge from evolutionary dynamics?
+**Corrected question:** What are the minimum ecological conditions under which maternal care emerges from near-zero and becomes genetically assimilated?
+
+**Phase 5 is the experiment that answers this correctly.**
 
 ---
 
-### Phase A: Code Cleanup
-1. Remove dead code — `stage="evolution_plastic"` (v1 lineage-blind) paths can stay but clearly mark as "null result baseline"
-2. Remove any leftover debug prints / placeholder comments
-3. Verify all imports are used, no unused variables
-4. Confirm `config.py` is clean and all flags are documented
-5. Check all experiment scripts have a proper `if __name__ == "__main__"` guard
+## Phase 5 — Ecological Emergence (IN PROGRESS 2026-04-11)
 
-### Phase B: Full Pipeline Recheck (from beginning)
-Run each stage in order and verify outputs are intact:
-1. `python experiments/phase1_survival/run.py` — survival gate must pass
-2. Check `outputs/phase3_maternal/run_20260408_191406_seed42` exists (C0 baseline frozen)
-3. Check `outputs/phase3_maternal/run_20260409_125601_seed42` exists (R0)
-4. Check `outputs/phase3_maternal/run_20260409_232012_seed42` exists (evolution)
-5. Check `outputs/phase3_maternal/multi_seed_evolution/` — 10 seeds intact
-6. Check `outputs/phase2_zeroshot/run_20260409_233243_seed42` — zero-shot baseline
-7. Check `outputs/phase4_plasticity/run_20260410_113356_seed42` — Phase4 v2 canonical
-8. Check `outputs/phase4_plasticity/multi_seed_evolution/statistical_tests.json` exists
-9. Run `python experiments/phase4_plasticity/make_thesis_plots.py` — all 4 thesis plots regenerate cleanly
-10. Spot-check key numbers: care_weight evolution r=−0.178, Phase4b LR 0.1548±0.017, zero-shot p=0.815
+**Folder:** `experiments/phase5_emergence/`
+**Output dir:** `outputs/phase5_emergence/`
 
-### Phase C: Report Writing
-Structure (based on what the simulation produced):
-1. **Introduction** — Why maternal care? Baldwin Effect hypothesis. Hamilton's rule framing.
-2. **Model** — Grid world, agents, genome (care/forage/self/lr/lc), stages.
-3. **Results Phase 1** — Survival gate: what min config enables stable population?
-4. **Results Phase 2/3** — Evolution of care: r=−0.178 selection, pre-reproductive cost, 9/10 seeds decline.
-5. **Results Phase 4** — Baldwin Effect: v1 null (lineage-blind), v2 partial (kin-conditional): lr evolved 8/10, assimilation absent (p=0.815). Seed 42 strongest case.
-6. **Hamilton Post-hoc** — rB−C≈0 (near break-even), 90% foreign care (no kin recognition), proximity creates kin bias.
-7. **Discussion** — Why partial? Why no assimilation? What would drive full assimilation?
-8. **Conclusion**
+### Goal
+Demonstrate that infant dependency ecology REVERSES the selection gradient for care: from negative (Phase 3, r=−0.178, eroding) to positive (Phase 5, r>0, building). Show care building upward from a depleted baseline through pure natural selection.
+
+### Mechanism 1 — Infant Starvation (core)
+
+Config param: `infant_starvation_multiplier = 1.15` (calibrated — see note below)
+- During `[0, maturity_age]`: child hunger rate *= 1.15
+- Without care, infants die at tick ~108 (just after maturity_age=100) → B near-existential
+- With care, infants survive → mother's care genes propagate
+
+**Calibration note:** Original design used mult=3.0, but this creates an evolutionary trap: selection works (care builds) but population crashes in the bottleneck before stabilizing. Scanned mult=1.0 through 1.20:
+- mult=1.0: flat/slight decline (Phase 3 direction)
+- mult=1.10: slight upward
+- mult=1.15: **clear upward trend (+24% in 5000 ticks)** ← SELECTED
+- mult≥1.25: evolutionary trap, population goes extinct
+
+### Mechanism 2 — Tighter Natal Philopatry (r amplifier)
+
+Config param: `birth_scatter_radius = 2` (Phase 5a), `birth_scatter_radius = 8` (Phase 5b control)
+- Infants born within 2 Chebyshev cells of mother → kin stay spatially clustered
+- Effective r increases from ~0.1 toward ~0.20 without kin recognition
+
+### Initialization
+
+```python
+# Phase 5 init — depleted care baseline
+care_weight   = uniform(0.0, 0.50)   # mean=0.25, vs. 0.5 start in Phase 3
+forage_weight = uniform(0.0, 1.0)
+self_weight   = uniform(0.0, 1.0)
+plasticity_enabled          = False   # clean genetic signal
+mutation_enabled            = True
+reproduction_enabled        = True
+infant_starvation_multiplier = 1.15
+birth_scatter_radius         = 2
+```
+
+### Key Measurements
+
+| Metric | Phase 3 result | Phase 5 prediction |
+|--------|---------------|-------------------|
+| Init care_weight | 0.500 mean | **0.250 mean (depleted)** |
+| Final care_weight | 0.420 (eroded) | **> 0.355 (building)** |
+| Selection gradient r | −0.178 (eroding) | **> 0 (positive — KEY)** |
+| Trajectory direction | ↓ declining | **↑ rising** |
+| Zero-shot assimilation | p=0.815 (none) | **TBD** |
+
+### Phase 5 Stages
+
+1. **5a evolution** — 5000 ticks (50 gens), seeds 42–51, mult=1.15, scatter=2, no plasticity
+2. **5b evolution control** — same but scatter=8 — tests natal philopatry contribution
+3. **5c zero-shot** — load 5a genomes, no plasticity/reproduction/mutation — assimilation test
+
+### Config Flags
+
+| Flag | Phase 5a | Phase 5b control | Notes |
+|------|---------|-----------------|-------|
+| `infant_starvation_multiplier` | 1.15 | 1.15 | Calibrated for positive gradient + population survival |
+| `birth_scatter_radius` | 2 | 8 | Tight vs dispersed natal philopatry |
+| `plasticity_enabled` | False | False | OFF — clean genetic selection signal |
+| `mutation_enabled` | True | True | Required for emergence |
+| `care_weight_init` | U(0, 0.50) | U(0, 0.50) | Mean=0.25, depleted baseline |
+
+### Survival Gate
+
+Before each 5000-tick run:
+- Run 1000 ticks (10 gens) with same config
+- Pass: ≥5 mothers at tick 1000
+- Seed 42 PASSED: 32 mothers at tick 1000 ✓
+
+---
+
+## Archived: Phase 0 Draft (Superseded)
+
+*Original conclusion draft — kept for reference. Framing was incorrect (see Scientific Reframe above).*
+
+> Maternal care emerged as a phenotypic behavior from random genomes... Conclusion: maternal instinct CAN emerge from evolutionary dynamics, but pure selection erodes it — phenotypic plasticity is necessary (though not sufficient alone) to maintain it across generations.
+
+*This draft will be rewritten after Phase 5 results are in.*
 
 ---
 
