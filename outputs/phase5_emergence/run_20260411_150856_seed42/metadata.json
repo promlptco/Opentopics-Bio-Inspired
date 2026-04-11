@@ -1,0 +1,9 @@
+{
+  "phase": "phase5_emergence",
+  "timestamp": "20260411_150856",
+  "seed": 42,
+  "stage": "survival_gate",
+  "infant_starvation_multiplier": 3.0,
+  "birth_scatter_radius": 2,
+  "note": "10-gen viability check. Population must reach \u22655 mothers at tick 1000."
+}

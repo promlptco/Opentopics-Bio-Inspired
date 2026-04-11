@@ -205,7 +205,50 @@ python experiments/phase3_maternal/watch.py
 
 ---
 
-**YOU ARE HERE: Phase 5 — Ecological Emergence (care from zero)**
+**YOU ARE HERE: Phase 5 single-seed COMPLETE — NEXT SESSION PLAN BELOW**
+
+---
+
+## Next Session Plan (open terminal and follow in order)
+
+### Step 1 — Run Phase 5 multi-seed (BLOCKING — do this first)
+```bash
+python experiments/phase5_emergence/run_multi_seed.py
+```
+- 10 seeds (42–51), ~20–40 min
+- Outputs to: `outputs/phase5_emergence/multi_seed_evolution/`
+- Produces: `statistical_tests.json`, CI plots, zero-shot bar charts
+
+**What to verify when done:**
+- `statistical_tests.json` → primary test: is mean gradient r > 0? (one-sample t-test p < 0.05?)
+- How many seeds show positive gradient? (expect 7+/10)
+- Phase 5a vs 5b care_weight CI overlap? (expect non-overlapping)
+
+---
+
+### Step 2 — Interpret multi-seed stats
+Key questions to answer from `statistical_tests.json`:
+1. Mean gradient across 10 seeds > 0? → confirms reversal is robust, not seed=42 lucky run
+2. Phase 5a mean care_weight vs Phase 5b? → confirms philopatry contribution
+3. Zero-shot window rates? → informational only (confounded by lower starting cw — see reviewer risk 2)
+
+---
+
+### Step 3 — Write-up: Methods fixes (reviewer-driven, from 2026-04-11 session)
+After multi-seed confirms stats, these write-up changes are required before submitting:
+
+1. **B quantification (HIGH priority):** In Methods, add: "B_individual is operationalized as `hunger_reduced` per care event (continuous, logged in care_log.csv). The existential nature of B is evidenced at the population level by the positive selection gradient r=+0.077 in birth_log.csv, not by per-event Hamilton accounting."
+2. **Scope the emergence claim (MODERATE):** In Discussion, scope Phase 5 as "gradient reversal from depleted baseline" not "emergence from absolute zero."
+3. **Cost of philopatry (LOW):** One sentence in Limitations: "Natal philopatry does not carry a resource competition cost in this model — a simplification common in grid-based ALife simulations."
+
+---
+
+### Step 4 — Decide: Phase 3 write-up or Phase 6?
+After multi-seed stats are in hand, decide whether to:
+- **(A) Write up Phases 3–5** as a complete thesis chapter (gradient reversal story is clean enough)
+- **(B) Add Part 3 extended plasticity** (epigenetic inheritance, social learning — see Roadmap Part 3 in SESSION_CONTEXT.md)
+
+Recommendation: if multi-seed confirms r > 0 in 7+/10 seeds, the story is complete. Go to write-up.
 
 ---
 
@@ -353,6 +396,7 @@ Phase4 v2 genomes care **9.5% more per mother-tick** in the care window of a new
 | 2026-04-10 | Phase4 plasticity: rewrote run.py (fixed extinction bug, added zeroshot stage, proper snapshots), added learning_rate_trajectory plot, ran both stages. ALL PIPELINE STEPS COMPLETE. |
 | 2026-04-10 | Phase4 v1 (blind) = null result. Phase4 v2 (kin-conditional) = Baldwin Effect confirmed (seed 42). 4 thesis comparison plots. Multi-seed Phase 4b script created, NOT YET RUN. |
 | 2026-04-10 | Multi-seed Phase 4b COMPLETE (seeds 42–51). Phase 2 baselines run for all 10 seeds. Paired stats computed. Partial Baldwin Effect: lr sweep 8/10 seeds, care recovery 2/10. Zero-shot not significant (p=0.815). |
+| 2026-04-11 | Phase 5 implemented and single-seed run complete. Gradient REVERSED: r=+0.077 (Phase 5a) vs −0.178 (Phase 3). Hamilton satisfied under natal philopatry (rB-C=+0.011 vs −0.026 control). Minimal conditions identified: existential B + effective r (logical AND). Multi-seed run PENDING. |
 
 ---
 
@@ -495,13 +539,105 @@ No kin recognition. No hard-coded targets. Mothers still pick highest-distress c
 
 ---
 
-## Phase 5 — Ecological Emergence (IN PROGRESS 2026-04-11)
+## Phase 5 — Ecological Emergence (SINGLE-SEED COMPLETE — 2026-04-11)
 
 **Folder:** `experiments/phase5_emergence/`
 **Output dir:** `outputs/phase5_emergence/`
 
 ### Goal
 Demonstrate that infant dependency ecology REVERSES the selection gradient for care: from negative (Phase 3, r=−0.178, eroding) to positive (Phase 5, r>0, building). Show care building upward from a depleted baseline through pure natural selection.
+
+### Seed=42 Results — CONFIRMED
+
+| Stage | Final cw | Gradient r | Hamilton rB-C | Dir |
+|-------|----------|-----------|---------------|-----|
+| Phase 5a (scatter=2) | 0.3547 | **+0.0768** | +0.0106 ✓ | ↑ BUILDING |
+| Phase 5b control (scatter=8) | 0.3124 | +0.0496 | −0.0255 ✗ | ↑ weaker |
+| Phase 3 baseline | 0.420 | −0.178 | violated | ↓ eroding |
+| Phase 5c zero-shot | — | — | 0.065 rate | — |
+
+**Primary finding confirmed:** Gradient REVERSED from −0.178 (Phase 3) to +0.077 (Phase 5a). Starting from depleted mean=0.25, care rose to 0.355 — crossing Phase 3's final eroded level is expected with more generations.
+
+**Natal philopatry contribution confirmed:** Phase 5a (scatter=2) rB-C=+0.011 (Hamilton satisfied) vs Phase 5b (scatter=8) rB-C=−0.026 (Hamilton violated). Tighter scatter tips Hamilton's rule.
+
+**Zero-shot lower than Phase 3** (0.065 vs 0.091) — expected, not a failure. Phase 5 evolved from 0.25 start vs Phase 3's 0.50. Lower absolute care_weight → lower zero-shot rate. Comparison is directionally confounded; zero-shot is informational only.
+
+### Conclusion: Does Care Emerge?
+
+**Yes — selection gradient reversed. Care builds rather than erodes.**
+
+**Minimal ecological conditions (logical AND, both required):**
+
+1. **Infant survival must be existentially dependent on maternal care** — B must be near-existential (infants die without care before reaching maturity), not marginal (infants just hungrier). `infant_starvation_multiplier=1.15` achieves this: infants die at tick ~108 without care.
+
+2. **Natal philopatry must create effective spatial kin clustering** — genealogical r=0.5 is insufficient when 89.5% of care goes to foreign infants (r≈0 in practice). `birth_scatter_radius=2` increases the statistical overlap between "nearest distressed infant" and "own offspring" — no kin recognition required, just proximity as a birth by-product.
+
+**Why neither condition alone suffices:**
+- B existential + r≈0: rB product still ≈ 0, Hamilton violated
+- r effective + B marginal: rB > 0 but rB < C, Hamilton still violated
+- Both together: rB-C = +0.011 (Phase 5a) — Hamilton satisfied, selection turns constructive
+
+**Caveat (operative threshold):** This holds above care_weight ~0.075 (the argmax competitive threshold against forage at typical energy). The result is "gradient reversal from depleted baseline" (mean=0.25), not emergence from absolute zero.
+
+**NEXT:** Multi-seed run (10 seeds 42–51) for statistical claim: is mean gradient r > 0 across seeds? (one-sample t-test vs H0: r=0).
+```bash
+python experiments/phase5_emergence/run_multi_seed.py
+```
+
+---
+
+### Reviewer Risks & Defenses (2026-04-11)
+
+#### Risk 1 — B Quantification Trap (HIGH)
+
+**Attack:** "How did you calculate B numerically for rB-C = +0.011? Infant survival is binary — you can't mix that with continuous energy costs."
+
+**What the simulation actually does:** B in the Hamilton table = `hunger_reduced` per care event (continuous float, mean ~0.054). C = `feed_cost + move_cost` (~0.044). So rB-C = 0.5×0.054 − 0.044 = +0.011. The "existential" claim is population-level, not per-event.
+
+**The tension:** Per-event B is still a small continuous hunger delta. The existential B claim lives in the *selection gradient* (birth_log r=+0.077) — care_weight predicts reproductive output. These are two different analyses at two different levels.
+
+**Defense:** Explicitly separate in Methods:
+- Per-event rB-C = +0.011 → post-hoc fitness accounting, captures kin bias, uses `hunger_reduced`
+- Selection gradient r=+0.077 → population-level evidence that B is existential (caring mothers produce more offspring across generations)
+- Do NOT use rB-C = +0.011 as proof of existential B — that's the wrong level of analysis
+
+**Action needed in write-up:** Methods section must state: "B_individual is operationalized as `hunger_reduced` per care event. The existential nature of B is evidenced at the population level by the positive selection gradient (r=+0.077), not by the per-event Hamilton accounting."
+
+---
+
+#### Risk 2 — Nest-Site Overlap (MODERATE)
+
+**Attack:** "Your natal philopatry (scatter=2) is functionally identical to a nest-site constraint. If philopatry can't cross the 0.075 operative threshold, how does care start at all?"
+
+**Key clarification:** Philopatry affects r (who benefits from care), NOT care_weight (whether care fires). An agent with care_weight=0.05 in a perfectly philopatric cluster still never cares — forage always wins the argmax. Philopatry cannot bootstrap care from zero.
+
+**Defense:** "This simulation tests maintenance and amplification of care given a non-zero founding frequency. The origin (crossing 0→0.075) requires genetic drift in small founder demes — a well-documented mechanism (Maynard Smith & Szathmáry 1995). Philopatry and nest-site constraints are functionally equivalent in this model; the contribution tested is maintenance of spatial kin bias once care has a foothold."
+
+**Action needed in write-up:** Explicitly scope the claim in Discussion. Phase 5 = reversal/amplification, not absolute-zero origin.
+
+---
+
+#### Risk 3 — Cost of Philopatry (LOW-MODERATE)
+
+**Attack:** "You gave philopatry for free. Real clustering depletes local food resources — your environment may be artificially forgiving."
+
+**What data exists:** None. No energy-by-scatter comparison plot. Phase 5b only varies scatter, not food respawn.
+
+**Honest assessment:** Environment probably IS partially forgiving. init_food=45 in 20×20 grid = 0.11 food/cell. Food respawns uniformly each tick. Local depletion cost under scatter=2 was not measured.
+
+**Defense:** State as a simplifying assumption: "Natal philopatry does not carry an explicit resource competition cost in this model. A complete treatment would impose local depletion penalties for clustering, raising the bar for emergence but not invalidating the directional result. We leave this as a future extension."
+
+**Action needed in write-up:** One sentence in Limitations. Do not over-defend — this is a common simplification in grid ALife models.
+
+---
+
+### Summary Table — Reviewer Risks
+
+| Risk | Data exists? | Defense strength | Write-up action |
+|------|-------------|-----------------|-----------------|
+| B quantification | Yes — hunger_reduced + birth_log r | Strong if separated | Separate per-event vs population-level B in Methods |
+| Nest-site overlap | Phase 5a vs 5b rB-C comparison | Moderate — scope limit | Explicitly scope claim: maintenance not origin |
+| Cost of philopatry | None | Weak — acknowledge | One sentence in Limitations |
 
 ### Mechanism 1 — Infant Starvation (core)
 
