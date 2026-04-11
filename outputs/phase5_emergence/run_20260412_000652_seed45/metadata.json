@@ -1,0 +1,15 @@
+{
+  "phase": "phase5_emergence",
+  "timestamp": "20260412_000652",
+  "seed": 45,
+  "stage": "control",
+  "num_agents": 24,
+  "grid_size": [
+    30,
+    30
+  ],
+  "infant_starvation_multiplier": 1.15,
+  "birth_scatter_radius": 8,
+  "plasticity_enabled": false,
+  "note": "Phase 5b \u2014 Dispersal control. Same as 5a but birth_scatter_radius=8 (standard). Tests whether natal philopatry is necessary or if dependency alone suffices."
+}

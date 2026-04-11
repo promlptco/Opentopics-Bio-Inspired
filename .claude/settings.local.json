@@ -7,7 +7,10 @@
       "Bash(python -c \"from experiments.phase3_maternal.run import run; run\\(seed=42, stage='evolution'\\)\")",
       "Bash(python experiments/phase3_maternal/run_multi_seed.py)",
       "Bash(python3:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired/outputs\" -type f -name \"*.png\" -exec dirname {} \\\\;)",
+      "Bash(awk -F: '{print $3}')",
+      "Bash(grep -vE \"^\\\\s*$|^#\")"
     ]
   }
 }

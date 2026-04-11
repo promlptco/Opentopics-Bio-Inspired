@@ -1,9 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from agents import child
 from agents.agent import Agent
 from evolution.genome import Genome
-from simulation import world
 
 if TYPE_CHECKING:
     from agents.child import ChildAgent

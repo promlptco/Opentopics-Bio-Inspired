@@ -1,0 +1,20 @@
+{
+  "stage": "zeroshot",
+  "source_dir": "outputs\\phase5_emergence\\run_20260411_233506_seed43",
+  "successful_care_events": 187,
+  "surviving_mothers": 0,
+  "care_per_mother_tick_all": 0.009778289060865928,
+  "total_mother_ticks": 19124,
+  "last_alive_tick": 428,
+  "care_window": {
+    "care_window_end_tick": 100,
+    "care_events_in_window": 187,
+    "mother_ticks_in_window": 4529,
+    "care_per_mother_tick_in_window": 0.0412894678737028,
+    "phase3_zeroshot_baseline": 0.09069,
+    "note": "Compare to phase3 zero-shot window rate 0.09069 for assimilation test."
+  },
+  "phase3_baseline": 0.09069,
+  "assimilation_signal": false,
+  "note": "assimilation_signal=True means window rate > Phase 3 baseline \u2014 care encoded in genome, not just learned in-lifetime."
+}

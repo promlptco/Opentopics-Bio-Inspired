@@ -1,0 +1,102 @@
+[
+  {
+    "seed": 42,
+    "n_survivors": 34,
+    "start_care_weight": 0.2741171792497666,
+    "final_care_mean": 0.35469465228109426,
+    "final_forage_mean": 0.5677171054694861,
+    "max_generation": 50,
+    "selection_grad_r": 0.07676940369466871,
+    "emerged": true
+  },
+  {
+    "seed": 43,
+    "n_survivors": 45,
+    "start_care_weight": 0.20410901578088603,
+    "final_care_mean": 0.21423310775005133,
+    "final_forage_mean": 0.5351024760035461,
+    "max_generation": 50,
+    "selection_grad_r": -0.02602709814306301,
+    "emerged": false
+  },
+  {
+    "seed": 44,
+    "n_survivors": 44,
+    "start_care_weight": 0.1584546847818404,
+    "final_care_mean": 0.23819132035134996,
+    "final_forage_mean": 0.5427640355456588,
+    "max_generation": 50,
+    "selection_grad_r": 0.09091126308963096,
+    "emerged": true
+  },
+  {
+    "seed": 45,
+    "n_survivors": 49,
+    "start_care_weight": 0.21440221626941713,
+    "final_care_mean": 0.29300176789118365,
+    "final_forage_mean": 0.642556257092375,
+    "max_generation": 50,
+    "selection_grad_r": 0.0970787256496466,
+    "emerged": true
+  },
+  {
+    "seed": 46,
+    "n_survivors": 48,
+    "start_care_weight": 0.22250062733575457,
+    "final_care_mean": 0.28975997056622055,
+    "final_forage_mean": 0.5893402874338048,
+    "max_generation": 50,
+    "selection_grad_r": 0.09490675243190724,
+    "emerged": true
+  },
+  {
+    "seed": 47,
+    "n_survivors": 39,
+    "start_care_weight": 0.16341675807275086,
+    "final_care_mean": 0.224912310674853,
+    "final_forage_mean": 0.44795791046058314,
+    "max_generation": 49,
+    "selection_grad_r": 0.073227051653608,
+    "emerged": true
+  },
+  {
+    "seed": 48,
+    "n_survivors": 50,
+    "start_care_weight": 0.21441467057673244,
+    "final_care_mean": 0.26080765869557837,
+    "final_forage_mean": 0.5522303125304026,
+    "max_generation": 50,
+    "selection_grad_r": 0.11097578772392705,
+    "emerged": false
+  },
+  {
+    "seed": 49,
+    "n_survivors": 36,
+    "start_care_weight": 0.21777224128790595,
+    "final_care_mean": 0.3028424210983501,
+    "final_forage_mean": 0.574849481444523,
+    "max_generation": 50,
+    "selection_grad_r": 0.04743422281181596,
+    "emerged": true
+  },
+  {
+    "seed": 50,
+    "n_survivors": 34,
+    "start_care_weight": 0.24875429761284532,
+    "final_care_mean": 0.3358232255069481,
+    "final_forage_mean": 0.5303607347001822,
+    "max_generation": 50,
+    "selection_grad_r": 0.11237160078370509,
+    "emerged": true
+  },
+  {
+    "seed": 51,
+    "n_survivors": 43,
+    "start_care_weight": 0.29320888821733126,
+    "final_care_mean": 0.3625124622983919,
+    "final_forage_mean": 0.6295851245880353,
+    "max_generation": 50,
+    "selection_grad_r": 0.11036806806667723,
+    "emerged": true
+  }
+]

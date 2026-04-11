@@ -11,9 +11,6 @@ project_root = os.path.dirname(experiments_dir)
 
 sys.path.insert(0, project_root)
 
-# Debug
-print(f"Project root: {project_root}")
-
 from config import Config
 from simulation.simulation import Simulation
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata

@@ -48,7 +48,7 @@ P3_RUN_DIRS_JSON = os.path.join(
 
 PHASE3_ZS_BASELINE      = 0.09069   # Phase 3 zero-shot window rate
 MATURITY_AGE            = 100
-PHASE5_EMERGENCE_LABEL  = "care_weight mean=0.25 start → positive gradient (vs Phase 3 r=−0.178)"
+PHASE5_EMERGENCE_LABEL  = "care_weight mean=0.25 start → positive gradient (vs Phase 3 r=-0.178)"
 
 
 # =============================================================================
@@ -176,13 +176,13 @@ def plot_multi_seed_ci(
     # Selection gradient annotation
     valid_grads = [g for g in (gradients or []) if g is not None]
     grad_str = (f"Mean selection gradient r = {_mean(valid_grads):+.4f}  "
-                f"(Phase 3 baseline: −0.178)"
+                f"(Phase 3 baseline: -0.178)"
                 if valid_grads else "")
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     fig.suptitle(
         f"Phase 5 Ecological Emergence — care_weight from near-zero\n"
-        f"{len(seeds)} seeds | infant_starvation_multiplier=3.0 | birth_scatter_radius=2",
+        f"{len(seeds)} seeds | infant_starvation_multiplier=1.15 | birth_scatter_radius=2",
         fontsize=10,
     )
 
@@ -327,8 +327,8 @@ def compute_statistical_tests(
                 "df":      n_g - 1,
             },
             "cohens_d":  d_g,
-            "positive_gradient": mean_g > 0,
-            "significant": t_g.pvalue < 0.05,
+            "positive_gradient": bool(mean_g > 0),
+            "significant": bool(t_g.pvalue < 0.05),
         }
 
     # ── Secondary: zero-shot informational ────────────────────────────────
@@ -354,7 +354,7 @@ def compute_statistical_tests(
         "gradient_reversal_test":  grad_result,
         "zeroshot_informational":  zs_result,
         "per_seed_gradients": [
-            {"seed": s.get("seed"), "gradient_r": s.get("selection_grad_r"), "positive": (s.get("selection_grad_r") or 0) > 0}
+            {"seed": s.get("seed"), "gradient_r": s.get("selection_grad_r"), "positive": bool((s.get("selection_grad_r") or 0) > 0)}
             for s in evo_summaries
         ],
     }
@@ -545,7 +545,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
         n_emerged = sum(1 for s in evo_summaries if s.get("emerged"))
         print("-" * 60)
         print(f"  Mean final care_weight : {_mean(final_cws):.4f} +/- {_ci95(final_cws):.4f}")
-        print(f"  Mean selection grad r  : {_mean(grads_v):+.4f}  (Phase 3: −0.178)")
+        print(f"  Mean selection grad r  : {_mean(grads_v):+.4f}  (Phase 3: -0.178)")
         print(f"  Emerged (>0.1, delta>0.05): {n_emerged}/{len(evo_summaries)} seeds")
 
     print("\n=== Phase 5 Primary Result: Selection Gradient Reversal ===")
@@ -553,7 +553,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
     if grt and "ttest_vs_zero" in grt:
         tt = grt["ttest_vs_zero"]
         p  = tt["p_value"]
-        print(f"  Mean selection gradient r : {grt['mean_r']:+.4f}  (Phase 3: −0.178)")
+        print(f"  Mean selection gradient r : {grt['mean_r']:+.4f}  (Phase 3: -0.178)")
         print(f"  95% CI                    : [{grt['ci95'][0]:+.4f}, {grt['ci95'][1]:+.4f}]")
         print(f"  One-sample t-test vs 0    : t={tt['t_stat']:.4f}, p={p:.4f}, df={tt['df']}")
         print(f"  Cohen's d                 : {grt['cohens_d']:.4f}")

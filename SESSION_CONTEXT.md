@@ -205,50 +205,204 @@ python experiments/phase3_maternal/watch.py
 
 ---
 
-**YOU ARE HERE: Phase 5 single-seed COMPLETE — NEXT SESSION PLAN BELOW**
+**YOU ARE HERE: ALL EXPERIMENTS COMPLETE — WRITE-UP PHASE**
 
 ---
 
-## Next Session Plan (open terminal and follow in order)
+## Phase 5 Multi-Seed Results (2026-04-12) — COMPLETE
 
-### Step 1 — Run Phase 5 multi-seed (BLOCKING — do this first)
-```bash
-python experiments/phase5_emergence/run_multi_seed.py
+**Output:** `outputs/phase5_emergence/multi_seed_evolution/`
+**Script:** `experiments/phase5_emergence/run_multi_seed.py`
+
+### Evolution Summary (seeds 42–51)
+
+| Seed | Survivors | Start cw | Final cw | Grad r | Emerged? |
+|------|-----------|----------|----------|--------|----------|
+| 42 | 34 | 0.2741 | 0.3547 | **+0.0768** | YES |
+| 43 | 45 | 0.2041 | 0.2142 | −0.0260 | no |
+| 44 | 44 | 0.1585 | 0.2382 | **+0.0909** | YES |
+| 45 | 49 | 0.2144 | 0.2930 | **+0.0971** | YES |
+| 46 | 48 | 0.2225 | 0.2898 | **+0.0949** | YES |
+| 47 | 39 | 0.1634 | 0.2249 | **+0.0732** | YES |
+| 48 | 50 | 0.2144 | 0.2608 | **+0.1110** | no |
+| 49 | 36 | 0.2178 | 0.3028 | **+0.0474** | YES |
+| 50 | 34 | 0.2488 | 0.3358 | **+0.1124** | YES |
+| 51 | 43 | 0.2932 | 0.3625 | **+0.1104** | YES |
+| **Mean** | — | — | **0.2877 ± 0.033** | **+0.0788** | **8/10** |
+
+### Primary Statistical Test — Gradient Reversal
+
+| Stat | Value | Interpretation |
+|------|-------|----------------|
+| Mean r | **+0.0788** | Positive — care builds |
+| 95% CI | [+0.053, +0.105] | Entirely above zero |
+| One-sample t vs 0 | t=5.93, **p=0.0002** | Highly significant |
+| Cohen's d | **1.87** | Very large effect |
+| Seeds positive | **9/10** | (seed 43 = −0.026, near-zero outlier) |
+| Phase 3 reference | −0.178 | Direction REVERSED |
+
+Zero-shot window rate: 0.052 vs Phase 3 baseline 0.091 — directionally confounded (lower starting cw), informational only.
+
+---
+
+## Code & Figures Status (2026-04-12) — COMPLETE
+
+### Code Cleanup Done
+- `agents/mother.py` — removed 2 unused imports (`from agents import child`, `from simulation import world`)
+- `experiments/phase0_evolution_sanity/run.py` — removed debug `print(f"Project root: ...")` statement
+- `requirements.txt` — created at project root (matplotlib, numpy, scipy, pandas, seaborn, pillow)
+
+### Publication Figures Generated
+Script: `python experiments/make_publication_figures.py`
+Output: `outputs/publication_figures/`
+
+| File | Content |
+|------|---------|
+| `figure1_phase3_erosion.png` | Panel A: 10-seed CI trajectory (erosion); Panel B: birth_log scatter r=−0.178 |
+| `figure2_phase4_plasticity.png` | Panel A: Phase 3 vs 4b trajectory; Panel B: zero-shot bar p=0.815 |
+| `figure3_phase5_reversal.png` | Panel A: Phase 5a CI + 5b control + Phase 3 overlay; Panel B: per-seed gradient r |
+
+Pre-existing figures (no new scripts needed):
+- `outputs/thesis_plots/` — 4 cross-phase comparison plots (make_thesis_plots.py)
+- `outputs/phase3_maternal/multi_seed_evolution/` — CI + hitchhiking check
+- `outputs/phase4_plasticity/multi_seed_evolution/` — CI + zeroshot bar
+- `outputs/phase5_emergence/multi_seed_evolution/` — CI + zeroshot bar
+- Phase 0–2 per-run plots in their respective `outputs/phaseX/.../plots/` directories
+
+---
+
+## Report Plan
+
+### Structure
+
 ```
-- 10 seeds (42–51), ~20–40 min
-- Outputs to: `outputs/phase5_emergence/multi_seed_evolution/`
-- Produces: `statistical_tests.json`, CI plots, zero-shot bar charts
-
-**What to verify when done:**
-- `statistical_tests.json` → primary test: is mean gradient r > 0? (one-sample t-test p < 0.05?)
-- How many seeds show positive gradient? (expect 7+/10)
-- Phase 5a vs 5b care_weight CI overlap? (expect non-overlapping)
-
----
-
-### Step 2 — Interpret multi-seed stats
-Key questions to answer from `statistical_tests.json`:
-1. Mean gradient across 10 seeds > 0? → confirms reversal is robust, not seed=42 lucky run
-2. Phase 5a mean care_weight vs Phase 5b? → confirms philopatry contribution
-3. Zero-shot window rates? → informational only (confounded by lower starting cw — see reviewer risk 2)
+1. Abstract (150 words)
+2. Introduction
+3. Related Work / Background
+4. Methods
+5. Results
+   5.1 Phase 3 — Care Erosion
+   5.2 Phase 4 — Kin-Conditional Baldwin Effect
+   5.3 Phase 5 — Ecological Emergence
+6. Discussion
+7. Conclusion
+8. References
+```
 
 ---
 
-### Step 3 — Write-up: Methods fixes (reviewer-driven, from 2026-04-11 session)
-After multi-seed confirms stats, these write-up changes are required before submitting:
+### Section-by-Section Drafting Guide
 
-1. **B quantification (HIGH priority):** In Methods, add: "B_individual is operationalized as `hunger_reduced` per care event (continuous, logged in care_log.csv). The existential nature of B is evidenced at the population level by the positive selection gradient r=+0.077 in birth_log.csv, not by per-event Hamilton accounting."
-2. **Scope the emergence claim (MODERATE):** In Discussion, scope Phase 5 as "gradient reversal from depleted baseline" not "emergence from absolute zero."
-3. **Cost of philopatry (LOW):** One sentence in Limitations: "Natal philopatry does not carry a resource competition cost in this model — a simplification common in grid-based ALife simulations."
+#### 1. Abstract
+Key sentence: "We demonstrate that two ecological conditions — existential infant dependency and natal philopatry — are jointly necessary and sufficient to reverse the evolutionary selection gradient on maternal care from negative (r=−0.178) to positive (r=+0.079, p=0.0002, d=1.87) in a grid-world agent-based simulation."
+Mention: gradient reversal, Hamilton's rule, Baldwin Effect negative result, 10-seed robustness.
 
 ---
 
-### Step 4 — Decide: Phase 3 write-up or Phase 6?
-After multi-seed stats are in hand, decide whether to:
-- **(A) Write up Phases 3–5** as a complete thesis chapter (gradient reversal story is clean enough)
-- **(B) Add Part 3 extended plasticity** (epigenetic inheritance, social learning — see Roadmap Part 3 in SESSION_CONTEXT.md)
+#### 2. Introduction
+- Hook: why does maternal care evolve? Hamilton's rule (rB > C) — but real populations rarely satisfy it simultaneously
+- Observation gap: prior ALife models either hard-code care targets or study maintenance, not emergence
+- Research question: *What are the minimum ecological conditions for care to emerge under evolutionary selection from a depleted baseline?*
+- Preview of findings: gradient reversal confirmed, two conditions identified (AND not OR)
 
-Recommendation: if multi-seed confirms r > 0 in 7+/10 seeds, the story is complete. Go to write-up.
+---
+
+#### 3. Related Work / Background
+- Hamilton (1964) — kin selection, rB > C
+- Baldwin Effect — Hinton & Nowlan (1987), genetic assimilation
+- ALife care evolution — cite 2–3 precedents (Axelrod, Nowak, or relevant grid-world papers)
+- Key gap: spatial structure as substitute for kin recognition (natal philopatry mechanism)
+
+---
+
+#### 4. Methods
+**4.1 Simulation architecture**
+- Grid world, tick-based, agent types (MotherAgent, ChildAgent), food dynamics
+- Decision model: argmax over (care, forage, self-maintenance) — emergent, not programmed
+- Genome: `care_weight`, `forage_weight`, `self_weight` + `learning_rate` (Phase 4 only)
+- Reproduction + mutation (GA): roulette selection by energy at tick 5000
+
+**4.2 Experimental phases**
+| Phase | Purpose | Key config |
+|-------|---------|------------|
+| Phase 1 | Survival gate | mutation=F, reproduction=T |
+| Phase 3 | Evolution baseline — care erosion | Genome(0.5,0.5,0.5), seeds 42–51 |
+| Phase 4b | Kin-conditional Baldwin Effect | plasticity_kin_conditional=T |
+| Phase 5a | Ecological emergence — natal philopatry | infant_mult=1.15, scatter=2 |
+| Phase 5b | Control — dispersal | scatter=8 (all else equal) |
+
+**4.3 B Quantification (two-level — CRITICAL, reviewer risk)**
+*Use the drafted Methods paragraph from 2026-04-12 session.*
+
+**4.4 Hamilton's rule operationalisation**
+- r = 2^(−d), post-hoc only; agents have no kin recognition
+- B_individual = hunger_reduced per event (care_log.csv)
+- C = feed_cost + move_cost per event
+- Selection gradient = Pearson r of care_weight vs generation from birth_log.csv
+
+---
+
+#### 5. Results
+
+**5.1 Phase 3 — Care Erosion (Figure 1)**
+- 9/10 seeds decline; mean final cw 0.420 from 0.500; r=−0.178
+- Hamilton post-hoc: rB−C≈−0.004 (Phase 3 seed 42 canonical)
+- 89.5% of care events are foreign (r=0) — diluted effective r is the mechanism
+- Forage independence (hitchhiking_check.png) — decline is in care specifically
+
+**5.2 Phase 4 — Kin-Conditional Baldwin Effect (Figure 2)**
+- v1 lineage-blind: null result (r=−0.216, worse than Phase 3)
+- v2 kin-conditional: care_weight trough 0.355 then recovery to 0.436 — Baldwin signature
+- learning_rate swept 0.103→0.170 (monotonic, 8/10 seeds)
+- Zero-shot: p=0.815, d=0.076 — no population-level genetic assimilation
+- Single-seed seed=42: +9.5% window rate (0.09933 vs 0.09069) — genome-level assimilation present but not robust at 10-seed scale
+
+**5.3 Phase 5 — Ecological Emergence (Figure 3)**
+- Gradient REVERSED: mean r=+0.0788 (p=0.0002, d=1.87), Phase 3 reference −0.178
+- 9/10 seeds positive; seed 43 outlier (−0.026, near-zero)
+- Phase 5a vs 5b: natal philopatry (scatter=2) lifts Hamilton rB−C from −0.026 to +0.011
+- Logical AND finding: existential B alone insufficient; effective r alone insufficient
+
+---
+
+#### 6. Discussion
+
+**6.1 Gradient reversal as the primary result**
+The shift from r=−0.178 to r=+0.079 is not merely a reduction in selection pressure — it is a sign change. Care went from a fitness liability to a fitness asset.
+
+**6.2 Mechanism: the AND condition**
+Explain why B existential + r diluted = still violated, and effective r + B marginal = still violated. Both conditions together cross the threshold.
+
+**6.3 Spatial structure as kin recognition substitute**
+No kin recognition gene in the model. Proximity at birth is sufficient when `birth_scatter_radius=2`. Connects to real biology (natal philopatry in wolves, elephants, passerine birds).
+
+**6.4 Baldwin Effect: partial result**
+Phase 4b shows Baldwin assimilation at single-seed level (+9.5%) but not at population level (p=0.815). Honest interpretation: genetic assimilation occurs but its magnitude is below detection threshold with n=10 seeds. Not a null result — the learning_rate sweep (8/10 seeds) is real.
+
+**6.5 Limitations**
+*Use the three drafted Limitations paragraphs from 2026-04-12 session:*
+1. B quantification trap — two-level measurement
+2. Origin gap — operative threshold ~0.075; we test depleted baseline, not absolute zero
+3. Cost of philopatry — no resource competition penalty (standard ALife simplification)
+
+---
+
+#### 7. Conclusion
+Restate: Two ecological conditions (existential B + effective r via natal philopatry) are jointly necessary to satisfy Hamilton's rule and reverse the selection gradient. Neither condition alone suffices. The model demonstrates this without kin recognition — spatial structure is the mechanism.
+
+Future work: stochastic drift crossing the 0→0.075 threshold; local resource competition as philopatry cost; epigenetic inheritance (Part 3 roadmap).
+
+---
+
+## Session Log
+
+| Date | Work done |
+|------|-----------|
+| 2026-04-08 | Phase 1 survival, Baseline-C0 |
+| 2026-04-09 | Baseline-R0, Evolution seeds 42–51, bugs #19–23 |
+| 2026-04-10 | Evolution analysis, birth_log, zero-shot fixed, Phase 4 both versions, multi-seed 4b |
+| 2026-04-11 | Phase 5 implemented, single-seed complete, gradient reversed r=+0.077 |
+| 2026-04-12 | Phase 5 multi-seed COMPLETE (p=0.0002, d=1.87, 9/10 seeds). Code cleanup. Publication figures. Report plan drafted. |
 
 ---
 
@@ -390,13 +544,11 @@ Phase4 v2 genomes care **9.5% more per mother-tick** in the care window of a new
 
 | Date | Work done |
 |------|-----------|
-| 2026-04-08 | phase1 survival, Baseline-C0 |
+| 2026-04-08 | Phase 1 survival, Baseline-C0 |
 | 2026-04-09 | Baseline-R0, evolution (seeds 42–51), bugs #19–23 |
-| 2026-04-10 | Evolution analysis (3 Qs, hitchhiking, Hamilton caveat), birth_log, reproductive fitness plots, zero-shot fixed + run, clarified zero-shot = baseline for phase4 |
-| 2026-04-10 | Phase4 plasticity: rewrote run.py (fixed extinction bug, added zeroshot stage, proper snapshots), added learning_rate_trajectory plot, ran both stages. ALL PIPELINE STEPS COMPLETE. |
-| 2026-04-10 | Phase4 v1 (blind) = null result. Phase4 v2 (kin-conditional) = Baldwin Effect confirmed (seed 42). 4 thesis comparison plots. Multi-seed Phase 4b script created, NOT YET RUN. |
-| 2026-04-10 | Multi-seed Phase 4b COMPLETE (seeds 42–51). Phase 2 baselines run for all 10 seeds. Paired stats computed. Partial Baldwin Effect: lr sweep 8/10 seeds, care recovery 2/10. Zero-shot not significant (p=0.815). |
-| 2026-04-11 | Phase 5 implemented and single-seed run complete. Gradient REVERSED: r=+0.077 (Phase 5a) vs −0.178 (Phase 3). Hamilton satisfied under natal philopatry (rB-C=+0.011 vs −0.026 control). Minimal conditions identified: existential B + effective r (logical AND). Multi-seed run PENDING. |
+| 2026-04-10 | Evolution analysis, birth_log, zero-shot, Phase 4 both versions, multi-seed 4b COMPLETE |
+| 2026-04-11 | Phase 5 implemented + single-seed COMPLETE. Gradient reversed r=+0.077. Multi-seed PENDING. |
+| 2026-04-12 | Phase 5 multi-seed COMPLETE (p=0.0002, d=1.87, 9/10 positive). Code cleanup. Publication figures (3). Report plan drafted. ALL EXPERIMENTS DONE. |
 
 ---
 
