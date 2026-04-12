@@ -1,4 +1,4 @@
-# Minimum Ecological Conditions for the Emergence of Maternal Care: A Grid-World Evolutionary Game Theory Simulation
+# Simulating the Minimum Ecological Conditions for the Emergence of Kin-Directed Maternal via Evolving Neuroendocrine Agents
 
 **FRA361 Open Topics — FIBO 3rd Year, Semester 2**
 **Author:** Chantouch Orungrote
