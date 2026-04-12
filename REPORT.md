@@ -106,7 +106,82 @@ Hamilton's rule is applied post-hoc from care event logs; it is not a selection 
 
 ## 4. Results
 
-### 4.1 Phase 3 — Care Erosion
+### 4.1 Phase 0 — Evolution Sanity Checks
+
+Phase 0 consists of four automated unit tests verifying that the genetic algorithm machinery is mechanically correct before any evolutionary experiment is run. No simulation plots are generated at this phase; the outputs are pass/fail assertions.
+
+| Test | Assertion | Result |
+|------|-----------|--------|
+| test_01_mutation | Mutated offspring differ from parent by ≤ σ per parameter | PASS |
+| test_02_inheritance | Offspring genome matches parent when mutation=False | PASS |
+| test_03_reproduction | Roulette selection preferentially selects higher-energy parents | PASS |
+| test_04_population_stability | Population remains non-zero across 100 generations under neutral selection | PASS |
+
+All four tests pass, confirming that inheritance, mutation, and selection operators are free of systematic bias before evolutionary experiments begin.
+
+---
+
+### 4.2 Phase 1 — Survival Gate
+
+Phase 1 verifies that the simulation environment sustains agent life under fixed, high-quality genomes (care=0.7, forage=0.85, self=0.55, mutation=False). This is a prerequisite gate: an environment that cannot maintain life under optimal fixed genomes cannot be used as an evolutionary testbed.
+
+**Figure P1 — Phase 1: Population & Energy Stability (seed=42)**
+
+![Figure P1](outputs/phase1_survival/run_20260408_000903_seed42/plots/population_energy.png)
+
+**Upper panel — Population count.** The blue line is perfectly flat at 12 mothers across all 300 ticks. Zero deaths occur. This is the expected result for fixed-genome, high-care agents in a food-sufficient environment: all mothers survive the full run duration. The flatness of the line confirms that the food supply, grid size, and energy dynamics are calibrated correctly — no starvation, no overcrowding extinction, no runaway energy drain.
+
+**Lower panel — Average energy.** Agent energy begins near 1.0 (fully initialised), then settles into a stable oscillating band between approximately 0.80 and 0.97. The mild downward drift over 300 ticks reflects the cumulative cost of care and movement actions, but energy never approaches the starvation threshold (0.0). The oscillation pattern reflects the alternation between foraging and caring cycles — mothers deplete energy on care actions then recover through foraging. The gate is PASSED: 12/12 survive, avg energy 0.910 at termination.
+
+---
+
+### 4.3 Phase 2 — Zero-Shot Baseline & Hamilton Post-Hoc Analysis
+
+Phase 2 transfers the top evolved genomes from Phase 3 evolution into a frozen environment (reproduction=False, mutation=False) to measure the intrinsic care rate of evolved genomes and perform post-hoc Hamilton analysis. This establishes two things: (1) the behavioural baseline rate (0.09069 events/mother-tick) used as the Phase 4 assimilation reference, and (2) the mechanistic account of why care erodes — the Hamilton violation.
+
+**Figure P2a — Phase 2: Population & Energy (canonical run, seed=42)**
+
+![Figure P2a](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/population_energy.png)
+
+**Upper panel — Population count.** The population begins at 25 mothers, rises briefly to ~50 as children mature into new adults at tick ~100, then declines monotonically to zero by tick ~650. This is the expected trajectory for a zero-shot run: with reproduction disabled, no new agents replace those who die, and the population exhausts itself. The brief rise at tick ~80–120 marks the maturation event where the initial cohort of children reach adulthood and are counted in the population. The care window of interest is **ticks 0–100**, before maturation — during this window all children are alive and the care rate is meaningful.
+
+**Lower panel — Average energy.** Energy oscillates between 0.55 and 0.95 during the care window (ticks 0–100), reflecting active foraging and care. After tick ~200, as the population thins, the few remaining agents can forage freely, producing the energy spike near 0.97 at tick ~450. The terminal collapse (energy → 0.0, tick 600+) corresponds to the last agents starving without any food replenishment.
+
+---
+
+**Figure P2b — Hamilton rB vs C: Own-Lineage Care Events**
+
+![Figure P2b](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_rB_vs_C.png)
+
+This scatter plot shows every own-lineage care event (r > 0) as a point with cost C on the x-axis and relatedness-weighted benefit rB on the y-axis. The red dashed diagonal is the rB = C break-even line — points above it satisfy Hamilton's rule, points below it do not. The majority of points cluster **below the diagonal**: rB is consistently lower than C for most events. Only a small number of points (upper-left cluster, highest-B events) exceed the break-even line. This visual directly demonstrates that most individual care acts — even those directed at own offspring (r = 0.5) — are Hamilton-violating: the energetic cost exceeds the relatedness-weighted benefit delivered. The sparse scatter and small n reflect that only ~16 of 229 total care events in this run were own-lineage.
+
+---
+
+**Figure P2c — Hamilton (rB − C) Distribution: Own-Lineage Care**
+
+![Figure P2c](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_rB_minus_C.png)
+
+This histogram shows the distribution of rB − C values across all own-lineage care events. The break-even line (rB − C = 0, red dashed) divides positive from negative events. The distribution is strongly left-skewed: the modal bin is −0.02 to −0.03, and the majority of the mass lies to the left of zero. Only the rightmost bin (rB − C ≈ +0.05) represents genuinely Hamilton-satisfying events, and this bin contains only 2 events. The mean rB − C ≈ −0.004 is therefore the average of a distribution that is predominantly negative with a thin positive tail — confirming that care is a net fitness liability in this ecological regime even when restricted to own-lineage events.
+
+---
+
+**Figure P2d — Care Events by Relatedness**
+
+![Figure P2d](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/care_by_relatedness.png)
+
+This bar chart shows the count of care events binned by recipient relatedness r. Two bins dominate: r = 0.0 (foreign-lineage, ~213 events) and r = 0.5 (own child, ~16 events). No events appear at r = 0.25 or r = 0.125 in this run, reflecting that care events occur primarily within the first generation (before grandchildren exist). The 93% foreign-lineage rate (213 of 229 total events) is the core mechanism of care erosion: when 93% of care is directed at unrelated recipients, the effective relatedness averaged across all care events is approximately 0.035 — far below the threshold needed to satisfy rB > C at the per-event benefit levels observed. This chart makes the relatedness dilution problem concrete and visually unambiguous.
+
+---
+
+**Figure P2e — Own vs Foreign Lineage Care**
+
+![Figure P2e](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_own_vs_foreign.png)
+
+This bar chart directly contrasts own-lineage (16 events, 7.0%) against foreign-lineage (213 events, 93.0%) care volume. The title reports the own-lineage percentage. The near-total dominance of the foreign-lineage bar makes the fundamental problem of maternal care evolution in this environment visually immediate: agents direct care based on visible child distress, not kinship. Without a spatial or recognition mechanism that preferentially routes care to kin, the inclusive fitness channel (rB) is almost entirely closed. This chart motivates the Phase 5 intervention — natal philopatry is designed to shift this ratio by ensuring that the children proximate to a mother at birth are disproportionately her own.
+
+---
+
+### 4.4 Phase 3 — Care Erosion
 
 Under standard ecological parameters (infant_starvation_multiplier = 1.0, birth_scatter_radius = 5), care_weight declines monotonically from a mean starting value of 0.500 across all 10 seeds. The mean Pearson's r of care_weight against generation is −0.178, with 9 of 10 seeds showing a negative gradient. The forage_weight time series remains flat across seeds, confirming that the decline is specific to care rather than a general genomic drift artifact.
 
@@ -136,7 +211,7 @@ The diluted effective relatedness (0.056 vs the theoretical 0.500 for own-child 
 
 This three-panel figure places the Phase 3 selection gradient (Pearson's r = −0.178) alongside the two plasticity variants for direct visual comparison. **Phase 3** (left, blue) shows the baseline negative OLS slope. **Phase 4a** (centre, orange — lineage-blind plasticity) shows a steeper negative slope (r = −0.216), visually confirming that indiscriminate learning amplifies selection against care rather than rescuing it; the scatter cloud shifts lower across generations compared to Phase 3. **Phase 4b** (right, green — kin-conditional plasticity) shows r = −0.189, marginally less steep than Phase 4a but still negative — the kin gate prevents the worst amplification but cannot overcome the underlying Hamilton deficit at this ecological setting. All three panels share the same axes and generation 0 reference (dashed, 0.500), enabling direct visual comparison. The key take-away is that no form of plasticity alone reverses the gradient; the sign change requires the ecological intervention of Phase 5.
 
-### 4.2 Phase 4 — Kin-Conditional Baldwin Effect
+### 4.5 Phase 4 — Kin-Conditional Baldwin Effect
 
 The lineage-blind plasticity variant (Phase 4a) produces r = −0.216, worse than the Phase 3 baseline, confirming that indiscriminate learning amplifies noise rather than signal and is not reported further.
 
@@ -178,9 +253,9 @@ This single-panel bar chart directly compares zero-shot care window rates across
 
 This visual table presents 18 quantitative metrics side-by-side for Phase 3, Phase 4a, and Phase 4b (seed=42, canonical). Green cells indicate the Phase 4b best value; coral cells flag Phase 4a comparisons. Key rows to read together: (1) `care_weight (Δ)` — Phase 3: −0.080, Phase 4a: −0.068, Phase 4b: −0.065 — all negative, confirming no variant fully arrests erosion. (2) `care_weight recovery?` — only Phase 4b shows Yes (0.355 → 0.436). (3) `learning_rate (Δ)` — Phase 4b: +0.066 vs Phase 4a: +0.041 — kin-conditionality produces a stronger and later-sweeping learning_rate increase. (4) `Selection r` — Phase 4b: −0.189, between Phase 3 (−0.178) and Phase 4a (−0.216), indicating the kin gate partially but not fully mitigates selection against care. (5) `ZS improvement vs Phase 2` — Phase 4b: +9.5%, Phase 4a: −21% — the directional difference between the two plasticity variants is stark. (6) `Hamilton rB > C (%)` — 39.7% of Phase 4b care events satisfy rB > C (up from 31.0% in Phase 4a), consistent with kin-conditionality concentrating care on higher-r events.
 
-### 4.3 Phase 5 — Ecological Emergence
+### 4.6 Phase 5 — Ecological Emergence
 
-#### 4.3.1 Gradient Reversal (Phase 5a)
+#### 4.6.1 Gradient Reversal (Phase 5a)
 
 With existential infant dependency (infant_starvation_multiplier = 1.15) and natal philopatry (birth_scatter_radius = 2), the selection gradient reverses sign in 9 of 10 seeds. Starting from a depleted baseline of care_weight ~ Uniform(0, 0.50) (mean ≈ 0.25, below the Phase 3 eroded equilibrium of 0.42), care_weight builds to a mean of 0.288 ± 0.033 by tick 5000.
 
@@ -197,7 +272,7 @@ The 95% confidence interval lies entirely above zero, and the effect size of d =
 
 The zero-shot comparison is noted but not interpreted as a primary assimilation test in Phase 5: the depleted starting care_weight (mean 0.25 vs Phase 3's 0.50) creates a directional confound in window rate comparisons that cannot be removed without matched initialisation. The zero-shot rate (0.052) is reported for completeness only.
 
-#### 4.3.2 Philopatry Contribution (Phase 5b)
+#### 4.6.2 Philopatry Contribution (Phase 5b)
 
 With dispersal increased to birth_scatter_radius = 8 while holding infant_starvation_multiplier = 1.15 constant, the mean gradient across seeds falls to Pearson's r = +0.050 compared to +0.077 under natal philopatry (scatter = 2). The gradient remains positive — confirming that existential B alone provides a real selection pressure — but is meaningfully weaker, confirming that natal philopatry independently amplifies the gradient.
 
