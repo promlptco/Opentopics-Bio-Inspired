@@ -23,6 +23,28 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import gridspec
 
+# ── Academic rcParams ─────────────────────────────────────────────────────────
+plt.rcParams.update({
+    'font.size':          10,
+    'axes.titlesize':     10,
+    'axes.labelsize':     10,
+    'xtick.labelsize':     9,
+    'ytick.labelsize':     9,
+    'legend.fontsize':     9,
+    'legend.framealpha':  0.93,
+    'legend.edgecolor':  '0.6',
+    'legend.borderpad':   0.5,
+    'legend.labelspacing': 0.4,
+    'axes.spines.top':   False,
+    'axes.spines.right': False,
+    'axes.linewidth':     0.8,
+    'grid.alpha':         0.22,
+    'grid.linewidth':     0.5,
+    'lines.linewidth':    2.0,
+    'figure.facecolor':  'white',
+    'axes.facecolor':    'white',
+})
+
 # ── Run directories ──────────────────────────────────────────────────────────
 DIRS = {
     "p3":   "outputs/phase3_erosion/run_20260409_232012_seed42",
@@ -111,27 +133,28 @@ def plot_selection_gradient():
         cws  = [float(r["mother_care_weight"]) for r in rows]
         r, slope, intercept = linregress_r(gens, cws)
 
-        ax.scatter(gens, cws, alpha=0.25, s=8, color=color, rasterized=True)
+        ax.scatter(gens, cws, alpha=0.22, s=7, color=color, rasterized=True)
         x_line = np.linspace(min(gens), max(gens), 200)
         ax.plot(x_line, slope * x_line + intercept,
-                color="black", linewidth=1.8, label=f"r = {r:.4f}")
+                color="black", linewidth=1.8, label=f"Pearson\u2019s r = {r:.4f}")
 
         ax.axhline(0.500, color="gray", linestyle="--", linewidth=1.0,
-                   label="Gen 0 start (0.500)")
+                   label="Gen 0 start (0.500)", alpha=0.7)
         ax.set_xlabel("Mother generation")
         ax.set_ylabel("care_weight at birth" if ax == axes[0] else "")
         ax.set_ylim(0, 1)
         ax.set_title(label, fontsize=10)
-        ax.legend(fontsize=8)
-        ax.grid(True, alpha=0.25)
+        # Upper right is clear — regression line descends; scatter thins out at high gen
+        ax.legend(loc="upper right", frameon=True)
+        ax.grid(True)
 
         ax.annotate(f"n={len(rows)}", xy=(0.97, 0.04),
                     xycoords="axes fraction", ha="right", fontsize=8, color="gray")
 
-    plt.tight_layout()
+    fig.tight_layout()
     out = os.path.join(OUT_DIR, "selection_gradient_comparison.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close()
+    fig.savefig(out, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {out}")
 
 
@@ -171,8 +194,9 @@ def plot_population_trough():
     ax1.axhline(10, color="red", linewidth=0.8, linestyle=":", label="Floor = 10 (min observed: 11)")
     ax1.set_ylabel("Mothers alive")
     ax1.set_ylim(0, 35)
-    ax1.legend(fontsize=8, loc="upper right")
-    ax1.grid(True, alpha=0.25)
+    # Upper right: population drops during trough; upper right (above ~28) is clear
+    ax1.legend(loc="upper right", frameon=True)
+    ax1.grid(True)
 
     p4b_trough = [p4b_pop[t - 1] for t in range(2000, 2601)]
     p3_trough  = [p3_pop[t - 1]  for t in range(2000, 2601)]
@@ -192,15 +216,16 @@ def plot_population_trough():
                 label="Gen 0 start (0.500)")
     ax2.axvspan(2000, 2600, alpha=0.10, color="salmon")
     ax2.set_xlabel("Tick")
-    ax2.set_ylabel("care_weight")
+    ax2.set_ylabel("Mean care_weight (genome parameter)")
     ax2.set_ylim(0.2, 0.6)
-    ax2.legend(fontsize=8, loc="upper right")
-    ax2.grid(True, alpha=0.25)
+    # Upper right: care_weight trajectory is in 0.35–0.50 range; upper right above 0.54 is clear
+    ax2.legend(loc="upper right", frameon=True)
+    ax2.grid(True)
 
-    plt.tight_layout()
+    fig.tight_layout()
     out = os.path.join(OUT_DIR, "population_trough.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close()
+    fig.savefig(out, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {out}")
 
 
@@ -246,21 +271,23 @@ def plot_zeroshot_comparison():
         "Fair comparison — removes dormancy confound",
         fontsize=10,
     )
-    ax.set_ylim(0, max(values) * 1.25)
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_ylim(0, max(values) * 1.30)
+    ax.grid(True, axis="y")
 
-    # Legend explaining metric
+    # Metric explanation — placed just inside upper-left corner, well above bars
     ax.annotate(
-        "Metric: successful care events ÷ mother-ticks in ticks 0–100\n"
-        "Removes dormancy confound (mothers alive with no children after maturation)",
-        xy=(0.5, -0.22), xycoords="axes fraction",
-        ha="center", fontsize=8, color="gray",
+        "Metric: successful care events \u00f7 alive-mother-ticks in ticks 0\u2013100\n"
+        "(removes dormancy confound after all children mature)",
+        xy=(0.03, 0.97), xycoords="axes fraction",
+        ha="left", va="top", fontsize=8, color="0.4",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                  edgecolor="0.65", linewidth=0.7),
     )
 
-    plt.tight_layout()
+    fig.tight_layout()
     out = os.path.join(OUT_DIR, "zeroshot_comparison.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close()
+    fig.savefig(out, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {out}")
 
 
@@ -340,10 +367,10 @@ def plot_phase_comparison_table():
         fontsize=10, pad=12,
     )
 
-    plt.tight_layout()
+    fig.tight_layout()
     out = os.path.join(OUT_DIR, "phase_comparison_table.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close()
+    fig.savefig(out, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {out}")
 
 

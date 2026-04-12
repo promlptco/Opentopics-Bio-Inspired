@@ -18,6 +18,14 @@ from utils.plotting import plot_start_vs_end_multiseed
 
 try:
     import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        'font.size': 10, 'axes.titlesize': 10, 'axes.labelsize': 10,
+        'xtick.labelsize': 9, 'ytick.labelsize': 9,
+        'legend.fontsize': 9, 'legend.framealpha': 0.93, 'legend.edgecolor': '0.6',
+        'axes.spines.top': False, 'axes.spines.right': False,
+        'axes.linewidth': 0.8, 'grid.alpha': 0.22, 'grid.linewidth': 0.5,
+        'lines.linewidth': 2.0, 'figure.facecolor': 'white', 'axes.facecolor': 'white',
+    })
 except ImportError:
     plt = None
 
@@ -83,34 +91,38 @@ def plot_multi_seed_ci(all_snapshots: list[list[dict]], seeds: list[int], output
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
 
-    # Individual seed traces (faint)
-    for i, snaps in enumerate(all_snapshots):
+    # Individual seed traces (faint, no legend entry)
+    for snaps in all_snapshots:
         ticks_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
         care_i  = [get_series(snaps, "avg_care_weight")[t] for t in ticks_i]
-        ax1.plot(ticks_i, care_i, color="steelblue", alpha=0.15, linewidth=1)
+        ax1.plot(ticks_i, care_i, color="steelblue", alpha=0.12, linewidth=0.9)
 
-    # Mean + CI
-    ax1.plot(common_ticks, care_mean, color="steelblue", linewidth=2.5, label=f"mean care_weight (n={len(seeds)})")
-    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.3, color="steelblue", label="95% CI")
-    ax1.set_ylabel("care_weight")
-    ax1.set_title(f"care_weight Evolution — {len(seeds)} seeds (selection vs drift)")
+    # Mean + CI (CI fold into mean label — no separate fill legend entry)
+    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.22, color="steelblue")
+    ax1.plot(common_ticks, care_mean, color="steelblue", linewidth=2.2,
+             label=f"Mean care_weight ± 95% CI  (n = {len(seeds)} seeds)")
+    ax1.set_ylabel("Mean care_weight (genome parameter)")
+    ax1.set_title(f"Phase 3 care_weight evolution — {len(seeds)} seeds")
     ax1.set_ylim(0, 1)
-    ax1.legend(loc="upper left")
-    ax1.grid(True, alpha=0.3)
+    # Lower left clear — erosion keeps data in 0.35–0.55 range
+    ax1.legend(loc="lower left", frameon=True)
+    ax1.grid(True)
 
-    # Forage mean
-    ax2.plot(common_ticks, forage_mean, color="darkorange", linewidth=2.5, label="mean forage_weight")
-    ax2.set_xlabel("Tick")
-    ax2.set_ylabel("forage_weight")
+    # Forage mean (hitchhiking check)
+    ax2.plot(common_ticks, forage_mean, color="#d95f02", linewidth=2.2,
+             label="Mean forage_weight")
+    ax2.set_xlabel("Simulation tick  (\u2248 100 ticks per generation)")
+    ax2.set_ylabel("Mean forage_weight (genome parameter)")
     ax2.set_ylim(0, 1)
-    ax2.set_title("forage_weight Evolution (hitchhiking check)")
-    ax2.legend(loc="upper left")
-    ax2.grid(True, alpha=0.3)
+    ax2.set_title("forage_weight evolution (hitchhiking check — should be flat)")
+    # Upper left: forage sits around 0.5; upper-left above 0.75 is clear
+    ax2.legend(loc="upper left", frameon=True)
+    ax2.grid(True)
 
-    plt.tight_layout()
+    fig.tight_layout()
     path = os.path.join(output_dir, "multi_seed_care_weight_ci.png")
-    plt.savefig(path)
-    plt.close()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     print(f"Saved: {path}")
 
 

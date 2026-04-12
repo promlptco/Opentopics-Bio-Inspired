@@ -27,6 +27,14 @@ from experiments.phase5a_reversal.run import run as run_p5
 
 try:
     import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        'font.size': 10, 'axes.titlesize': 10, 'axes.labelsize': 10,
+        'xtick.labelsize': 9, 'ytick.labelsize': 9,
+        'legend.fontsize': 9, 'legend.framealpha': 0.93, 'legend.edgecolor': '0.6',
+        'axes.spines.top': False, 'axes.spines.right': False,
+        'axes.linewidth': 0.8, 'grid.alpha': 0.22, 'grid.linewidth': 0.5,
+        'lines.linewidth': 2.0, 'figure.facecolor': 'white', 'axes.facecolor': 'white',
+    })
 except ImportError:
     plt = None
 
@@ -187,57 +195,70 @@ def plot_multi_seed_ci(
     )
 
     # Panel 1: care_weight
+    # Ghost traces — individual seeds (no legend entry)
     for snaps in all_snapshots:
         if not snaps:
             continue
-        t_i = [s["tick"]           for s in snaps]
+        t_i = [s["tick"]            for s in snaps]
         c_i = [s["avg_care_weight"] for s in snaps]
-        ax1.plot(t_i, c_i, color="seagreen", alpha=0.12, linewidth=1)
+        ax1.plot(t_i, c_i, color="#2ca02c", alpha=0.10, linewidth=0.9)
 
     if ticks5:
-        ax1.plot(ticks5, care5_mean, color="seagreen", linewidth=2.5,
-                 label=f"Phase 5a mean (scatter=2, n={len(seeds)})")
-        ax1.fill_between(ticks5, care5_lo, care5_hi, alpha=0.25, color="seagreen",
-                         label="Phase 5a 95% CI")
+        ax1.fill_between(ticks5, care5_lo, care5_hi, alpha=0.20, color="#2ca02c")
+        ax1.plot(ticks5, care5_mean, color="#2ca02c", linewidth=2.2,
+                 label=f"Phase 5a — natal philopatry, scatter=2  "
+                       f"(mean ± 95% CI, n = {len(seeds)})")
     if ticks_c:
-        ax1.plot(ticks_c, care_c_mean, color="darkorange", linewidth=1.8, linestyle="--",
-                 label="Phase 5b control (scatter=8)")
+        ax1.fill_between(ticks_c, care_c_lo, care_c_hi, alpha=0.10, color="#d95f02")
+        ax1.plot(ticks_c, care_c_mean, color="#d95f02", linewidth=1.8, linestyle="--",
+                 label="Phase 5b — dispersal control, scatter=8")
     if p3_ticks:
-        ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.8, linestyle=":",
-                 label="Phase 3 mean (no ecology)", zorder=4)
-    ax1.axhline(0.025, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
-                label="Phase 5 start (0.025 mean)")
-    ax1.axhline(0.420, color="crimson", linestyle=":", linewidth=1.2,
+        ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.5, linestyle=":",
+                 label="Phase 3 reference (no ecology)", zorder=4)
+
+    ax1.axhline(0.25,  color="gray",    linestyle="--", linewidth=0.9, alpha=0.65,
+                label="Phase 5 init mean (0.25)")
+    ax1.axhline(0.420, color="crimson", linestyle=":",  linewidth=1.1,
                 label="Phase 3 final (0.420)")
-    ax1.set_ylabel("care_weight")
+
+    ax1.set_ylabel("Mean care_weight (genome parameter)")
     ax1.set_ylim(0, 1)
-    ax1.legend(loc="upper left", fontsize=8, ncol=2)
-    ax1.grid(True, alpha=0.2)
+
+    # Upper right: Phase 5 lines start at 0.25 and rise to ~0.35;
+    # Phase 3 dips from 0.50 to ~0.42. Above 0.60 the plot is entirely clear.
+    ax1.legend(loc="upper right", frameon=True, fontsize=8.5)
+    ax1.grid(True)
+
     if grad_str:
+        # Annotation in lower right — below the Phase 5 init line (0.25),
+        # so below 0.08 of the 0–1 axis range is always clear.
         ax1.annotate(
             grad_str,
-            xy=(0.02, 0.06), xycoords="axes fraction", fontsize=9,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", edgecolor="gray"),
+            xy=(0.97, 0.04), xycoords="axes fraction",
+            ha="right", va="bottom", fontsize=8.5,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow",
+                      edgecolor="0.65", linewidth=0.7),
         )
 
     # Panel 2: forage_weight (hitchhiking check)
     _, forage5_mean, forage5_lo, forage5_hi = _extract(all_snapshots, "avg_forage_weight")
     if ticks5:
-        ax2.plot(ticks5, forage5_mean, color="darkorange", linewidth=2.5,
-                 label="Phase 5a forage_weight mean")
-        ax2.fill_between(ticks5, forage5_lo, forage5_hi, alpha=0.2, color="darkorange")
-    ax2.axhline(0.5, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
+        ax2.fill_between(ticks5, forage5_lo, forage5_hi, alpha=0.18, color="#d95f02")
+        ax2.plot(ticks5, forage5_mean, color="#d95f02", linewidth=2.2,
+                 label="Phase 5a mean forage_weight ± 95% CI")
+    ax2.axhline(0.5, color="gray", linestyle="--", linewidth=0.9, alpha=0.65,
                 label="Init mean (0.5)")
-    ax2.set_xlabel("Tick  (approx. 1 generation per 100 ticks)")
-    ax2.set_ylabel("forage_weight")
+    ax2.set_xlabel("Simulation tick  (\u2248 100 ticks per generation)")
+    ax2.set_ylabel("Mean forage_weight (genome parameter)")
     ax2.set_ylim(0, 1)
-    ax2.legend(loc="upper right", fontsize=8)
-    ax2.grid(True, alpha=0.2)
+    # Upper right: forage hovers near 0.5; above 0.80 is clear
+    ax2.legend(loc="upper right", frameon=True)
+    ax2.grid(True)
 
-    plt.tight_layout()
+    fig.tight_layout()
     path = os.path.join(output_dir, "multi_seed_care_weight_ci.png")
-    plt.savefig(path, dpi=120)
-    plt.close()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {path}")
 
 
@@ -263,22 +284,24 @@ def plot_zeroshot_multiseed(zs_summaries: list[dict], output_dir: str) -> None:
     b2 = ax.bar([xi + width/2 for xi in x], p5_rates, width,
                 label="Phase 5c zero-shot (evolved genomes)", color=colors, alpha=0.9, edgecolor="white")
     ax.set_xticks(x)
-    ax.set_xticklabels([f"seed {s}" for s in seeds], fontsize=8)
-    ax.set_ylabel("Care / mother-tick (ticks 0–100)")
+    ax.set_xticklabels([f"s{s}" for s in seeds], fontsize=8)
+    ax.set_ylabel("Care events / alive-mother-tick  (ticks 0\u2013100)")
     ax.set_title(
-        "Phase 5c Genetic Assimilation Test: Zero-Shot Window Rate vs Phase 3 Baseline\n"
-        "Green = above Phase 3 baseline (assimilation signal) | Coral = below",
+        "Phase 5c zero-shot window rate vs. Phase 3 baseline\n"
+        "Green = above Phase 3 baseline | Red = below  "
+        "(directionally confounded by lower init care_weight)",
     )
-    ax.legend(fontsize=9)
-    ax.set_ylim(0, max(max(p5_rates), PHASE3_ZS_BASELINE) * 1.35)
-    ax.grid(True, axis="y", alpha=0.3)
+    # Upper right: bars are short (< 0.12), upper right is clear
+    ax.legend(loc="upper right", frameon=True)
+    ax.set_ylim(0, max(max(p5_rates), PHASE3_ZS_BASELINE) * 1.40)
+    ax.grid(True, axis="y")
     for bar, val in zip(b2, p5_rates):
-        ax.text(bar.get_x() + bar.get_width()/2, val + 0.001,
-                f"{val:.4f}", ha="center", va="bottom", fontsize=7)
-    plt.tight_layout()
+        ax.text(bar.get_x() + bar.get_width() / 2, val + 0.001,
+                f"{val:.4f}", ha="center", va="bottom", fontsize=7, color="0.3")
+    fig.tight_layout()
     path = os.path.join(output_dir, "zeroshot_multiseed.png")
-    plt.savefig(path, dpi=120)
-    plt.close()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {path}")
 
 

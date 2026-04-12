@@ -28,6 +28,14 @@ from utils.plotting import plot_start_vs_end_multiseed
 
 try:
     import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        'font.size': 10, 'axes.titlesize': 10, 'axes.labelsize': 10,
+        'xtick.labelsize': 9, 'ytick.labelsize': 9,
+        'legend.fontsize': 9, 'legend.framealpha': 0.93, 'legend.edgecolor': '0.6',
+        'axes.spines.top': False, 'axes.spines.right': False,
+        'axes.linewidth': 0.8, 'grid.alpha': 0.22, 'grid.linewidth': 0.5,
+        'lines.linewidth': 2.0, 'figure.facecolor': 'white', 'axes.facecolor': 'white',
+    })
 except ImportError:
     plt = None
 
@@ -267,15 +275,14 @@ def plot_multi_seed_ci(
     )
 
     # ── Panel 1: care_weight ──
-    for i, snaps in enumerate(all_snapshots):
+    for snaps in all_snapshots:
         t_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
         c_i = [get_val(snaps, t, "avg_care_weight") for t in t_i]
-        ax1.plot(t_i, c_i, color="seagreen", alpha=0.12, linewidth=1)
+        ax1.plot(t_i, c_i, color="#2ca02c", alpha=0.10, linewidth=0.9)
 
-    ax1.plot(common_ticks, care_mean, color="seagreen", linewidth=2.5,
-             label=f"Phase 4b mean (n={len(seeds)})")
-    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.25, color="seagreen",
-                     label="Phase 4b 95% CI")
+    ax1.fill_between(common_ticks, care_lo, care_hi, alpha=0.22, color="#2ca02c")
+    ax1.plot(common_ticks, care_mean, color="#2ca02c", linewidth=2.2,
+             label=f"Phase 4b mean ± 95% CI  (n = {len(seeds)} seeds)")
     if p3_ticks:
         ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.8,
                  linestyle="--", label="Phase 3 mean (no plasticity)", zorder=4)
@@ -283,58 +290,67 @@ def plot_multi_seed_ci(
                 label="Gen 0 start (0.500)")
     ax1.axhline(0.365, color="crimson", linestyle=":",  linewidth=1.2,
                 label="R0 survivors (0.365)")
-    ax1.set_ylabel("care_weight")
+    ax1.set_ylabel("Mean care_weight (genome parameter)")
     ax1.set_ylim(0, 1)
-    ax1.legend(loc="upper right", fontsize=8, ncol=2)
-    ax1.grid(True, alpha=0.2)
+    # Lower left clear — care data lives in 0.35–0.55 range throughout
+    ax1.legend(loc="lower left", frameon=True, ncol=2)
+    ax1.grid(True)
     if baldwin_classifications:
+        # Annotation in lower right (below data region, after care plateau)
         ax1.annotate(
-            f"Care recovery: {n_care_recovered}/{len(seeds)} seeds",
-            xy=(0.02, 0.06), xycoords="axes fraction", fontsize=9,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", edgecolor="gray"),
+            f"Care recovery \u2265 0.03: {n_care_recovered}/{len(seeds)} seeds",
+            xy=(0.97, 0.06), xycoords="axes fraction",
+            ha="right", va="bottom", fontsize=8.5,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow",
+                      edgecolor="0.65", linewidth=0.7),
         )
 
     # ── Panel 2: learning_rate ──
     for snaps in all_snapshots:
         t_i = [s["tick"] for s in snaps if s["tick"] in set(common_ticks)]
         l_i = [get_val(snaps, t, "avg_learning_rate") for t in t_i]
-        ax2.plot(t_i, l_i, color="mediumpurple", alpha=0.12, linewidth=1)
+        ax2.plot(t_i, l_i, color="mediumpurple", alpha=0.10, linewidth=0.9)
 
-    ax2.plot(common_ticks, lr_mean, color="mediumpurple", linewidth=2.5,
-             label=f"Phase 4b mean (n={len(seeds)})")
-    ax2.fill_between(common_ticks, lr_lo, lr_hi, alpha=0.25, color="mediumpurple",
-                     label="Phase 4b 95% CI")
+    ax2.fill_between(common_ticks, lr_lo, lr_hi, alpha=0.22, color="mediumpurple")
+    ax2.plot(common_ticks, lr_mean, color="mediumpurple", linewidth=2.2,
+             label=f"Phase 4b mean ± 95% CI  (n = {len(seeds)} seeds)")
     if p3_ticks:
         ax2.plot(p3_ticks, p3_lr, color="gray", linewidth=1.8,
-                 linestyle="--", label="Phase 3 mean (fixed near 0.1)", zorder=4)
+                 linestyle="--", label="Phase 3 mean (\u2248 0.100, fixed)", zorder=4)
     ax2.axhline(0.100, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
                 label="Gen 0 start (0.100)")
-    ax2.set_ylabel("learning_rate")
+    ax2.set_ylabel("Mean learning_rate (genome parameter)")
     ax2.set_ylim(0, 0.5)
-    ax2.legend(loc="upper left", fontsize=8, ncol=2)
-    ax2.grid(True, alpha=0.2)
+    # Upper left: learning_rate starts at 0.10 and rises; upper-left above 0.40 is clear
+    ax2.legend(loc="upper left", frameon=True, ncol=2)
+    ax2.grid(True)
     if baldwin_classifications:
+        # Annotation in lower right
         ax2.annotate(
-            f"LR sweep: {n_lr_swept}/{len(seeds)} seeds  |  Full Baldwin: {n_baldwin}/{len(seeds)}",
-            xy=(0.02, 0.06), xycoords="axes fraction", fontsize=9,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", edgecolor="gray"),
+            f"LR sweep \u2265 0.03: {n_lr_swept}/{len(seeds)} seeds  |  "
+            f"Full Baldwin: {n_baldwin}/{len(seeds)}",
+            xy=(0.97, 0.06), xycoords="axes fraction",
+            ha="right", va="bottom", fontsize=8.5,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow",
+                      edgecolor="0.65", linewidth=0.7),
         )
 
     # ── Panel 3: forage (hitchhiking check) ──
-    ax3.plot(common_ticks, forage_mean, color="darkorange", linewidth=2.5,
+    ax3.plot(common_ticks, forage_mean, color="#d95f02", linewidth=2.2,
              label="Phase 4b mean forage_weight")
     ax3.axhline(0.500, color="gray", linestyle="--", linewidth=0.9, alpha=0.7,
                 label="Gen 0 start (0.500)")
-    ax3.set_xlabel("Tick  (approx. 1 generation per 100 ticks)")
-    ax3.set_ylabel("forage_weight")
+    ax3.set_xlabel("Simulation tick  (\u2248 100 ticks per generation)")
+    ax3.set_ylabel("Mean forage_weight (genome parameter)")
     ax3.set_ylim(0, 1)
-    ax3.legend(loc="upper left", fontsize=8)
-    ax3.grid(True, alpha=0.2)
+    # Upper left: forage hovers near 0.5; above 0.8 is clear
+    ax3.legend(loc="upper left", frameon=True)
+    ax3.grid(True)
 
-    plt.tight_layout()
+    fig.tight_layout()
     path = os.path.join(output_dir, "multi_seed_care_weight_ci.png")
-    plt.savefig(path, dpi=120)
-    plt.close()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {path}")
 
 
@@ -372,24 +388,25 @@ def plot_zeroshot_multiseed(
                 color=p4b_colors, alpha=0.9, edgecolor="white")
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"seed {s}" for s in seeds], fontsize=8)
-    ax.set_ylabel("Care / mother-tick (ticks 0-100)")
+    ax.set_xticklabels([f"s{s}" for s in seeds], fontsize=8)
+    ax.set_ylabel("Care events / alive-mother-tick  (ticks 0\u2013100)")
     ax.set_title(
-        "Zero-Shot Care-Window Rate: Phase 4b vs Phase 2 Baseline — Per Seed\n"
-        "Green = Phase 4b above Phase 2 for that seed | Coral = below",
+        "Zero-shot window rate: Phase 4b vs. Phase 2 baseline\n"
+        "Green = Phase 4b above baseline | Red = below",
     )
-    ax.legend(fontsize=9)
-    ax.set_ylim(0, max(max(p4b_rates), max(p2_rates)) * 1.3)
-    ax.grid(True, axis="y", alpha=0.3)
+    # Upper right: bars are short (< 0.12), upper right is clear
+    ax.legend(loc="upper right", frameon=True)
+    ax.set_ylim(0, max(max(p4b_rates), max(p2_rates)) * 1.35)
+    ax.grid(True, axis="y")
 
     for bar, val in zip(b2, p4b_rates):
-        ax.text(bar.get_x() + bar.get_width()/2, val + 0.002,
-                f"{val:.4f}", ha="center", va="bottom", fontsize=7)
+        ax.text(bar.get_x() + bar.get_width() / 2, val + 0.001,
+                f"{val:.4f}", ha="center", va="bottom", fontsize=7, color="0.3")
 
-    plt.tight_layout()
+    fig.tight_layout()
     path = os.path.join(output_dir, "zeroshot_multiseed.png")
-    plt.savefig(path, dpi=120)
-    plt.close()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     print(f"  Saved: {path}")
 
 
