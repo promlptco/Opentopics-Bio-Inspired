@@ -1,4 +1,4 @@
-# Simulating the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal via Evolving Neuroendocrine Agents
+# Simulation of the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal Care via Evolving Neuroendocrine Agents
 ## Experimental Design — FRA361 Open Topics, FIBO 3rd Year, Semester 2
 
 This document provides a full methodological breakdown of every experimental phase in the pipeline. Each phase is designed to isolate a specific mechanism or test a specific hypothesis, building cumulatively toward the core finding: that existential infant dependency and natal philopatry are jointly necessary and sufficient to reverse the selection gradient on maternal care.

@@ -1,4 +1,4 @@
-# Simulating the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal via Evolving Neuroendocrine Agents
+# Simulation of the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal Care via Evolving Neuroendocrine Agents
 
 **FRA361 Open Topics — FIBO 3rd Year, Semester 2**
 **Author:** Chantouch Orungrote

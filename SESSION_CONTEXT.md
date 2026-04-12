@@ -219,7 +219,7 @@ python experiments/phase3_erosion/watch.py
 | `REPORT.md` | ✓ FIRST DRAFT COMPLETE | Full academic paper — all sections written, all plots embedded |
 
 ### Project Title (updated)
-**"Simulating the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal via Evolving Neuroendocrine Agents"**
+**"Simulation of the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal Care via Evolving Neuroendocrine Agents"**
 Applied consistently across README.md, EXPERIMENT.md, REPORT.md.
 
 ### Citations Verified (2026-04-13)
