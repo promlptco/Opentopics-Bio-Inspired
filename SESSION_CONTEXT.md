@@ -249,11 +249,11 @@ All four citations confirmed with exact volume/page numbers:
 
 ### Problem Statement (Formalised)
 Added as an explicit blockquote in the Introduction (§1):
-> *"What are the minimum ecological conditions under which kin-directed maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?"*
+> *"What are the minimum ecological conditions under which kin-biased maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?"*
 
 Key framing decisions embedded:
 - "build" not "emerge" — avoids the absolute-zero trap (operative threshold ≈ 0.075)
-- "kin-directed" — matches new title
+- "kin-biased" — matches new title
 - "depleted baseline" — init mean=0.25, below Phase 3 eroded equilibrium 0.42
 - "no kin recognition gene" — spatial proximity is the sole mechanism
 
@@ -268,7 +268,7 @@ Key framing decisions embedded:
 
 ### Immediate (before submission)
 1. **Review REPORT.md first full draft** — read all sections end-to-end, flag any inconsistencies or claims that need softening
-2. **Abstract alignment** — check the 150-word abstract still matches the updated title ("kin-directed", "neuroendocrine agents") — currently abstract does not mention these terms; decide whether to align or keep abstract more conservative
+2. **Abstract alignment** — check the 150-word abstract still matches the updated title ("kin-biased", "neuroendocrine agents") — currently abstract does not mention these terms; decide whether to align or keep abstract more conservative
 3. **Title check: "Neuroendocrine Agents"** — the title uses "Neuroendocrine Agents" but the simulation does not model neuroendocrine dynamics explicitly. Be prepared to justify this framing if questioned (e.g., argmax domain selection as a behavioural proxy for neuroendocrine priority-setting). Consider whether to soften to "Evolving Agents" to avoid this risk.
 4. **Figure numbering audit** — REPORT.md uses Figure 1/2/3 (publication), H3a/H3b/H5a/H5b (Hamilton), P1/P2a-e (Phase 1-2), S1-S4 (supplementary). Decide whether to unify into a single sequential numbering scheme for formal submission.
 5. **References section** — add Emlen (1995) and Stacey & Koenig (1990) which are cited in Discussion §5.3 but may be missing from the formatted References list
