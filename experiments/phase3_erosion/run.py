@@ -1,4 +1,4 @@
-# experiments/phase3_maternal/run.py
+# experiments/phase3_erosion/run.py
 """Phase 3: Maternal — supports 3 stages via `stage` parameter.
 
 Stages:
@@ -20,7 +20,7 @@ from evolution.genome import Genome
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
 from utils.plotting import generate_all_plots
 
-PHASE_NAME = "phase3_maternal"
+PHASE_NAME = "phase3_erosion"
 
 
 def _fixed_genomes(care: float, forage: float, self_w: float, n: int) -> list[Genome]:

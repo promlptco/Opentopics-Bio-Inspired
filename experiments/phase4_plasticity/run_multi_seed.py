@@ -44,7 +44,7 @@ CHECKPOINT   = os.path.join(COMBINED_DIR, "checkpoint.json")
 
 # Phase 3 multi-seed manifest (for baseline overlay + Phase 2 paired baselines)
 P3_RUN_DIRS_JSON = os.path.join(
-    PROJECT_ROOT, "outputs", "phase3_maternal", "multi_seed_evolution", "run_dirs.json"
+    PROJECT_ROOT, "outputs", "phase3_erosion", "multi_seed_evolution", "run_dirs.json"
 )
 
 # Baldwin Effect classification thresholds

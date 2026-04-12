@@ -111,7 +111,7 @@ def run(seed: int = 42):
     print("=" * 50)
 
     if results["passed"]:
-        print("PASSED — Survival gate cleared. Proceed to phase3_maternal.")
+        print("PASSED — Survival gate cleared. Proceed to phase3_erosion.")
     else:
         print("FAILED — Debug before proceeding.")
         if extinction_tick is not None:

@@ -1,4 +1,4 @@
-# experiments/phase5_emergence/run_multi_seed.py
+# experiments/phase5a_reversal/run_multi_seed.py
 """
 Phase 5a/5b/5c multi-seed runner (seeds 42–51).
 
@@ -13,7 +13,7 @@ Hardened against:
   - Data loss: checkpoint saved after every seed
   - Extinction: survival gate run before each full seed; failed seeds logged and skipped
 
-Output: outputs/phase5_emergence/multi_seed_evolution/
+Output: outputs/phase5a_reversal/multi_seed_evolution/
 """
 import sys
 import os
@@ -23,7 +23,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase5_emergence.run import run as run_p5
+from experiments.phase5a_reversal.run import run as run_p5
 
 try:
     import matplotlib.pyplot as plt
@@ -38,12 +38,12 @@ except ImportError:
     print("Warning: scipy not available — statistical tests will be skipped.")
 
 SEEDS        = list(range(42, 52))
-COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase5_emergence", "multi_seed_evolution")
+COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase5a_reversal", "multi_seed_evolution")
 CHECKPOINT   = os.path.join(COMBINED_DIR, "checkpoint.json")
 
 # Phase 3 multi-seed manifest (for baseline overlay)
 P3_RUN_DIRS_JSON = os.path.join(
-    PROJECT_ROOT, "outputs", "phase3_maternal", "multi_seed_evolution", "run_dirs.json"
+    PROJECT_ROOT, "outputs", "phase3_erosion", "multi_seed_evolution", "run_dirs.json"
 )
 
 PHASE3_ZS_BASELINE      = 0.09069   # Phase 3 zero-shot window rate
@@ -423,7 +423,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
             gens  = [g.get("generation", 0) for g in genomes]
 
             # Load selection gradient from birth_log
-            from experiments.phase5_emergence.run import _compute_selection_gradient
+            from experiments.phase5a_reversal.run import _compute_selection_gradient
             grad = _compute_selection_gradient(os.path.join(evo_dir, "birth_log.csv"))
 
             # Determine emergence: care_weight increased from ~0.025 start

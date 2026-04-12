@@ -10,7 +10,10 @@
       "Bash(python:*)",
       "Bash(find \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired/outputs\" -type f -name \"*.png\" -exec dirname {} \\\\;)",
       "Bash(awk -F: '{print $3}')",
-      "Bash(grep -vE \"^\\\\s*$|^#\")"
+      "Bash(grep -vE \"^\\\\s*$|^#\")",
+      "Bash(sed -i 's/phase3_maternal/phase3_erosion/g' \"outputs/phase3_erosion/multi_seed_evolution/run_dirs.json\")",
+      "Bash(sed -i 's/phase5_emergence/phase5a_reversal/g' \"outputs/phase5a_reversal/multi_seed_evolution/run_dirs.json\")",
+      "Bash(sed -i 's/phase5_emergence/phase5a_reversal/g' \"outputs/phase5a_reversal/multi_seed_evolution/checkpoint.json\")"
     ]
   }
 }

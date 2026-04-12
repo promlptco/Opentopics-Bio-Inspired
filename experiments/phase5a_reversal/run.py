@@ -1,4 +1,4 @@
-# experiments/phase5_emergence/run.py
+# experiments/phase5a_reversal/run.py
 """Phase 5: Ecological Emergence — selection gradient reversal via infant dependency.
 
 Scientific question:
@@ -55,7 +55,7 @@ from evolution.genome import Genome
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
 from utils.plotting import generate_all_plots
 
-PHASE_NAME = "phase5_emergence"
+PHASE_NAME = "phase5a_reversal"
 
 # Phase 5 ecological parameters
 # mult=1.15: infants die at tick ~108 without care (maturity_age=100) → B near-existential.

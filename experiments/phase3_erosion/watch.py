@@ -1,4 +1,4 @@
-# experiments/phase3_maternal/watch.py
+# experiments/phase3_erosion/watch.py
 """
 Live visualisation of Baseline-C0 (balanced genome).
 Re-runs the same seed so the trajectory is identical to the logged run.

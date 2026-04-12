@@ -1,4 +1,4 @@
-# experiments/phase3_maternal/run_multi_seed.py
+# experiments/phase3_erosion/run_multi_seed.py
 """
 Run evolution stage across N seeds and produce:
   - Per-seed generation_snapshots + full outputs
@@ -13,7 +13,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase3_maternal.run import run
+from experiments.phase3_erosion.run import run
 from utils.plotting import plot_start_vs_end_multiseed
 
 try:
@@ -148,7 +148,7 @@ def run_all(seeds: list[int] = SEEDS, stage: str = STAGE) -> None:
 
     # Combined output dir (next to individual runs)
     combined_dir = os.path.join(
-        PROJECT_ROOT, "outputs", "phase3_maternal", "multi_seed_evolution"
+        PROJECT_ROOT, "outputs", "phase3_erosion", "multi_seed_evolution"
     )
     os.makedirs(combined_dir, exist_ok=True)
 

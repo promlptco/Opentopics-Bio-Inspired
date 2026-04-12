@@ -23,7 +23,7 @@ def load_evolved_genomes(phase3_run_dir: str) -> list[Genome]:
     genome_path = os.path.join(phase3_run_dir, "top_genomes.json")
     
     if not os.path.exists(genome_path):
-        print(f"Warning: {genome_path} not found. Run phase3_maternal evolution stage first.")
+        print(f"Warning: {genome_path} not found. Run phase3_erosion evolution stage first.")
         return [Genome() for _ in range(10)]
     
     with open(genome_path, "r") as f:
@@ -157,5 +157,5 @@ def run(seed: int = 42, phase3_run_dir: str = None):
 
 if __name__ == "__main__":
     # Pass phase3 evolution output dir to load evolved genomes, e.g.:
-    # run(seed=42, phase3_run_dir="outputs/phase3_maternal/run_xxx")
+    # run(seed=42, phase3_run_dir="outputs/phase3_erosion/run_xxx")
     run(seed=42)

@@ -38,11 +38,11 @@ OUT_DIR = os.path.join(PROJECT_ROOT, "outputs", "publication_figures")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── Canonical run directories ────────────────────────────────────────────────
-P3_CANONICAL      = os.path.join(PROJECT_ROOT, "outputs", "phase3_maternal", "run_20260409_232012_seed42")
+P3_CANONICAL      = os.path.join(PROJECT_ROOT, "outputs", "phase3_erosion", "run_20260409_232012_seed42")
 P4B_CANONICAL     = os.path.join(PROJECT_ROOT, "outputs", "phase4_plasticity", "run_20260410_113356_seed42")
-P3_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase3_maternal",   "multi_seed_evolution")
+P3_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase3_erosion",   "multi_seed_evolution")
 P4B_MULTI_DIR     = os.path.join(PROJECT_ROOT, "outputs", "phase4_plasticity", "multi_seed_evolution")
-P5_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase5_emergence",  "multi_seed_evolution")
+P5_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase5a_reversal",  "multi_seed_evolution")
 
 PHASE3_ZS_BASELINE = 0.09069   # Phase 2 / Phase 3 zero-shot window rate
 MATURITY_AGE       = 100

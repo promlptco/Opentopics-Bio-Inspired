@@ -25,7 +25,7 @@ from matplotlib import gridspec
 
 # ── Run directories ──────────────────────────────────────────────────────────
 DIRS = {
-    "p3":   "outputs/phase3_maternal/run_20260409_232012_seed42",
+    "p3":   "outputs/phase3_erosion/run_20260409_232012_seed42",
     "p4a":  "outputs/phase4_plasticity/run_20260410_104824_seed42",
     "p4b":  "outputs/phase4_plasticity/run_20260410_113356_seed42",
     "p2zs": "outputs/phase2_zeroshot/run_20260409_233243_seed42",
