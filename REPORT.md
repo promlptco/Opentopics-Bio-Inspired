@@ -1,7 +1,7 @@
 # Minimum Ecological Conditions for the Emergence of Maternal Care: A Grid-World Evolutionary Game Theory Simulation
 
 **FRA361 Open Topics — FIBO 3rd Year, Semester 2**
-**Author:** [Author Name]
+**Author:** Chantouch Orungrote
 **Date:** April 2026
 
 ---
