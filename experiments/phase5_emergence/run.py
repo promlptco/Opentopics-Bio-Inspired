@@ -284,7 +284,7 @@ def _run_evolution(seed: int, stage: str = "evolution",
         plasticity_enabled=False,
         note=(
             "Phase 5a — Ecological Emergence. Near-zero care init (0–0.05). "
-            "infant_starvation_multiplier=3.0 makes B existential. "
+            "infant_starvation_multiplier=1.15 makes B existential. "
             "birth_scatter_radius=2 increases effective r via natal philopatry. "
             "Plasticity OFF — any care rise is pure genetic selection."
             if stage == "evolution" else
@@ -458,7 +458,7 @@ def run(seed: int = 42, stage: str = "evolution", source_dir: str = None) -> str
     stage:
       'survival_gate'  — quick 10-gen viability check (returns dict, not str)
       'evolution'      — 5a: full 50-gen, birth_scatter_radius=2
-      'control'        — 5b: full 50-gen, birth_scatter_radius=5 (dispersal control)
+      'control'        — 5b: full 50-gen, birth_scatter_radius=8 (dispersal control)
       'zeroshot'       — 5c: genetic assimilation test (requires source_dir)
     """
     if stage == "survival_gate":

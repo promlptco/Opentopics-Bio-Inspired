@@ -11,5 +11,5 @@
   "infant_starvation_multiplier": 1.15,
   "birth_scatter_radius": 2,
   "plasticity_enabled": false,
-  "note": "Phase 5a \u2014 Ecological Emergence. Near-zero care init (0\u20130.05). infant_starvation_multiplier=3.0 makes B existential. birth_scatter_radius=2 increases effective r via natal philopatry. Plasticity OFF \u2014 any care rise is pure genetic selection."
+  "note": "Phase 5a \u2014 Ecological Emergence. Near-zero care init (0\u20130.05). infant_starvation_multiplier=1.15 makes B existential. birth_scatter_radius=2 increases effective r via natal philopatry. Plasticity OFF \u2014 any care rise is pure genetic selection."
 }

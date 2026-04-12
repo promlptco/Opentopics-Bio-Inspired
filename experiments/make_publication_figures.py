@@ -396,7 +396,7 @@ def figure3_phase5_reversal() -> None:
     )
     ax2.legend(fontsize=8, loc="lower right")
     ax2.grid(True, axis="y", alpha=0.3)
-    ax2.set_ylim(min(grads_g) * 1.4 - 0.03, max(grads_g) * 1.5)
+    ax2.set_ylim(min(min(grads_g) * 1.4 - 0.03, -0.21), max(grads_g) * 1.5)
 
     plt.tight_layout()
     path = os.path.join(OUT_DIR, "figure3_phase5_reversal.png")

@@ -201,7 +201,7 @@ def plot_multi_seed_ci(
                          label="Phase 5a 95% CI")
     if ticks_c:
         ax1.plot(ticks_c, care_c_mean, color="darkorange", linewidth=1.8, linestyle="--",
-                 label="Phase 5b control (scatter=5)")
+                 label="Phase 5b control (scatter=8)")
     if p3_ticks:
         ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.8, linestyle=":",
                  label="Phase 3 mean (no ecology)", zorder=4)
@@ -450,7 +450,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
 
     # ── Control pass (5b) ─────────────────────────────────────────────────────
     print("=" * 55)
-    print("Phase 5b: Dispersal control (scatter=5)...")
+    print("Phase 5b: Dispersal control (scatter=8)...")
     print("=" * 55 + "\n")
 
     for seed in seeds:
@@ -486,7 +486,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
         zs_summaries.append({
             "seed":        seed,
             "window_rate": window.get("care_per_mother_tick_in_window", 0.0),
-            "assimulated": m.get("assimilation_signal", False),
+            "assimilated": m.get("assimilation_signal", False),
         })
         cp["completed_zs"].append(seed)
         cp["zs_run_dirs"]  = zs_run_dirs
