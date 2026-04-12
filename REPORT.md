@@ -22,7 +22,7 @@ Prior agent-based life (ALife) studies of cooperation have established that spat
 
 **Problem Statement**
 
-> *What are the minimum ecological conditions under which kin-biased maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?*
+> *What are the minimum ecological conditions under which kin-biased maternal care can evolve under natural selection?*
 
 Two important constraints bound this question. First, the model's argmax decision architecture places an operative threshold at care_weight ≈ 0.075: below this value, care never wins the domain competition at typical energy levels, making true emergence from absolute zero untestable in this framework. We therefore initialise with care_weight drawn from Uniform(0, 0.50) (mean ≈ 0.25), a *depleted* baseline well below the Phase 3 eroded equilibrium of 0.42. Second, no kin recognition gene exists in the genome — any kin-biased care that emerges must arise solely from ecological spatial structure, not programmed discrimination.
 

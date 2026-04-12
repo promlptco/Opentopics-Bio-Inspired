@@ -249,7 +249,7 @@ All four citations confirmed with exact volume/page numbers:
 
 ### Problem Statement (Formalised)
 Added as an explicit blockquote in the Introduction (§1):
-> *"What are the minimum ecological conditions under which kin-biased maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?"*
+> *"What are the minimum ecological conditions under which kin-biased maternal care can evolve under natural selection?"*
 
 Key framing decisions embedded:
 - "build" not "emerge" — avoids the absolute-zero trap (operative threshold ≈ 0.075)
@@ -367,7 +367,7 @@ Pre-existing figures (no new scripts needed):
 ### Section-by-Section Drafting Guide
 
 #### 1. Abstract
-Key sentence: "We demonstrate that two ecological conditions — existential infant dependency and natal philopatry — are jointly necessary and sufficient to reverse the evolutionary selection gradient on maternal care from negative (r=−0.178) to positive (r=+0.079, p=0.0002, d=1.87) in a grid-world agent-based simulation."
+Key sentence: "We demonstrate that two ecological conditions — existential infant dependency and natal philopatry — are jointly necessary and sufficient to reverse the natural selection gradient on maternal care from negative (r=−0.178) to positive (r=+0.079, p=0.0002, d=1.87) in a grid-world agent-based simulation."
 Mention: gradient reversal, Hamilton's rule, Baldwin Effect negative result, 10-seed robustness.
 
 ---
@@ -375,7 +375,7 @@ Mention: gradient reversal, Hamilton's rule, Baldwin Effect negative result, 10-
 #### 2. Introduction
 - Hook: why does maternal care evolve? Hamilton's rule (rB > C) — but real populations rarely satisfy it simultaneously
 - Observation gap: prior ALife models either hard-code care targets or study maintenance, not emergence
-- Research question: *What are the minimum ecological conditions for care to emerge under evolutionary selection from a depleted baseline?*
+- Research question: *What are the minimum ecological conditions for care to emerge under natural selection from a depleted baseline?*
 - Preview of findings: gradient reversal confirmed, two conditions identified (AND not OR)
 
 ---
