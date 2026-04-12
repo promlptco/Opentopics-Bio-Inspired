@@ -1,4 +1,4 @@
-# Simulating the Minimum Ecological Conditions for the Emergence of Kin-Directed Maternal via Evolving Neuroendocrine Agents
+# Simulating the Minimum Ecological Conditions for the Emergence of Kin-Biased Maternal via Evolving Neuroendocrine Agents
 ## FRA361 Open Topics — FIBO 3rd Year, Semester 2
 
 A tick-based, grid-world agent-based simulation studying the **emergence of maternal care** through evolutionary game theory and Hamilton's rule (rB > C). Agents evolve genome weights governing care, foraging, and self-maintenance behaviour without any hard-coded care targets — prosocial behaviour emerges purely from selection pressure.
