@@ -1,6 +1,6 @@
 {
   "stage": "zeroshot",
-  "source_dir": "outputs\\phase5_emergence\\run_20260411_234850_seed47",
+  "source_dir": "outputs\\phase5a_reversal\\run_20260411_234850_seed47",
   "successful_care_events": 166,
   "surviving_mothers": 0,
   "care_per_mother_tick_all": 0.0098974481278321,

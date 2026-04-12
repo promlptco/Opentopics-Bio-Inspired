@@ -44,13 +44,13 @@ Pipeline: survival → maternal → plasticity → Hamilton-like analysis.
 | 7 | `phase1_survival/run.py` was empty | phase1_survival/run.py |
 | 8 | `initialize_with_genomes()` didn't exist | simulation.py |
 | 9 | Phase2 loaded genomes from phase1 (wrong) | phase2_zeroshot/run.py |
-| 10 | Phase3 never saved `top_genomes.json` | phase3_maternal/run.py |
-| 11 | Phase3 had no stage support | phase3_maternal/run.py |
+| 10 | Phase3 never saved `top_genomes.json` | phase3_erosion/run.py |
+| 11 | Phase3 had no stage support | phase3_erosion/run.py |
 | 12 | `stress` never updated — M_self half-broken | agents/mother.py |
-| 13 | `population_history.json` never saved → plots silently skipped | phase3_maternal/run.py |
+| 13 | `population_history.json` never saved → plots silently skipped | phase3_erosion/run.py |
 | 14 | `_log_choice` re-called `choose_child` ignoring commitment → wrong target logged | simulation.py |
-| 15 | `init_mothers=30, init_food=25` → 0.83 food/mother → total extinction | phase3_maternal/run.py |
-| 16 | `reproduction_enabled=False` on baselines → care only in first 100 ticks | phase3_maternal/run.py |
+| 15 | `init_mothers=30, init_food=25` → 0.83 food/mother → total extinction | phase3_erosion/run.py |
+| 16 | `reproduction_enabled=False` on baselines → care only in first 100 ticks | phase3_erosion/run.py |
 | 17 | No `mutation_enabled` flag → no way to fix genomes without killing reproduction | config.py, simulation.py |
 | 18 | `get_step_toward` only tried 3 directions → agents froze in crowds | simulation/world.py |
 | 19 | `own_child_id` never cleared on child death/maturation → mothers could only reproduce once | simulation/simulation.py |
@@ -101,9 +101,9 @@ To swap: change the import in `simulation/world.py`.
 |-------|--------|
 | `step1_survival_check` | VALIDATED — 6 runs, all passed |
 | `phase1_survival` | PASSED — 12/12 survive, avg energy 0.910, 2026-04-08 |
-| `phase3_maternal` | **Baseline-C0 FROZEN** — 2026-04-08 |
-| `phase3_maternal` | **Baseline-R0 COMPLETE** — 2026-04-09 |
-| `phase3_maternal` | **Evolution COMPLETE** — 2026-04-09, seeds 42–51 (10 runs) |
+| `phase3_erosion` | **Baseline-C0 FROZEN** — 2026-04-08 |
+| `phase3_erosion` | **Baseline-R0 COMPLETE** — 2026-04-09 |
+| `phase3_erosion` | **Evolution COMPLETE** — 2026-04-09, seeds 42–51 (10 runs) |
 | `phase2_zeroshot` | **COMPLETE** — 2026-04-09, seed=42 |
 | `phase4_plasticity` | **COMPLETE** — 2026-04-10, evolution + zeroshot, seed=42 |
 
@@ -112,7 +112,7 @@ To swap: change the import in `simulation/world.py`.
 ## Baseline-C0 — FROZEN
 
 **Config:** `care=0.7, forage=0.85, self=0.55`, `seed=42`
-**Run dir:** `outputs/phase3_maternal/run_20260408_191406_seed42`
+**Run dir:** `outputs/phase3_erosion/run_20260408_191406_seed42`
 **Results:** 24 surviving mothers, 12 children, 1262 care events, 100% success
 **Energy:** avg 0.439, stable oscillation 0.25–0.65
 **Relatedness:** avg_r=0.056 (~87% foreign care, ~13% own-child)
@@ -121,7 +121,7 @@ To swap: change the import in `simulation/world.py`.
 
 To watch live:
 ```bash
-python experiments/phase3_maternal/watch.py
+python experiments/phase3_erosion/watch.py
 ```
 
 ---
@@ -129,7 +129,7 @@ python experiments/phase3_maternal/watch.py
 ## Baseline-R0 — COMPLETE
 
 **Config:** random genomes `uniform(0,1)`, `seed=42`
-**Run dir:** `outputs/phase3_maternal/run_20260409_125601_seed42`
+**Run dir:** `outputs/phase3_erosion/run_20260409_125601_seed42`
 **Results:** 24 surviving mothers, 12 children, 829 care events, 100% success
 **Energy:** avg 0.447, stable
 **Relatedness:** avg_r=0.077 (84% foreign care, 16% own-child)
@@ -181,8 +181,8 @@ python experiments/phase3_maternal/watch.py
 **Implementation status (2026-04-11):**
 - Config: `infant_starvation_multiplier` + `birth_scatter_radius` added ✓
 - Simulation: infant hunger multiplier + birth_pos scatter ✓
-- `experiments/phase5_emergence/run.py` ✓ (survival_gate / evolution / control / zeroshot)
-- `experiments/phase5_emergence/run_multi_seed.py` ✓
+- `experiments/phase5a_reversal/run.py` ✓ (survival_gate / evolution / control / zeroshot)
+- `experiments/phase5a_reversal/run_multi_seed.py` ✓
 - Survival gate seed=42: PASSED (32 mothers at tick 1000)
 - Full single-seed run: IN PROGRESS
 
@@ -205,14 +205,20 @@ python experiments/phase3_maternal/watch.py
 
 ---
 
-**YOU ARE HERE: ALL EXPERIMENTS COMPLETE — WRITE-UP PHASE**
+**YOU ARE HERE: WRITE-UP PHASE — REPORT DRAFTING IN PROGRESS**
+
+**Next task (start of next session): Research and verify all citations before continuing report.**
+- Abstract ✓ APPROVED (Pearson's r disambiguation applied)
+- Introduction ✓ DRAFTED (pending citation verification)
+- Citations to verify: Hamilton (1964), Hinton & Nowlan (1987), and 2–3 ALife care/cooperation precedents (Axelrod & Hamilton 1981 used as placeholder — verify exact title/journal). Run WebSearch at session start before touching the Introduction text.
+- Sections remaining: Related Work → Methods → Results (3.1/3.2/3.3) → Discussion → Conclusion
 
 ---
 
 ## Phase 5 Multi-Seed Results (2026-04-12) — COMPLETE
 
-**Output:** `outputs/phase5_emergence/multi_seed_evolution/`
-**Script:** `experiments/phase5_emergence/run_multi_seed.py`
+**Output:** `outputs/phase5a_reversal/multi_seed_evolution/`
+**Script:** `experiments/phase5a_reversal/run_multi_seed.py`
 
 ### Evolution Summary (seeds 42–51)
 
@@ -264,9 +270,9 @@ Output: `outputs/publication_figures/`
 
 Pre-existing figures (no new scripts needed):
 - `outputs/thesis_plots/` — 4 cross-phase comparison plots (make_thesis_plots.py)
-- `outputs/phase3_maternal/multi_seed_evolution/` — CI + hitchhiking check
+- `outputs/phase3_erosion/multi_seed_evolution/` — CI + hitchhiking check
 - `outputs/phase4_plasticity/multi_seed_evolution/` — CI + zeroshot bar
-- `outputs/phase5_emergence/multi_seed_evolution/` — CI + zeroshot bar
+- `outputs/phase5a_reversal/multi_seed_evolution/` — CI + zeroshot bar
 - Phase 0–2 per-run plots in their respective `outputs/phaseX/.../plots/` directories
 
 ---
@@ -403,6 +409,9 @@ Future work: stochastic drift crossing the 0→0.075 threshold; local resource c
 | 2026-04-10 | Evolution analysis, birth_log, zero-shot fixed, Phase 4 both versions, multi-seed 4b |
 | 2026-04-11 | Phase 5 implemented, single-seed complete, gradient reversed r=+0.077 |
 | 2026-04-12 | Phase 5 multi-seed COMPLETE (p=0.0002, d=1.87, 9/10 seeds). Code cleanup. Publication figures. Report plan drafted. |
+| 2026-04-12 | Bug fixes (6 bugs: stale mult=3.0 metadata, scatter=5 labels, assimulated typo, Figure 3B invisible Phase 3 line). Figure 3 regenerated. |
+| 2026-04-12 | Directory rename: phase3_erosion→phase3_erosion, phase5a_reversal→phase5a_reversal. phase5b_control wrapper created. 91 output JSON files patched. All imports and paths verified clean. |
+| 2026-04-12 | Report drafting started: Abstract APPROVED, Introduction DRAFTED. Citations unverified — next session must verify before proceeding. |
 
 ---
 
@@ -488,8 +497,8 @@ Phase4 v2 genomes care **9.5% more per mother-tick** in the care window of a new
 
 ## Evolution — COMPLETE
 
-**Run dir (canonical):** `outputs/phase3_maternal/run_20260409_232012_seed42`
-**Multi-seed dir:** `outputs/phase3_maternal/multi_seed_evolution` (seeds 42–51)
+**Run dir (canonical):** `outputs/phase3_erosion/run_20260409_232012_seed42`
+**Multi-seed dir:** `outputs/phase3_erosion/multi_seed_evolution` (seeds 42–51)
 **Config:** `mutation_enabled=True`, `reproduction_enabled=True`, default Genome (0.5, 0.5, 0.5), `seed=42`
 **Results (seed 42):** 25 surviving mothers, care_weight 0.500→0.420 over 50 generations
 **Multi-seed:** 9/10 seeds declined (mean −0.059), 1 outlier (seed 48 +0.067 — low forage pressure)
@@ -505,7 +514,7 @@ Phase4 v2 genomes care **9.5% more per mother-tick** in the care window of a new
 ## Zero-Shot — COMPLETE (2026-04-10)
 
 **Run dir:** `outputs/phase2_zeroshot/run_20260409_233243_seed42`
-**Source genomes:** `outputs/phase3_maternal/run_20260409_232012_seed42/top_genomes.json`
+**Source genomes:** `outputs/phase3_erosion/run_20260409_232012_seed42/top_genomes.json`
 **Config:** 25 mothers (from evolution), `init_food=100`, no reproduction, no mutation, 1000 ticks
 **Results:** 229 care events (all successful), last alive tick 697
 **Care/mother-tick:** 0.0144 (vs phase3 evolution ~0.0094 — higher rate without reproduction pressure)
@@ -693,8 +702,8 @@ No kin recognition. No hard-coded targets. Mothers still pick highest-distress c
 
 ## Phase 5 — Ecological Emergence (SINGLE-SEED COMPLETE — 2026-04-11)
 
-**Folder:** `experiments/phase5_emergence/`
-**Output dir:** `outputs/phase5_emergence/`
+**Folder:** `experiments/phase5a_reversal/`
+**Output dir:** `outputs/phase5a_reversal/`
 
 ### Goal
 Demonstrate that infant dependency ecology REVERSES the selection gradient for care: from negative (Phase 3, r=−0.178, eroding) to positive (Phase 5, r>0, building). Show care building upward from a depleted baseline through pure natural selection.
@@ -733,7 +742,7 @@ Demonstrate that infant dependency ecology REVERSES the selection gradient for c
 
 **NEXT:** Multi-seed run (10 seeds 42–51) for statistical claim: is mean gradient r > 0 across seeds? (one-sample t-test vs H0: r=0).
 ```bash
-python experiments/phase5_emergence/run_multi_seed.py
+python experiments/phase5a_reversal/run_multi_seed.py
 ```
 
 ---

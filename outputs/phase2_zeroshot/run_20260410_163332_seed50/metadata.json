@@ -8,6 +8,6 @@
     30
   ],
   "plasticity_enabled": false,
-  "source_genomes": "outputs\\phase3_maternal\\run_20260409_195112_seed50",
+  "source_genomes": "outputs\\phase3_erosion\\run_20260409_195112_seed50",
   "note": "Evolved genomes from phase3 maternal evolution \u2014 zero-shot transfer test"
 }

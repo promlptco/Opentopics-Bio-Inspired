@@ -7,6 +7,6 @@
   "care_per_mother_tick": 0.011440734335506186,
   "total_mother_ticks": 15034,
   "last_alive_tick": 548,
-  "source_genomes": "outputs\\phase3_maternal\\run_20260409_194932_seed49",
+  "source_genomes": "outputs\\phase3_erosion\\run_20260409_194932_seed49",
   "note": "Extinction is expected: no reproduction -> 50 mothers post-maturation with no replacement. Key metric is care_per_mother_tick."
 }

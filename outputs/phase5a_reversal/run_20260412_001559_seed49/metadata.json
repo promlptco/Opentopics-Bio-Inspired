@@ -1,10 +1,10 @@
 {
-  "phase": "phase5_emergence",
+  "phase": "phase5a_reversal",
   "timestamp": "20260412_001559",
   "seed": 49,
   "stage": "zeroshot",
   "num_agents": 72,
-  "source_dir": "outputs\\phase5_emergence\\run_20260411_235504_seed49",
+  "source_dir": "outputs\\phase5a_reversal\\run_20260411_235504_seed49",
   "infant_starvation_multiplier": 1.15,
   "note": "Phase 5c genetic assimilation test. Evolved genomes, no plasticity/reproduction. Compare care_window rate to Phase 3 baseline 0.09069. Higher rate = care encoded in genome (assimilation confirmed)."
 }
