@@ -18,9 +18,17 @@ Maternal care is among the most energetically costly and evolutionarily signific
 
 Prior agent-based life (ALife) studies of cooperation have established that spatial structure can create local clusters of cooperators, providing a route to positive selection without explicit kin recognition (Axelrod and Hamilton, 1981; Nowak and May, 1992). These findings motivate the present inquiry: can spatial proximity at birth serve as a de facto kin-recognition substitute, elevating effective relatedness sufficiently to support care evolution? And does the magnitude of offspring dependency independently modulate the selection gradient?
 
-We address a specific and underexplored research question: *what are the minimum ecological conditions necessary for maternal care to emerge — that is, to build under positive selection — from a depleted evolutionary baseline?* Our framing deliberately excludes the harder problem of emergence from absolute zero, which is below the operative threshold of the model's decision architecture (care_weight < 0.075 yields no care events at typical energy levels). Instead, we initialise with care_weight drawn from Uniform(0, 0.50), mean ≈ 0.25, placing the population below the Phase 3 eroded equilibrium of 0.42 — a state from which spontaneous recovery has not previously been demonstrated.
+---
 
-Our principal finding is that two ecological conditions — existential infant dependency and natal philopatry — are jointly necessary and sufficient to reverse the selection gradient from −0.178 (erosion) to +0.079 (emergence), a sign change with effect size Cohen's d = 1.87. Neither condition in isolation produces a robust reversal. The model generates no explicit kin recognition; spatial proximity at birth is the sole mechanism mediating kin-biased care.
+**Problem Statement**
+
+> *What are the minimum ecological conditions under which kin-directed maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?*
+
+Two important constraints bound this question. First, the model's argmax decision architecture places an operative threshold at care_weight ≈ 0.075: below this value, care never wins the domain competition at typical energy levels, making true emergence from absolute zero untestable in this framework. We therefore initialise with care_weight drawn from Uniform(0, 0.50) (mean ≈ 0.25), a *depleted* baseline well below the Phase 3 eroded equilibrium of 0.42. Second, no kin recognition gene exists in the genome — any kin-biased care that emerges must arise solely from ecological spatial structure, not programmed discrimination.
+
+---
+
+Our principal finding is that two ecological conditions — existential infant dependency (infant_starvation_multiplier = 1.15) and natal philopatry (birth_scatter_radius = 2) — are jointly necessary and sufficient to reverse the selection gradient from −0.178 (Phase 3 erosion) to +0.079 (Phase 5a emergence), a sign change with effect size Cohen's d = 1.87 across 10 independent seeds. Neither condition in isolation produces a robust reversal. Spatial proximity at birth is the sole mechanism mediating kin-biased care.
 
 ---
 
@@ -211,6 +219,24 @@ The diluted effective relatedness (0.056 vs the theoretical 0.500 for own-child 
 
 This three-panel figure places the Phase 3 selection gradient (Pearson's r = −0.178) alongside the two plasticity variants for direct visual comparison. **Phase 3** (left, blue) shows the baseline negative OLS slope. **Phase 4a** (centre, orange — lineage-blind plasticity) shows a steeper negative slope (r = −0.216), visually confirming that indiscriminate learning amplifies selection against care rather than rescuing it; the scatter cloud shifts lower across generations compared to Phase 3. **Phase 4b** (right, green — kin-conditional plasticity) shows r = −0.189, marginally less steep than Phase 4a but still negative — the kin gate prevents the worst amplification but cannot overcome the underlying Hamilton deficit at this ecological setting. All three panels share the same axes and generation 0 reference (dashed, 0.500), enabling direct visual comparison. The key take-away is that no form of plasticity alone reverses the gradient; the sign change requires the ecological intervention of Phase 5.
 
+---
+
+**Figure H3a — Phase 3 Hamilton Deficit: rB vs C (Own-Lineage Care, seed=42)**
+
+![Figure H3a](outputs/phase3_erosion/run_20260409_232012_seed42/plots/hamilton_rB_vs_C.png)
+
+Each point is a single own-lineage care event (r > 0) from the full 5000-tick evolution run. The x-axis is the energetic cost C (feed_cost + move_cost) and the y-axis is the relatedness-weighted benefit rB (r × hunger_reduced). The red dashed diagonal is the Hamilton break-even line (rB = C); points above it satisfy rB > C, points below violate it. The scatter is predominantly **below the diagonal** — the dense cluster between C = 0.03 and C = 0.09 sits largely under the line, meaning the majority of own-lineage care events fail to satisfy Hamilton's rule even at r = 0.5. Some high-rB events at the top-left (low cost, high benefit) do cross above the line, but these are the minority. This plot is the mechanistic diagnosis of why care erodes: even when a mother cares for her own child, the per-event arithmetic frequently violates rB > C because B (hunger_reduced per event) is insufficient to outweigh C at the standard infant hunger rate.
+
+---
+
+**Figure H3b — Phase 3 Hamilton Deficit Distribution (rB − C, Own-Lineage)**
+
+![Figure H3b](outputs/phase3_erosion/run_20260409_232012_seed42/plots/hamilton_rB_minus_C.png)
+
+This histogram shows the distribution of rB − C values across all own-lineage care events in the Phase 3 evolution run. The distribution is **bimodal**: a left cluster centred around −0.03 to −0.02 (modal bin count ≈ 12), and a right cluster around +0.06 to +0.07. The break-even line (rB − C = 0, red dashed) divides the two modes. The left mode represents events where the cost of care exceeds the relatedness-weighted benefit — the Hamilton deficit. The right mode at +0.06 to +0.07 represents events where a high-hunger infant received effective care (large hunger_reduced), pushing rB well above C; these are the events that would, in isolation, support care evolution. However, the left mode is taller and contains more events than the positive tail in the middle range, pulling the mean to approximately −0.004. This bimodal structure is the quantitative motivation for Phase 5: if ecological conditions could shift the whole distribution rightward — either by elevating B (existential infant dependency) or by concentrating events on higher-r recipients (natal philopatry) — the mean rB − C would cross zero and selection would reverse.
+
+---
+
 ### 4.5 Phase 4 — Kin-Conditional Baldwin Effect
 
 The lineage-blind plasticity variant (Phase 4a) produces r = −0.216, worse than the Phase 3 baseline, confirming that indiscriminate learning amplifies noise rather than signal and is not reported further.
@@ -291,6 +317,26 @@ With dispersal increased to birth_scatter_radius = 8 while holding infant_starva
 **(A) care_weight trajectory: Phase 5a vs. Phase 5b vs. Phase 3.** Four reference lines anchor the plot: the Phase 5 initial mean (0.25, dashed light blue at top-left), the Phase 3 final equilibrium (0.420, dotted red near top), and the zero no-selection line. The Phase 5a trajectory (solid green, mean ± 95% CI, n=10 seeds) begins at mean ≈ 0.25 and rises steadily over 5000 ticks, with the CI band narrowing as seeds converge — indicating that the positive gradient is consistent, not dominated by high-variance early ticks. The Phase 5b trajectory (dashed orange) follows a similar rising shape but terminates lower, visually confirming the gradient attenuation from scatter=2 to scatter=8. The Phase 3 reference trajectory (dotted grey) runs as a horizontal-declining baseline across the upper portion of the plot, making the direction contrast stark: Phase 3 descends from 0.500 toward 0.420 while Phase 5a ascends from 0.250 toward 0.355+. The annotation box in the lower-right reports the three key statistics (Pearson's r = +0.0788, p = 0.0002, Cohen's d = 1.87), confirming the reversal is statistically robust. Ghost seed traces (faint green) reveal that most seeds rise individually, with only one seed (43) clearly diverging toward flat/negative.
 
 **(B) Per-seed selection gradient — Phase 5a (9/10 seeds positive).** Each bar represents the Pearson's r of care_weight vs generation for one seed. Green bars (positive r) confirm gradient reversal; the sole red bar (seed 43, r = −0.026) is the near-zero outlier. Three reference lines are superimposed: the zero line (black, no net selection), the Phase 3 reference (blue dashed, −0.178), and the Phase 5a cross-seed mean (green dash-dot, +0.0788). The visual gap between the Phase 3 reference line and the cluster of green bars makes the sign change immediately apparent without needing to read the numbers. Seed 43's red bar falls only slightly below zero — not a strong negative outlier — while seeds 44–51 cluster densely between +0.047 and +0.112, consistent with a robust underlying positive selection pressure operating across different stochastic initialisations.
+
+---
+
+#### 4.6.3 Hamilton Deficit Reduction (Phase 5a vs Phase 3)
+
+The gradient reversal observed in §4.6.1 is not merely a statistical artefact — it is rooted in a measurable change in the per-event Hamilton arithmetic. The following two figures show how the ecological interventions (infant_starvation_multiplier = 1.15, birth_scatter_radius = 2) shift the rB − C distribution of own-lineage care events relative to the Phase 3 deficit baseline established in §4.4.
+
+**Figure H5a — Phase 5a Hamilton: rB vs C (Own-Lineage Care, seed=42)**
+
+![Figure H5a](outputs/phase5a_reversal/run_20260411_233237_seed42/plots/hamilton_rB_vs_C.png)
+
+Comparing this scatter directly to Figure H3a (Phase 3), the cloud of own-lineage care events in Phase 5a shows a noticeably different relationship to the break-even diagonal. While many points still fall below the rB = C line, the cluster near and above the diagonal is denser — particularly in the C = 0.03 to C = 0.06 range where Phase 3 was dominated by below-diagonal points. This reflects two mechanisms acting simultaneously: (1) existential infant dependency elevates hunger_reduced per event (infants are more hungry and the care event relieves more hunger, increasing B), and (2) natal philopatry concentrates care events on own-lineage recipients (r = 0.5), so the rB term is computed at full relatedness rather than at the diluted effective r ≈ 0.035 that characterises most Phase 3 events. The shift is not dramatic — the distribution still straddles the line — but the direction is clear and consistent with the gradient reversal.
+
+**Figure H5b — Phase 5a Hamilton Deficit Distribution: rB − C (Own-Lineage)**
+
+![Figure H5b](outputs/phase5a_reversal/run_20260411_233237_seed42/plots/hamilton_rB_minus_C.png)
+
+Comparing this histogram to Figure H3b (Phase 3), the rB − C distribution in Phase 5a shows a **rightward shift**: the left-mode cluster (deficit, rB − C < 0) is now less dominant relative to the positive bins, and more events accumulate near and just above zero. The positive tail at +0.06 to +0.07 remains present in both phases, but in Phase 5a the mid-range positive bins (0.00 to +0.04) contain more events than in Phase 3, reflecting the increased number of Hamilton-satisfying events made possible by the higher effective B. The mean rB − C remains slightly negative for own-lineage events in isolation — because 93.6% of care events are still foreign-lineage (Figure P2e pattern repeats in Phase 5a) — but the rightward shift of the own-lineage distribution is the mechanistic basis of the positive selection gradient: the genomes with higher care_weight now receive a marginally better inclusive fitness return per own-lineage event, tipping the long-run selection balance positive.
+
+This cross-phase comparison (Phase 3 deficit → Phase 5a partial closure) is the mechanistic account of the gradient reversal: the ecological interventions do not eliminate the Hamilton deficit in any single event, but they shift the distribution enough that selection across thousands of own-lineage events accumulates a positive net force on care_weight.
 
 ---
 

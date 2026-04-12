@@ -205,13 +205,80 @@ python experiments/phase3_erosion/watch.py
 
 ---
 
-**YOU ARE HERE: WRITE-UP PHASE — REPORT DRAFTING IN PROGRESS**
+**YOU ARE HERE: WRITE-UP PHASE — FIRST FULL DRAFT COMPLETE (2026-04-13)**
 
-**Next task (start of next session): Research and verify all citations before continuing report.**
-- Abstract ✓ APPROVED (Pearson's r disambiguation applied)
-- Introduction ✓ DRAFTED (pending citation verification)
-- Citations to verify: Hamilton (1964), Hinton & Nowlan (1987), and 2–3 ALife care/cooperation precedents (Axelrod & Hamilton 1981 used as placeholder — verify exact title/journal). Run WebSearch at session start before touching the Introduction text.
-- Sections remaining: Related Work → Methods → Results (3.1/3.2/3.3) → Discussion → Conclusion
+---
+
+## What Was Done This Session (2026-04-13)
+
+### Documents Generated
+| File | Status | Notes |
+|------|--------|-------|
+| `README.md` | ✓ COMPLETE | Developer guide — config flags, execution commands, output structure |
+| `EXPERIMENT.md` | ✓ COMPLETE | Full methodology — purpose/assumption/rationale/objective/variables per phase |
+| `REPORT.md` | ✓ FIRST DRAFT COMPLETE | Full academic paper — all sections written, all plots embedded |
+
+### Project Title (updated)
+**"Simulating the Minimum Ecological Conditions for the Emergence of Kin-Directed Maternal via Evolving Neuroendocrine Agents"**
+Applied consistently across README.md, EXPERIMENT.md, REPORT.md.
+
+### Citations Verified (2026-04-13)
+All four citations confirmed with exact volume/page numbers:
+- Hamilton (1964) — *J. Theoretical Biology* 7(1), 1–52
+- Hinton & Nowlan (1987) — *Complex Systems* 1(3), 495–502
+- Axelrod & Hamilton (1981) — *Science* 211(4489), 1390–1396
+- Nowak & May (1992) — *Nature* 359(6398), 826–829
+
+### REPORT.md — Sections Written
+| Section | Status | Notes |
+|---------|--------|-------|
+| Title | ✓ | Updated to new project title |
+| Abstract | ✓ APPROVED | 150 words, Pearson's r disambiguation applied |
+| 1. Introduction | ✓ | Includes formal **Problem Statement** block (corrected framing) |
+| 2. Related Work | ✓ | Hamilton, Baldwin Effect, ALife precedents, key gap |
+| 3. Methods | ✓ | 4 subsections incl. two-level B distinction (critical) |
+| 4.1 Phase 0 | ✓ | Pass/fail table — no plots (unit tests only) |
+| 4.2 Phase 1 | ✓ | population_energy.png embedded + interpreted |
+| 4.3 Phase 2 | ✓ | 5 plots embedded (population_energy, hamilton trio, own_vs_foreign) |
+| 4.4 Phase 3 | ✓ | Figure 1 + Supp S1 + Hamilton deficit diagnosis (H3a, H3b) |
+| 4.5 Phase 4 | ✓ | Figure 2 + Supp S2, S3, S4 |
+| 4.6 Phase 5 | ✓ | Figure 3 + Hamilton deficit reduction (H5a, H5b) + §4.6.3 cross-phase narrative |
+| 5. Discussion | ✓ | 5 subsections incl. AND condition, philopatry mechanism, Baldwin partial result, 3 limitations |
+| 6. Conclusion | ✓ | Two conditions, future work |
+| References | ✓ | 6 citations with full details |
+
+### Problem Statement (Formalised)
+Added as an explicit blockquote in the Introduction (§1):
+> *"What are the minimum ecological conditions under which kin-directed maternal care can build under evolutionary selection from a depleted baseline — that is, for the selection gradient on care to reverse from negative to positive in a population whose care level has been eroded by prior evolution?"*
+
+Key framing decisions embedded:
+- "build" not "emerge" — avoids the absolute-zero trap (operative threshold ≈ 0.075)
+- "kin-directed" — matches new title
+- "depleted baseline" — init mean=0.25, below Phase 3 eroded equilibrium 0.42
+- "no kin recognition gene" — spatial proximity is the sole mechanism
+
+### Hamilton Deficit Reduction Plots Added
+- Phase 3 canonical: `hamilton_rB_vs_C.png` + `hamilton_rB_minus_C.png` → deficit diagnosed in §4.4
+- Phase 5a canonical: `hamilton_rB_vs_C.png` + `hamilton_rB_minus_C.png` → deficit reduction in §4.6.3
+- Narrative: distribution shifts rightward from Phase 3 → Phase 5a; mean rB−C remains slightly negative per-event but the shift tips cumulative selection positive
+
+---
+
+## Next Steps — Thesis Plan
+
+### Immediate (before submission)
+1. **Review REPORT.md first full draft** — read all sections end-to-end, flag any inconsistencies or claims that need softening
+2. **Abstract alignment** — check the 150-word abstract still matches the updated title ("kin-directed", "neuroendocrine agents") — currently abstract does not mention these terms; decide whether to align or keep abstract more conservative
+3. **Title check: "Neuroendocrine Agents"** — the title uses "Neuroendocrine Agents" but the simulation does not model neuroendocrine dynamics explicitly. Be prepared to justify this framing if questioned (e.g., argmax domain selection as a behavioural proxy for neuroendocrine priority-setting). Consider whether to soften to "Evolving Agents" to avoid this risk.
+4. **Figure numbering audit** — REPORT.md uses Figure 1/2/3 (publication), H3a/H3b/H5a/H5b (Hamilton), P1/P2a-e (Phase 1-2), S1-S4 (supplementary). Decide whether to unify into a single sequential numbering scheme for formal submission.
+5. **References section** — add Emlen (1995) and Stacey & Koenig (1990) which are cited in Discussion §5.3 but may be missing from the formatted References list
+
+### Future Thesis Extensions (Part 3 — if pursued)
+- Epigenetic inheritance (Lamarckian soft transmission of care_weight)
+- Social learning (copy-successful-mothers mechanism)
+- Evolvable kin sensitivity (explicit genome parameter for kin recognition)
+- Local resource competition as a cost of natal philopatry (food depletion near birth sites)
+- Stochastic modelling of operative threshold crossing (care_weight 0→0.075 gap)
 
 ---
 
