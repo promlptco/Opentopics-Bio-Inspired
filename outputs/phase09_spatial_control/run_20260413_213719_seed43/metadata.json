@@ -1,0 +1,14 @@
+{
+  "phase": "phase5d_spatial_control",
+  "timestamp": "20260413_213719",
+  "seed": 43,
+  "num_agents": 24,
+  "grid_size": [
+    30,
+    30
+  ],
+  "infant_starvation_multiplier": 1.0,
+  "birth_scatter_radius": 2,
+  "plasticity_enabled": false,
+  "note": "Phase 5d \u2014 Spatial-Only Control. mult=1.0 (no infant pressure), scatter=2 (natal philopatry). Isolates spatial mechanism. Expected: gradient stays \u2264 0."
+}

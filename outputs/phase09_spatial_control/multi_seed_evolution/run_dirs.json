@@ -1,0 +1,26 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "run_dirs": {
+    "42": "outputs\\phase5d_spatial_control\\run_20260413_213604_seed42",
+    "43": "outputs\\phase5d_spatial_control\\run_20260413_213719_seed43",
+    "44": "outputs\\phase5d_spatial_control\\run_20260413_213831_seed44",
+    "45": "outputs\\phase5d_spatial_control\\run_20260413_213935_seed45",
+    "46": "outputs\\phase5d_spatial_control\\run_20260413_214106_seed46",
+    "47": "outputs\\phase5d_spatial_control\\run_20260413_214226_seed47",
+    "48": "outputs\\phase5d_spatial_control\\run_20260413_214346_seed48",
+    "49": "outputs\\phase5d_spatial_control\\run_20260413_214507_seed49",
+    "50": "outputs\\phase5d_spatial_control\\run_20260413_214627_seed50",
+    "51": "outputs\\phase5d_spatial_control\\run_20260413_214746_seed51"
+  }
+}

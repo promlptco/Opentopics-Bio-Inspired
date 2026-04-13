@@ -17,7 +17,9 @@
       "WebSearch",
       "Bash(xargs grep:*)",
       "Bash(mkdir -p \"C:/Users/User/.claude/plans\")",
-      "Read(//c/Users/User/.claude/plans/**)"
+      "Read(//c/Users/User/.claude/plans/**)",
+      "Bash(ls experiments/phase5c_instinct/)",
+      "Bash(ls outputs/phase5c_instinct/)"
     ]
   }
 }

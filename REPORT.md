@@ -81,11 +81,11 @@ We implement a 2D discrete grid-world simulation (tick-based, synchronous update
 
 | Phase | Key Config | Scientific Purpose |
 |-------|-----------|-------------------|
-| Phase 1 | mutation=F, reproduction=T | Survival viability gate |
-| Phase 3 | Genome(0.5,0.5,0.5) ± mutation, seeds 42–51, mult=1.0, scatter=5 | Care erosion baseline |
+| Phase 03 | mutation=F, reproduction=T | Survival viability gate |
+| Phase 04 | Genome(0.5,0.5,0.5) ± mutation, seeds 42–51, mult=1.0, scatter=5 | Care erosion baseline |
 | Phase 4b | + learning_rate, plasticity_kin_conditional=T | Kin-conditional Baldwin Effect |
-| Phase 5a | mult=1.15, scatter=2, Genome(0,0.50) | Ecological emergence — natal philopatry |
-| Phase 5b | mult=1.15, scatter=8 (all else Phase 5a) | Control — high dispersal |
+| Phase 07 | mult=1.15, scatter=2, Genome(0,0.50) | Ecological emergence — natal philopatry |
+| Phase 08 | mult=1.15, scatter=8 (all else Phase 5a) | Control — high dispersal |
 
 All multi-seed runs use seeds 42–51 (n = 10 independent replicates). Each seed runs for 5000 ticks (approximately 100 ticks per generation at standard reproduction rates).
 
@@ -137,7 +137,7 @@ Phase 1 verifies that the simulation environment sustains agent life under fixed
 
 **Figure P1 — Phase 1: Population & Energy Stability (seed=42)**
 
-![Figure P1](outputs/phase1_survival/run_20260408_000903_seed42/plots/population_energy.png)
+![Figure P1](outputs/phase03_survival_full/run_20260408_000903_seed42/plots/population_energy.png)
 
 **Upper panel — Population count.** The blue line is perfectly flat at 12 mothers across all 300 ticks. Zero deaths occur. This is the expected result for fixed-genome, high-care agents in a food-sufficient environment: all mothers survive the full run duration. The flatness of the line confirms that the food supply, grid size, and energy dynamics are calibrated correctly — no starvation, no overcrowding extinction, no runaway energy drain.
 
@@ -151,7 +151,7 @@ Phase 2 transfers the top evolved genomes from Phase 3 evolution into a frozen e
 
 **Figure P2a — Phase 2: Population & Energy (canonical run, seed=42)**
 
-![Figure P2a](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/population_energy.png)
+![Figure P2a](outputs/phase05_zeroshot_standard/run_20260409_233243_seed42/plots/population_energy.png)
 
 **Upper panel — Population count.** The population begins at 25 mothers, rises briefly to ~50 as children mature into new adults at tick ~100, then declines monotonically to zero by tick ~650. This is the expected trajectory for a zero-shot run: with reproduction disabled, no new agents replace those who die, and the population exhausts itself. The brief rise at tick ~80–120 marks the maturation event where the initial cohort of children reach adulthood and are counted in the population. The care window of interest is **ticks 0–100**, before maturation — during this window all children are alive and the care rate is meaningful.
 
@@ -161,7 +161,7 @@ Phase 2 transfers the top evolved genomes from Phase 3 evolution into a frozen e
 
 **Figure P2b — Hamilton rB vs C: Own-Lineage Care Events**
 
-![Figure P2b](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_rB_vs_C.png)
+![Figure P2b](outputs/phase05_zeroshot_standard/run_20260409_233243_seed42/plots/hamilton_rB_vs_C.png)
 
 This scatter plot shows every own-lineage care event (r > 0) as a point with cost C on the x-axis and relatedness-weighted benefit rB on the y-axis. The red dashed diagonal is the rB = C break-even line — points above it satisfy Hamilton's rule, points below it do not. The majority of points cluster **below the diagonal**: rB is consistently lower than C for most events. Only a small number of points (upper-left cluster, highest-B events) exceed the break-even line. This visual directly demonstrates that most individual care acts — even those directed at own offspring (r = 0.5) — are Hamilton-violating: the energetic cost exceeds the relatedness-weighted benefit delivered. The sparse scatter and small n reflect that only ~16 of 229 total care events in this run were own-lineage.
 
@@ -169,7 +169,7 @@ This scatter plot shows every own-lineage care event (r > 0) as a point with cos
 
 **Figure P2c — Hamilton (rB − C) Distribution: Own-Lineage Care**
 
-![Figure P2c](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_rB_minus_C.png)
+![Figure P2c](outputs/phase05_zeroshot_standard/run_20260409_233243_seed42/plots/hamilton_rB_minus_C.png)
 
 This histogram shows the distribution of rB − C values across all own-lineage care events. The break-even line (rB − C = 0, red dashed) divides positive from negative events. The distribution is strongly left-skewed: the modal bin is −0.02 to −0.03, and the majority of the mass lies to the left of zero. Only the rightmost bin (rB − C ≈ +0.05) represents genuinely Hamilton-satisfying events, and this bin contains only 2 events. The mean rB − C ≈ −0.004 is therefore the average of a distribution that is predominantly negative with a thin positive tail — confirming that care is a net fitness liability in this ecological regime even when restricted to own-lineage events.
 
@@ -177,7 +177,7 @@ This histogram shows the distribution of rB − C values across all own-lineage 
 
 **Figure P2d — Care Events by Relatedness**
 
-![Figure P2d](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/care_by_relatedness.png)
+![Figure P2d](outputs/phase05_zeroshot_standard/run_20260409_233243_seed42/plots/care_by_relatedness.png)
 
 This bar chart shows the count of care events binned by recipient relatedness r. Two bins dominate: r = 0.0 (foreign-lineage, ~213 events) and r = 0.5 (own child, ~16 events). No events appear at r = 0.25 or r = 0.125 in this run, reflecting that care events occur primarily within the first generation (before grandchildren exist). The 93% foreign-lineage rate (213 of 229 total events) is the core mechanism of care erosion: when 93% of care is directed at unrelated recipients, the effective relatedness averaged across all care events is approximately 0.035 — far below the threshold needed to satisfy rB > C at the per-event benefit levels observed. This chart makes the relatedness dilution problem concrete and visually unambiguous.
 
@@ -185,7 +185,7 @@ This bar chart shows the count of care events binned by recipient relatedness r.
 
 **Figure P2e — Own vs Foreign Lineage Care**
 
-![Figure P2e](outputs/phase2_zeroshot/run_20260409_233243_seed42/plots/hamilton_own_vs_foreign.png)
+![Figure P2e](outputs/phase05_zeroshot_standard/run_20260409_233243_seed42/plots/hamilton_own_vs_foreign.png)
 
 This bar chart directly contrasts own-lineage (16 events, 7.0%) against foreign-lineage (213 events, 93.0%) care volume. The title reports the own-lineage percentage. The near-total dominance of the foreign-lineage bar makes the fundamental problem of maternal care evolution in this environment visually immediate: agents direct care based on visible child distress, not kinship. Without a spatial or recognition mechanism that preferentially routes care to kin, the inclusive fitness channel (rB) is almost entirely closed. This chart motivates the Phase 5 intervention — natal philopatry is designed to shift this ratio by ensuring that the children proximate to a mother at birth are disproportionately her own.
 
@@ -207,7 +207,7 @@ The diluted effective relatedness (0.056 vs the theoretical 0.500 for own-child 
 
 **Figure 1 — Phase 3: Evolutionary Erosion of Maternal Care**
 
-![Figure 1](outputs/publication_figures/figure1_phase3_erosion.png)
+![Figure 1](outputs/publication_figures/figure1_phase04_care_erosion.png)
 
 **(A) Multi-seed care_weight trajectory (seeds 42–51).** The solid blue line shows the mean care_weight ± 95% CI across all 10 seeds. Individual seed ghost traces (faint blue) reveal that the decline is consistent, not driven by outliers. The initial mean (0.500, dashed grey) and final mean (0.420, dotted red) reference lines make the erosion magnitude immediately legible. The population converges toward a lower equilibrium around 0.42 by tick 3000–5000, with the confidence band narrowing as seeds co-converge. The flatness of this terminal region (ticks 3000–5000) indicates that the eroded state is stable under these ecological conditions — not a transient — and that further evolutionary time would not reverse the trend without a change in ecological parameters.
 
@@ -225,7 +225,7 @@ This three-panel figure places the Phase 3 selection gradient (Pearson's r = −
 
 **Figure H3a — Phase 3 Hamilton Deficit: rB vs C (Own-Lineage Care, seed=42)**
 
-![Figure H3a](outputs/phase3_erosion/run_20260409_232012_seed42/plots/hamilton_rB_vs_C.png)
+![Figure H3a](outputs/phase04_care_erosion/run_20260409_232012_seed42/plots/hamilton_rB_vs_C.png)
 
 Each point is a single own-lineage care event (r > 0) from the full 5000-tick evolution run. The x-axis is the energetic cost C (feed_cost + move_cost) and the y-axis is the relatedness-weighted benefit rB (r × hunger_reduced). The red dashed diagonal is the Hamilton break-even line (rB = C); points above it satisfy rB > C, points below violate it. The scatter is predominantly **below the diagonal** — the dense cluster between C = 0.03 and C = 0.09 sits largely under the line, meaning the majority of own-lineage care events fail to satisfy Hamilton's rule even at r = 0.5. Some high-rB events at the top-left (low cost, high benefit) do cross above the line, but these are the minority. This plot is the mechanistic diagnosis of why care erodes: even when a mother cares for her own child, the per-event arithmetic frequently violates rB > C because B (hunger_reduced per event) is insufficient to outweigh C at the standard infant hunger rate.
 
@@ -233,7 +233,7 @@ Each point is a single own-lineage care event (r > 0) from the full 5000-tick ev
 
 **Figure H3b — Phase 3 Hamilton Deficit Distribution (rB − C, Own-Lineage)**
 
-![Figure H3b](outputs/phase3_erosion/run_20260409_232012_seed42/plots/hamilton_rB_minus_C.png)
+![Figure H3b](outputs/phase04_care_erosion/run_20260409_232012_seed42/plots/hamilton_rB_minus_C.png)
 
 This histogram shows the distribution of rB − C values across all own-lineage care events in the Phase 3 evolution run. The distribution is **bimodal**: a left cluster centred around −0.03 to −0.02 (modal bin count ≈ 12), and a right cluster around +0.06 to +0.07. The break-even line (rB − C = 0, red dashed) divides the two modes. The left mode represents events where the cost of care exceeds the relatedness-weighted benefit — the Hamilton deficit. The right mode at +0.06 to +0.07 represents events where a high-hunger infant received effective care (large hunger_reduced), pushing rB well above C; these are the events that would, in isolation, support care evolution. However, the left mode is taller and contains more events than the positive tail in the middle range, pulling the mean to approximately −0.004. This bimodal structure is the quantitative motivation for Phase 5: if ecological conditions could shift the whole distribution rightward — either by elevating B (existential infant dependency) or by concentrating events on higher-r recipients (natal philopatry) — the mean rB − C would cross zero and selection would reverse.
 
@@ -251,7 +251,7 @@ For the genetic assimilation test, evolved Phase 4b genomes (seed=42) were trans
 
 **Figure 2 — Phase 4: Kin-Conditional Baldwin Effect**
 
-![Figure 2](outputs/publication_figures/figure2_phase4_plasticity.png)
+![Figure 2](outputs/publication_figures/figure2_phase06_baldwin_effect.png)
 
 **(A) care_weight trajectory: Phase 3 vs Phase 4b (seed=42).** The blue line (Phase 3, no plasticity) shows the expected monotonic erosion from 0.500 to 0.420. The green line (Phase 4b, kin-conditional plasticity) departs immediately from Phase 3: care_weight dips more steeply to a trough of 0.355 at approximately tick 2300 before recovering to 0.436 by tick 5000. This trough-and-recovery is the canonical Baldwin Effect signature — the genome initially "makes room" for the new learning_rate parameter by reducing care_weight, then recovers as the learning mechanism begins generating selective return. The annotation marks both the trough value and the recovery onset (tick 3600+), making the temporal structure of assimilation legible. The Phase 4b final value (0.436) slightly exceeds the Phase 3 final (0.420), indicating that the Baldwin mechanism provides marginal but real rescue of care in the genome.
 
@@ -314,7 +314,7 @@ With dispersal increased to birth_scatter_radius = 8 while holding infant_starva
 
 **Figure 3 — Phase 5: Ecological Emergence of Maternal Care (Gradient Reversal)**
 
-![Figure 3](outputs/publication_figures/figure3_phase5_reversal.png)
+![Figure 3](outputs/publication_figures/figure3_phase07_ecological_emergence.png)
 
 **(A) care_weight trajectory: Phase 5a vs. Phase 5b vs. Phase 3.** Four reference lines anchor the plot: the Phase 5 initial mean (0.25, dashed light blue at top-left), the Phase 3 final equilibrium (0.420, dotted red near top), and the zero no-selection line. The Phase 5a trajectory (solid green, mean ± 95% CI, n=10 seeds) begins at mean ≈ 0.25 and rises steadily over 5000 ticks, with the CI band narrowing as seeds converge — indicating that the positive gradient is consistent, not dominated by high-variance early ticks. The Phase 5b trajectory (dashed orange) follows a similar rising shape but terminates lower, visually confirming the gradient attenuation from scatter=2 to scatter=8. The Phase 3 reference trajectory (dotted grey) runs as a horizontal-declining baseline across the upper portion of the plot, making the direction contrast stark: Phase 3 descends from 0.500 toward 0.420 while Phase 5a ascends from 0.250 to approximately 0.29 by tick 5000. The annotation box in the lower-right reports the three key statistics (Pearson's r = +0.0788, p = 0.0002, Cohen's d = 1.87), confirming the reversal is statistically robust. Ghost seed traces (faint green) reveal that most seeds rise individually, with only one seed (43) clearly diverging toward flat/negative.
 
@@ -328,13 +328,13 @@ The gradient reversal observed in §4.6.1 is not merely a statistical artefact �
 
 **Figure H5a — Phase 5a Hamilton: rB vs C (Own-Lineage Care, seed=42)**
 
-![Figure H5a](outputs/phase5a_reversal/run_20260411_233237_seed42/plots/hamilton_rB_vs_C.png)
+![Figure H5a](outputs/phase07_ecological_emergence/run_20260411_233237_seed42/plots/hamilton_rB_vs_C.png)
 
 Comparing this scatter directly to Figure H3a (Phase 3), the cloud of own-lineage care events in Phase 5a shows a noticeably different relationship to the break-even diagonal. While many points still fall below the rB = C line, the cluster near and above the diagonal is denser — particularly in the C = 0.03 to C = 0.06 range where Phase 3 was dominated by below-diagonal points. This reflects two mechanisms acting simultaneously: (1) existential infant dependency elevates hunger_reduced per event (infants are more hungry and the care event relieves more hunger, increasing B), and (2) natal philopatry keeps own-lineage children spatially proximate during the maturation window, so when a highly-distressed own-child triggers a care event, the providing mother is more likely to be the birth mother (r = 0.5) rather than a foreign agent. Note that the majority of care events remain foreign-lineage even under natal philopatry (93.6%), consistent with the proximity-based rather than kin-recognition-based selection mechanism; the gradient reversal is driven by the improved *quality* of own-lineage events (higher B, higher effective r at the event level), not by a dramatic shift in the raw own/foreign ratio. The shift in the scatter is not dramatic — the distribution still straddles the line — but the direction is clear and consistent with the gradient reversal.
 
 **Figure H5b — Phase 5a Hamilton Deficit Distribution: rB − C (Own-Lineage)**
 
-![Figure H5b](outputs/phase5a_reversal/run_20260411_233237_seed42/plots/hamilton_rB_minus_C.png)
+![Figure H5b](outputs/phase07_ecological_emergence/run_20260411_233237_seed42/plots/hamilton_rB_minus_C.png)
 
 Comparing this histogram to Figure H3b (Phase 3), the rB − C distribution in Phase 5a shows a **rightward shift**: the left-mode cluster (deficit, rB − C < 0) is now less dominant relative to the positive bins, and more events accumulate near and just above zero. The positive tail at +0.06 to +0.07 remains present in both phases, but in Phase 5a the mid-range positive bins (0.00 to +0.04) contain more events than in Phase 3, reflecting the increased number of Hamilton-satisfying events made possible by the higher effective B. The mean rB − C remains slightly negative for own-lineage events in isolation — because 93.6% of care events are still foreign-lineage (Figure P2e pattern repeats in Phase 5a) — but the rightward shift of the own-lineage distribution is the mechanistic basis of the positive selection gradient: the genomes with higher care_weight now receive a marginally better inclusive fitness return per own-lineage event, tipping the long-run selection balance positive.
 

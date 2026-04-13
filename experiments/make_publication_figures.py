@@ -37,11 +37,11 @@ OUT_DIR = os.path.join(PROJECT_ROOT, "outputs", "publication_figures")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── Canonical run directories ────────────────────────────────────────────────
-P3_CANONICAL      = os.path.join(PROJECT_ROOT, "outputs", "phase3_erosion",    "run_20260409_232012_seed42")
-P4B_CANONICAL     = os.path.join(PROJECT_ROOT, "outputs", "phase4_plasticity", "run_20260410_113356_seed42")
-P3_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase3_erosion",    "multi_seed_evolution")
-P4B_MULTI_DIR     = os.path.join(PROJECT_ROOT, "outputs", "phase4_plasticity", "multi_seed_evolution")
-P5_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase5a_reversal",  "multi_seed_evolution")
+P3_CANONICAL      = os.path.join(PROJECT_ROOT, "outputs", "phase04_care_erosion",    "run_20260409_232012_seed42")
+P4B_CANONICAL     = os.path.join(PROJECT_ROOT, "outputs", "phase06_baldwin_effect", "run_20260410_113356_seed42")
+P3_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase04_care_erosion",    "multi_seed_evolution")
+P4B_MULTI_DIR     = os.path.join(PROJECT_ROOT, "outputs", "phase06_baldwin_effect", "multi_seed_evolution")
+P5_MULTI_DIR      = os.path.join(PROJECT_ROOT, "outputs", "phase07_ecological_emergence",  "multi_seed_evolution")
 
 PHASE3_ZS_BASELINE = 0.09069
 MATURITY_AGE       = 100
@@ -146,7 +146,7 @@ def _resolve_run_dirs_dict(manifest_json: str, key: str) -> dict[str, str]:
 
 # ── Figure 1: Phase 3 Care Erosion ───────────────────────────────────────────
 
-def figure1_phase3_erosion() -> None:
+def figure1_phase04_care_erosion() -> None:
     print("Generating Figure 1 — Phase 3 Care Erosion...")
 
     p3_run_dirs = _resolve_run_dirs(os.path.join(P3_MULTI_DIR, "run_dirs.json"))
@@ -227,7 +227,7 @@ def figure1_phase3_erosion() -> None:
     ax2.grid(True)
 
     fig.tight_layout()
-    path = os.path.join(OUT_DIR, "figure1_phase3_erosion.png")
+    path = os.path.join(OUT_DIR, "figure1_phase04_care_erosion.png")
     fig.savefig(path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
@@ -235,7 +235,7 @@ def figure1_phase3_erosion() -> None:
 
 # ── Figure 2: Phase 4 Baldwin Effect & Zero-Shot ─────────────────────────────
 
-def figure2_phase4_plasticity() -> None:
+def figure2_phase06_baldwin_effect() -> None:
     print("Generating Figure 2 — Phase 4 Baldwin Effect & Zero-Shot Transfer...")
 
     p3_snaps  = _snapshots(P3_CANONICAL)
@@ -340,11 +340,11 @@ def figure2_phase4_plasticity() -> None:
         ax2.legend(loc="lower right", frameon=True)
         ax2.grid(True, axis="y")
     else:
-        ax2.text(0.5, 0.5, "per_seed data not found\n(re-run phase4 multi-seed)",
+        ax2.text(0.5, 0.5, "per_seed data not found\n(re-run phase06 multi-seed)",
                  ha="center", va="center", transform=ax2.transAxes, fontsize=10)
 
     fig.tight_layout()
-    path = os.path.join(OUT_DIR, "figure2_phase4_plasticity.png")
+    path = os.path.join(OUT_DIR, "figure2_phase06_baldwin_effect.png")
     fig.savefig(path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
@@ -352,7 +352,7 @@ def figure2_phase4_plasticity() -> None:
 
 # ── Figure 3: Phase 5 Ecological Emergence ───────────────────────────────────
 
-def figure3_phase5_reversal() -> None:
+def figure3_phase07_ecological_emergence() -> None:
     print("Generating Figure 3 — Phase 5 Ecological Emergence (Gradient Reversal)...")
 
     p5_manifest  = os.path.join(P5_MULTI_DIR, "run_dirs.json")
@@ -458,7 +458,7 @@ def figure3_phase5_reversal() -> None:
     ax2.grid(True, axis="y")
 
     fig.tight_layout()
-    path = os.path.join(OUT_DIR, "figure3_phase5_reversal.png")
+    path = os.path.join(OUT_DIR, "figure3_phase07_ecological_emergence.png")
     fig.savefig(path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
@@ -468,7 +468,7 @@ def figure3_phase5_reversal() -> None:
 
 if __name__ == "__main__":
     print(f"Output directory: {OUT_DIR}\n")
-    figure1_phase3_erosion()
-    figure2_phase4_plasticity()
-    figure3_phase5_reversal()
+    figure1_phase04_care_erosion()
+    figure2_phase06_baldwin_effect()
+    figure3_phase07_ecological_emergence()
     print("\nAll publication figures generated.")

@@ -13,16 +13,16 @@ The pipeline proceeds through five experimental phases:
 
 | Phase | Directory | Purpose |
 |-------|-----------|---------|
-| Phase 0 | `experiments/phase0_evolution_sanity/` | Unit tests for mutation, inheritance, reproduction |
-| Phase 1 | `experiments/phase1_survival/` | Survival gate — confirm baseline viability |
-| Phase 2 | `experiments/phase2_zeroshot/` | Zero-shot baseline — evolved genome transfer, no further evolution |
-| Phase 3 | `experiments/phase3_erosion/` | Evolution with standard parameters — care erosion baseline |
-| Phase 4 | `experiments/phase4_plasticity/` | Kin-conditional plasticity / Baldwin Effect |
-| Phase 5a | `experiments/phase5a_reversal/` | Ecological emergence — natal philopatry + existential infant dependency |
-| Phase 5b | `experiments/phase5b_control/` | Control — high dispersal (scatter=8), tests philopatry contribution |
+| Phase 01 | `experiments/phase01_mechanics_tests/` | Unit tests for mutation, inheritance, reproduction |
+| Phase 03 | `experiments/phase03_survival_full/` | Survival gate — confirm baseline viability |
+| Phase 05 | `experiments/phase05_zeroshot_standard/` | Zero-shot baseline — evolved genome transfer, no further evolution |
+| Phase 04 | `experiments/phase04_care_erosion/` | Evolution with standard parameters — care erosion baseline |
+| Phase 06 | `experiments/phase06_baldwin_effect/` | Kin-conditional plasticity / Baldwin Effect |
+| Phase 07 | `experiments/phase07_ecological_emergence/` | Ecological emergence — natal philopatry + existential infant dependency |
+| Phase 08 | `experiments/phase08_dispersal_control/` | Control — high dispersal (scatter=8), tests philopatry contribution |
 
 Publication figures: `experiments/make_publication_figures.py`
-Cross-phase thesis plots: `experiments/phase4_plasticity/make_thesis_plots.py`
+Cross-phase thesis plots: `experiments/phase06_baldwin_effect/make_thesis_plots.py`
 
 ---
 
@@ -63,7 +63,7 @@ All flags are passed as keyword arguments to the `SimConfig` dataclass (`config.
 
 **Phase-by-phase config summary:**
 
-| Flag | baseline_c0 | baseline_r0 | Phase 3 | zero-shot | Phase 4b | Phase 5a |
+| Flag | baseline_c0 | baseline_r0 | Phase 04 | zero-shot | Phase 4b | Phase 07 |
 |------|-------------|-------------|---------|-----------|----------|----------|
 | `reproduction_enabled` | True | True | True | **False** | True | True |
 | `mutation_enabled` | **False** | **False** | True | **False** | True | True |
@@ -80,91 +80,91 @@ All commands are run from the **project root** directory.
 ### Phase 0 — Evolution Sanity Tests
 
 ```bash
-python experiments/phase0_evolution_sanity/test_01_mutation.py
-python experiments/phase0_evolution_sanity/test_02_inheritance.py
-python experiments/phase0_evolution_sanity/test_03_reproduction.py
-python experiments/phase0_evolution_sanity/test_04_population_stability.py
+python experiments/phase01_mechanics_tests/test_01_mutation.py
+python experiments/phase01_mechanics_tests/test_02_inheritance.py
+python experiments/phase01_mechanics_tests/test_03_reproduction.py
+python experiments/phase01_mechanics_tests/test_04_population_stability.py
 ```
 
 Or run all four:
 
 ```bash
-python experiments/phase0_evolution_sanity/run.py
+python experiments/phase01_mechanics_tests/run.py
 ```
 
 ### Phase 1 — Survival Gate
 
 ```bash
-python experiments/phase1_survival/run.py
+python experiments/phase03_survival_full/run.py
 ```
 
-Expects: 12/12 survival, avg energy > 0.85. Results written to `outputs/phase1_survival/`.
+Expects: 12/12 survival, avg energy > 0.85. Results written to `outputs/phase03_survival_full/`.
 
 ### Phase 2 — Zero-Shot Baseline
 
 ```bash
-python experiments/phase2_zeroshot/run.py
+python experiments/phase05_zeroshot_standard/run.py
 ```
 
-Transfers evolved genomes from Phase 3 (run Phase 3 first). Outputs care window rate for baseline comparison. Results in `outputs/phase2_zeroshot/`.
+Transfers evolved genomes from Phase 3 (run Phase 3 first). Outputs care window rate for baseline comparison. Results in `outputs/phase05_zeroshot_standard/`.
 
 ### Phase 3 — Evolution Baseline (Care Erosion)
 
 Single seed:
 ```bash
-python experiments/phase3_erosion/run.py
+python experiments/phase04_care_erosion/run.py
 ```
 
 Multi-seed (seeds 42–51, 10 runs):
 ```bash
-python experiments/phase3_erosion/run_multi_seed.py
+python experiments/phase04_care_erosion/run_multi_seed.py
 ```
 
 Watch the simulation live (Baseline-C0 config):
 ```bash
-python experiments/phase3_erosion/watch.py
+python experiments/phase04_care_erosion/watch.py
 ```
 
 Outputs: per-seed `generation_snapshots.json`, `top_genomes.json`, CI trajectory plot, hitchhiking check.
-Combined: `outputs/phase3_erosion/multi_seed_evolution/`
+Combined: `outputs/phase04_care_erosion/multi_seed_evolution/`
 
 ### Phase 4 — Kin-Conditional Plasticity / Baldwin Effect
 
 Single seed:
 ```bash
-python experiments/phase4_plasticity/run.py
+python experiments/phase06_baldwin_effect/run.py
 ```
 
 Multi-seed:
 ```bash
-python experiments/phase4_plasticity/run_multi_seed.py
+python experiments/phase06_baldwin_effect/run_multi_seed.py
 ```
 
 Cross-phase thesis plots (selection gradient, population trough, zero-shot comparison, phase table):
 ```bash
-python experiments/phase4_plasticity/make_thesis_plots.py
+python experiments/phase06_baldwin_effect/make_thesis_plots.py
 ```
 
-Output: `outputs/phase4_plasticity/` and `outputs/thesis_plots/`
+Output: `outputs/phase06_baldwin_effect/` and `outputs/thesis_plots/`
 
 ### Phase 5a — Ecological Emergence (Natal Philopatry)
 
 Single seed:
 ```bash
-python experiments/phase5a_reversal/run.py
+python experiments/phase07_ecological_emergence/run.py
 ```
 
 Multi-seed (seeds 42–51):
 ```bash
-python experiments/phase5a_reversal/run_multi_seed.py
+python experiments/phase07_ecological_emergence/run_multi_seed.py
 ```
 
-Output: `outputs/phase5a_reversal/multi_seed_evolution/`
+Output: `outputs/phase07_ecological_emergence/multi_seed_evolution/`
 
 ### Phase 5b — Control (High Dispersal)
 
 ```bash
-python experiments/phase5b_control/run.py
+python experiments/phase08_dispersal_control/run.py
 ```
 
 Uses `birth_scatter_radius=8`. Compares selection gradient vs Phase 5a (scatter=2).
@@ -176,9 +176,9 @@ python experiments/make_publication_figures.py
 ```
 
 Produces three publication-ready figures in `outputs/publication_figures/` at 300 DPI:
-- `figure1_phase3_erosion.png` — Phase 3 CI trajectory + selection gradient scatter
-- `figure2_phase4_plasticity.png` — Phase 3 vs 4b trajectory + zero-shot bar chart
-- `figure3_phase5_reversal.png` — Phase 5a/5b CI overlay + per-seed gradient bar chart
+- `figure1_phase04_care_erosion.png` — Phase 3 CI trajectory + selection gradient scatter
+- `figure2_phase06_baldwin_effect.png` — Phase 3 vs 4b trajectory + zero-shot bar chart
+- `figure3_phase07_ecological_emergence.png` — Phase 5a/5b CI overlay + per-seed gradient bar chart
 
 ---
 
@@ -186,20 +186,20 @@ Produces three publication-ready figures in `outputs/publication_figures/` at 30
 
 ```
 outputs/
-  phase1_survival/
-  phase2_zeroshot/
+  phase03_survival_full/
+  phase05_zeroshot_standard/
     run_YYYYMMDD_HHMMSS_seed42/
       plots/
       care_log.csv
       birth_log.csv
       population_history.json
-  phase3_erosion/
+  phase04_care_erosion/
     run_YYYYMMDD_HHMMSS_seed42/     <- canonical evolution run
     multi_seed_evolution/            <- CI plots, summary.json, run_dirs.json
-  phase4_plasticity/
+  phase06_baldwin_effect/
     run_YYYYMMDD_HHMMSS_seed42/
     multi_seed_evolution/
-  phase5a_reversal/
+  phase07_ecological_emergence/
     run_YYYYMMDD_HHMMSS_seed42/
     multi_seed_evolution/
   publication_figures/               <- figure1/2/3 PNGs (300 DPI)
