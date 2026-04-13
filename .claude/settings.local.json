@@ -15,7 +15,9 @@
       "Bash(sed -i 's/phase5_emergence/phase5a_reversal/g' \"outputs/phase5a_reversal/multi_seed_evolution/run_dirs.json\")",
       "Bash(sed -i 's/phase5_emergence/phase5a_reversal/g' \"outputs/phase5a_reversal/multi_seed_evolution/checkpoint.json\")",
       "WebSearch",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(mkdir -p \"C:/Users/User/.claude/plans\")",
+      "Read(//c/Users/User/.claude/plans/**)"
     ]
   }
 }

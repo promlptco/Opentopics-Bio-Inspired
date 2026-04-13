@@ -196,6 +196,52 @@ python experiments/phase3_erosion/watch.py
 
 ---
 
+### Part 2 Addition — Phase 5c: Instinct Emergence (PLANNED — not yet run)
+
+**Scientific motivation:** Phase 4b tested plasticity under poor ecology (mult=1.0, scatter=5) → gradient still negative. Phase 5a tested favorable ecology without plasticity → gradient reverses. The combination (plasticity ON + favorable ecology) was never run. Without it, the report can claim "care is selected for" but NOT "maternal care instinct emerges" — the instinct claim requires Baldwin Effect completing under conditions where selection is actually positive.
+
+**Design:**
+- Ecology: Phase 5a settings — `infant_starvation_multiplier=1.15`, `birth_scatter_radius=2`
+- Plasticity: Phase 4b settings — `plasticity_enabled=True`, `plasticity_kin_conditional=True`
+- Init: depleted baseline — `care_weight ~ Uniform(0, 0.50)` (same as Phase 5a)
+- Evolution: **10000 ticks** (doubled from Phase 5a to give plasticity time to assimilate)
+- Seeds: 42–51 (10 seeds)
+
+**Two-stage run:**
+1. **Evolution stage (plasticity ON, 10000 ticks):** care_weight should rise (Baldwin + selection cooperating). learning_rate should sweep upward. Pearson's r target: ≥ +0.079.
+2. **Instinct test stage (plasticity OFF, mutation OFF, reproduction ON, 5000 ticks):** Load evolved genomes, run forward across ~50 generations without plasticity or mutation. Tests whether care is truly assimilated into the genome (instinct). Pass criteria: population survival ≥ 0.8, care_weight drift ≤ 0.02, care events continue firing.
+
+**Figure 4 — Conclusion figure (single concatenated Baldwin-style plot):**
+- X-axis: ticks 0–15000 (10000 evolution + 5000 instinct test)
+- Ticks 0–10000: rising care_weight trajectory (plasticity ON — Baldwin first phase)
+- Vertical separator at tick 10000 with label "← Plasticity ON | Plasticity OFF →"
+- Ticks 10000–15000: flat care_weight line (plasticity OFF, mutation OFF, reproduction ON — Baldwin second phase / instinct)
+- The flat line during Phase 2 is the visual proof: plasticity removed, no mutation, care persists across 50 generations
+- Shading: light green (0–10000), light grey (10000–15000)
+- Annotation box: population survival %, care_weight drift, care events/mother-tick, instinct pass rate (X/10 seeds)
+
+**Directories:**
+- `experiments/phase5c_instinct/run.py`
+- `experiments/phase5c_instinct/run_multi_seed.py`
+- `outputs/phase5c_instinct/run_<timestamp>_seed<n>/`
+- `outputs/phase5c_instinct/multi_seed_evolution/`
+- `outputs/publication_figures/figure4_phase5c_instinct.png`
+
+**Instinct pass criterion:** ≥ 8/10 seeds pass all three criteria → report can claim "maternal care instinct demonstrated." Honest null reporting if fewer seeds pass.
+
+**Config flags for Phase 5c:**
+
+| Flag | Phase 5a | Phase 5c |
+|------|----------|----------|
+| plasticity_enabled | False | **True** |
+| plasticity_kin_conditional | False | **True** |
+| infant_starvation_multiplier | 1.15 | 1.15 |
+| birth_scatter_radius | 2 | 2 |
+| max_ticks (evolution) | 5000 | **10000** |
+| max_ticks (instinct test) | 1000 repro=OFF | **5000 repro=ON** |
+
+---
+
 ### Part 3 — Extended Plasticity (Future Chapter, if needed)
 *Revisit only if Phase 5 demonstrates emergence — these become "refinement" experiments, not "fix the broken system" experiments.*
 - Epigenetic inheritance (Lamarckian soft transmission)
@@ -205,7 +251,7 @@ python experiments/phase3_erosion/watch.py
 
 ---
 
-**YOU ARE HERE: WRITE-UP PHASE — FIRST FULL DRAFT COMPLETE (2026-04-13)**
+**YOU ARE HERE: PHASE 5c — INSTINCT EXPERIMENT PLANNED, NOT YET RUN (2026-04-13)**
 
 ---
 
