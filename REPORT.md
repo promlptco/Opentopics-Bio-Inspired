@@ -8,7 +8,7 @@
 
 ## Abstract
 
-Maternal care is among the most energetically costly prosocial behaviours observed in vertebrates, yet explaining its evolutionary origin under Hamilton's rule (rB > C) remains non-trivial when the coefficient of relatedness r is diluted by spatial mixing and per-event benefits B are marginal. We present a grid-world agent-based simulation in which mother agents evolve genome weights governing care, foraging, and self-maintenance without hard-coded care targets. Under standard ecological parameters, care erodes under selection (Pearson's r = −0.178 across 10 seeds). Introducing kin-conditional phenotypic plasticity induces a Baldwin Effect learning-rate sweep (8/10 seeds) but fails to produce robust genetic assimilation at the population level (p = 0.815). Critically, combining existential infant dependency (infant_starvation_multiplier = 1.15) with natal philopatry (birth_scatter_radius = 2) reverses the selection gradient to strongly positive (Pearson's r = +0.079, p = 0.0002, Cohen's d = 1.87, 9/10 seeds). We conclude that existential offspring dependency and spatial kin bias via natal philopatry are jointly necessary — neither condition alone is sufficient — to satisfy Hamilton's rule and drive care emergence from a depleted evolutionary baseline.
+Maternal care is among the most energetically costly prosocial behaviours observed in vertebrates, yet explaining its evolutionary origin under Hamilton's rule (rB > C) remains non-trivial when the coefficient of relatedness r is diluted by spatial mixing and per-event benefits B are marginal. We present a grid-world agent-based simulation in which mother agents evolve genome weights governing care, foraging, and self-maintenance without hard-coded care targets. Under standard ecological parameters, care erodes under selection (Pearson's r = −0.178 across 10 seeds). Introducing kin-conditional phenotypic plasticity induces a Baldwin Effect learning-rate sweep (8/10 seeds) but fails to produce robust genetic assimilation at the population level (p = 0.815). Critically, combining existential infant dependency (infant_starvation_multiplier = 1.15) with natal philopatry (birth_scatter_radius = 2) reverses the selection gradient to strongly positive (Pearson's r = +0.079, p = 0.0002, Cohen's d = 1.87, 9/10 seeds). We conclude that existential offspring dependency and spatial kin bias via natal philopatry are jointly necessary for robust gradient reversal — existential B alone yields a weakened positive gradient (+0.050) while the full sign change (+0.079) requires both conditions — and together they satisfy Hamilton's rule and drive care emergence from a depleted evolutionary baseline.
 
 ---
 
@@ -17,6 +17,8 @@ Maternal care is among the most energetically costly prosocial behaviours observ
 Maternal care is among the most energetically costly and evolutionarily significant prosocial behaviours in vertebrate life. Hamilton's rule (rB > C) provides a principled account of when care should evolve: a care-giving allele spreads when the benefit B to the recipient, weighted by the coefficient of relatedness r, exceeds the cost C borne by the actor (Hamilton, 1964). In practice, however, real populations rarely satisfy all three conditions simultaneously. Spatial mixing dilutes effective relatedness toward zero; marginal offspring benefit fails to exceed care cost; and the two shortfalls compound. Explaining how care evolves — rather than merely how it is maintained once established — requires identifying the minimum ecological conditions that jointly bring rB above C.
 
 Prior agent-based life (ALife) studies of cooperation have established that spatial structure can create local clusters of cooperators, providing a route to positive selection without explicit kin recognition (Axelrod and Hamilton, 1981; Nowak and May, 1992). These findings motivate the present inquiry: can spatial proximity at birth serve as a de facto kin-recognition substitute, elevating effective relatedness sufficiently to support care evolution? And does the magnitude of offspring dependency independently modulate the selection gradient?
+
+We term our agents *neuroendocrine* in the sense that each agent's genome encodes continuous weights that modulate the relative salience of care, foraging, and self-maintenance — a computational analogue of the neuroendocrine axis in which oxytocin-mediated bonding biases maternal attention toward offspring in distress. No explicit hormone dynamics are modelled; the genome weight governing care serves as a proxy for the individual's constitutive bonding disposition, and its evolution under selection is the phenomenon of interest.
 
 ---
 
@@ -28,7 +30,7 @@ Two important constraints bound this question. First, the model's argmax decisio
 
 ---
 
-Our principal finding is that two ecological conditions — existential infant dependency (infant_starvation_multiplier = 1.15) and natal philopatry (birth_scatter_radius = 2) — are jointly necessary and sufficient to reverse the selection gradient from −0.178 (Phase 3 erosion) to +0.079 (Phase 5a emergence), a sign change with effect size Cohen's d = 1.87 across 10 independent seeds. Neither condition in isolation produces a robust reversal. Spatial proximity at birth is the sole mechanism mediating kin-biased care.
+Our principal finding is that two ecological conditions — existential infant dependency (infant_starvation_multiplier = 1.15) and natal philopatry (birth_scatter_radius = 2) — are jointly necessary for robust reversal of the selection gradient from −0.178 (Phase 3 erosion) to +0.079 (Phase 5a emergence), a sign change with effect size Cohen's d = 1.87 across 10 independent seeds. Existential B alone produces a real but weakened positive gradient (+0.050); the full reversal requires natal philopatry in addition. Spatial proximity at birth is the sole mechanism mediating kin-biased care.
 
 ---
 
@@ -300,13 +302,13 @@ The zero-shot comparison is noted but not interpreted as a primary assimilation 
 
 #### 4.6.2 Philopatry Contribution (Phase 5b)
 
-With dispersal increased to birth_scatter_radius = 8 while holding infant_starvation_multiplier = 1.15 constant, the mean gradient across seeds falls to Pearson's r = +0.050 compared to +0.077 under natal philopatry (scatter = 2). The gradient remains positive — confirming that existential B alone provides a real selection pressure — but is meaningfully weaker, confirming that natal philopatry independently amplifies the gradient.
+With dispersal increased to birth_scatter_radius = 8 while holding infant_starvation_multiplier = 1.15 constant, the mean gradient across seeds falls to Pearson's r = +0.050 compared to +0.079 under natal philopatry (scatter = 2). The gradient remains positive — confirming that existential B alone provides a real selection pressure — but is meaningfully weaker, confirming that natal philopatry independently amplifies the gradient.
 
 | Condition | Mean Pearson's r |
 |-----------|-----------------|
 | Phase 3 (mult=1.0, scatter=5) | −0.178 |
 | Phase 5b (mult=1.15, scatter=8) | +0.050 |
-| Phase 5a (mult=1.15, scatter=2) | +0.077 |
+| Phase 5a (mult=1.15, scatter=2) | +0.079 |
 
 ---
 
@@ -314,7 +316,7 @@ With dispersal increased to birth_scatter_radius = 8 while holding infant_starva
 
 ![Figure 3](outputs/publication_figures/figure3_phase5_reversal.png)
 
-**(A) care_weight trajectory: Phase 5a vs. Phase 5b vs. Phase 3.** Four reference lines anchor the plot: the Phase 5 initial mean (0.25, dashed light blue at top-left), the Phase 3 final equilibrium (0.420, dotted red near top), and the zero no-selection line. The Phase 5a trajectory (solid green, mean ± 95% CI, n=10 seeds) begins at mean ≈ 0.25 and rises steadily over 5000 ticks, with the CI band narrowing as seeds converge — indicating that the positive gradient is consistent, not dominated by high-variance early ticks. The Phase 5b trajectory (dashed orange) follows a similar rising shape but terminates lower, visually confirming the gradient attenuation from scatter=2 to scatter=8. The Phase 3 reference trajectory (dotted grey) runs as a horizontal-declining baseline across the upper portion of the plot, making the direction contrast stark: Phase 3 descends from 0.500 toward 0.420 while Phase 5a ascends from 0.250 toward 0.355+. The annotation box in the lower-right reports the three key statistics (Pearson's r = +0.0788, p = 0.0002, Cohen's d = 1.87), confirming the reversal is statistically robust. Ghost seed traces (faint green) reveal that most seeds rise individually, with only one seed (43) clearly diverging toward flat/negative.
+**(A) care_weight trajectory: Phase 5a vs. Phase 5b vs. Phase 3.** Four reference lines anchor the plot: the Phase 5 initial mean (0.25, dashed light blue at top-left), the Phase 3 final equilibrium (0.420, dotted red near top), and the zero no-selection line. The Phase 5a trajectory (solid green, mean ± 95% CI, n=10 seeds) begins at mean ≈ 0.25 and rises steadily over 5000 ticks, with the CI band narrowing as seeds converge — indicating that the positive gradient is consistent, not dominated by high-variance early ticks. The Phase 5b trajectory (dashed orange) follows a similar rising shape but terminates lower, visually confirming the gradient attenuation from scatter=2 to scatter=8. The Phase 3 reference trajectory (dotted grey) runs as a horizontal-declining baseline across the upper portion of the plot, making the direction contrast stark: Phase 3 descends from 0.500 toward 0.420 while Phase 5a ascends from 0.250 to approximately 0.29 by tick 5000. The annotation box in the lower-right reports the three key statistics (Pearson's r = +0.0788, p = 0.0002, Cohen's d = 1.87), confirming the reversal is statistically robust. Ghost seed traces (faint green) reveal that most seeds rise individually, with only one seed (43) clearly diverging toward flat/negative.
 
 **(B) Per-seed selection gradient — Phase 5a (9/10 seeds positive).** Each bar represents the Pearson's r of care_weight vs generation for one seed. Green bars (positive r) confirm gradient reversal; the sole red bar (seed 43, r = −0.026) is the near-zero outlier. Three reference lines are superimposed: the zero line (black, no net selection), the Phase 3 reference (blue dashed, −0.178), and the Phase 5a cross-seed mean (green dash-dot, +0.0788). The visual gap between the Phase 3 reference line and the cluster of green bars makes the sign change immediately apparent without needing to read the numbers. Seed 43's red bar falls only slightly below zero — not a strong negative outlier — while seeds 44–51 cluster densely between +0.047 and +0.112, consistent with a robust underlying positive selection pressure operating across different stochastic initialisations.
 
@@ -328,7 +330,7 @@ The gradient reversal observed in §4.6.1 is not merely a statistical artefact �
 
 ![Figure H5a](outputs/phase5a_reversal/run_20260411_233237_seed42/plots/hamilton_rB_vs_C.png)
 
-Comparing this scatter directly to Figure H3a (Phase 3), the cloud of own-lineage care events in Phase 5a shows a noticeably different relationship to the break-even diagonal. While many points still fall below the rB = C line, the cluster near and above the diagonal is denser — particularly in the C = 0.03 to C = 0.06 range where Phase 3 was dominated by below-diagonal points. This reflects two mechanisms acting simultaneously: (1) existential infant dependency elevates hunger_reduced per event (infants are more hungry and the care event relieves more hunger, increasing B), and (2) natal philopatry concentrates care events on own-lineage recipients (r = 0.5), so the rB term is computed at full relatedness rather than at the diluted effective r ≈ 0.035 that characterises most Phase 3 events. The shift is not dramatic — the distribution still straddles the line — but the direction is clear and consistent with the gradient reversal.
+Comparing this scatter directly to Figure H3a (Phase 3), the cloud of own-lineage care events in Phase 5a shows a noticeably different relationship to the break-even diagonal. While many points still fall below the rB = C line, the cluster near and above the diagonal is denser — particularly in the C = 0.03 to C = 0.06 range where Phase 3 was dominated by below-diagonal points. This reflects two mechanisms acting simultaneously: (1) existential infant dependency elevates hunger_reduced per event (infants are more hungry and the care event relieves more hunger, increasing B), and (2) natal philopatry keeps own-lineage children spatially proximate during the maturation window, so when a highly-distressed own-child triggers a care event, the providing mother is more likely to be the birth mother (r = 0.5) rather than a foreign agent. Note that the majority of care events remain foreign-lineage even under natal philopatry (93.6%), consistent with the proximity-based rather than kin-recognition-based selection mechanism; the gradient reversal is driven by the improved *quality* of own-lineage events (higher B, higher effective r at the event level), not by a dramatic shift in the raw own/foreign ratio. The shift in the scatter is not dramatic — the distribution still straddles the line — but the direction is clear and consistent with the gradient reversal.
 
 **Figure H5b — Phase 5a Hamilton Deficit Distribution: rB − C (Own-Lineage)**
 
@@ -350,11 +352,11 @@ The reversal was achieved by modifying exactly two ecological parameters from th
 
 ### 5.2 The AND Condition: Why Neither Mechanism Alone Suffices
 
-The Phase 5b control demonstrates that existential B alone (mult=1.15, scatter=8) yields a positive but weakened gradient (r = +0.050). The full reversal (r = +0.077) requires natal philopatry in addition. This supports the AND-condition interpretation: both mechanisms must be active for Hamilton's rule to be robustly satisfied.
+The Phase 5b control demonstrates that existential B alone (mult=1.15, scatter=8) yields a positive but weakened gradient (r = +0.050). The full reversal (r = +0.079) requires natal philopatry in addition. This supports the AND-condition interpretation: both mechanisms must be active for Hamilton's rule to be robustly satisfied.
 
 The logic is as follows. Under high dispersal, infants die without care (existential B is real), but the mothers providing care are not systematically their own birth mothers — spatial mixing means that care events are distributed among mothers with low r to the recipient. The per-event Hamilton calculation remains rB − C < 0 for most events because effective r is diluted, just as in Phase 3. Adding natal philopatry ensures that the mothers proximate to a dying infant are statistically likely to be that infant's birth mother (r = 0.5), converting the majority of care events from foreign-lineage (r ≈ 0) to own-lineage (r = 0.5) interactions. With existential B, rB now substantially exceeds C for own-lineage events, producing positive selection.
 
-Neither condition alone is sufficient in this model:
+Neither condition alone achieves robust reversal in this model:
 - Existential B without philopatry: r = +0.050 (real but weak — effective r still diluted)
 - Philopatry without existential B: Phase 3 result would be expected (spatial clustering insufficient to overcome low-B regime at mult=1.0)
 
@@ -405,3 +407,130 @@ Hinton, G. E., and Nowlan, S. J. (1987). How learning can guide evolution. *Comp
 Nowak, M. A., and May, R. M. (1992). Evolutionary games and spatial chaos. *Nature*, 359(6398), 826–829.
 
 Stacey, P. B., and Koenig, W. D. (Eds.) (1990). *Cooperative Breeding in Birds: Long-Term Studies of Ecology and Behavior*. Cambridge University Press.
+
+---
+
+## Glossary
+
+Definitions are given in the context of this simulation. Biological usage may be broader.
+
+---
+
+### A — Evolutionary Biology Terms
+
+**Altruistic allele**
+A gene variant that reduces the actor's direct fitness while increasing the recipient's fitness. In this model, a high care_weight genome is altruistic when caring for foreign-lineage children (r = 0), since the actor pays cost C with no inclusive fitness return.
+
+**Baldwin Effect**
+An evolutionary process in which phenotypic plasticity — the ability to learn or adjust within a lifetime — guides natural selection toward heritable versions of the learned behaviour. Described by Hinton and Nowlan (1987). In Phase 4, the learning_rate genome parameter sweeps upward under selection, a signature of the Baldwin process in progress.
+
+**Coefficient of relatedness (r)**
+A measure of the proportion of genes shared between two individuals by common descent, ranging from 0 (unrelated) to 1 (identical). In this simulation: r = 2^(−d), where d is generational distance. Own child: r = 0.5; grandchild: r = 0.25; foreign-lineage: r = 0.
+
+**Foreign-lineage care**
+A care event in which the providing mother and the recipient child belong to different maternal lineages, giving r = 0. No inclusive fitness benefit accrues to the actor. Dominant event type (~90–94%) in all phases due to proximity-based (not kin-recognition-based) care selection.
+
+**Genetic assimilation**
+The process by which a phenotype originally expressed only through plasticity (learning) becomes encoded directly in the genotype, so that it is expressed without learning. In Phase 4, tested by comparing zero-shot care rates of evolved Phase 4b genomes to the pre-plasticity Phase 2 baseline.
+
+**Hamilton's rule**
+rB > C: an altruistic behaviour evolves when the benefit B to the recipient, weighted by relatedness r, exceeds the cost C to the actor. Formalised by Hamilton (1964). Applied post-hoc in this simulation from care event logs; agents have no access to r during decision-making.
+
+**Hamilton deficit**
+The condition rB − C < 0: a care event where the relatedness-weighted benefit fails to exceed the energetic cost. Dominant condition in Phases 2–4 due to relatedness dilution. Phase 5 partially closes this deficit by elevating B and maintaining higher effective r via natal philopatry.
+
+**Inclusive fitness**
+The sum of an individual's direct fitness (own reproductive success) and indirect fitness (copies of shared genes promoted through kin). Hamilton's rule is a condition on inclusive fitness.
+
+**Kin-conditional plasticity**
+A variant of phenotypic plasticity in which learning updates fire only for own-lineage care events (r > 0). Implemented in Phase 4b. Prevents the reinforcement signal from being diluted by the majority of foreign-lineage events that return no inclusive fitness benefit.
+
+**Natal philopatry**
+The tendency of offspring to remain near or return to their birth site. In this simulation, operationalised as a small birth_scatter_radius (scatter = 2), which keeps newborn children spatially proximate to their birth mother during the maturation window, elevating effective relatedness of care events.
+
+**Own-lineage care**
+A care event in which the recipient child descends from the providing mother's lineage, giving r > 0. Own child: r = 0.5; grandchild: r = 0.25. The minority of total care events in all phases (~6–16%), but the only events that contribute to inclusive fitness.
+
+**Phenotypic plasticity**
+The capacity of an individual to adjust its expressed behaviour or physiology within its lifetime in response to environmental signals, without genetic change. In Phase 4, implemented as within-lifetime reinforcement of care_weight based on observed benefit.
+
+**Relatedness dilution**
+The reduction in the effective coefficient of relatedness across all care events that occurs when care is directed at foreign-lineage recipients. If 93% of events have r = 0, the population-averaged effective r ≈ 0.035, far below the threshold needed to satisfy rB > C.
+
+**Selection gradient**
+The rate and direction of change in a trait under natural selection, measured here as the Pearson's r of care_weight against generation number from birth_log.csv. Negative gradient = care erodes; positive gradient = care builds.
+
+---
+
+### B — Simulation Architecture Terms
+
+**Agent-based simulation**
+A computational model in which individual agents follow local rules, and population-level patterns emerge from their interactions. This simulation uses two agent types — MotherAgent and ChildAgent — on a 2D discrete grid.
+
+**Argmax decision architecture**
+The mechanism by which mother agents select their behavioural domain at each tick: compute a utility score for care, forage, and self-maintenance, then execute the action with the highest score. Below care_weight ≈ 0.075, care never wins this competition at typical energy levels — the operative threshold.
+
+**Care window**
+Ticks 0–100 of a zero-shot run, covering the period before the first cohort of children matures into adults. Used as the measurement window for zero-shot care rate comparisons because after tick ~100 the child population changes character, confounding the metric.
+
+**Maturation age**
+The number of ticks after birth at which a ChildAgent transitions into adulthood (becomes a MotherAgent and is counted in the adult population). Set to 100 ticks in all phases.
+
+**Neuroendocrine agent**
+In this simulation, an agent whose genome encodes continuous weights modulating the relative salience of care, foraging, and self-maintenance — a computational analogue of the neuroendocrine axis in which oxytocin-mediated bonding biases maternal attention toward offspring in distress. The care_weight parameter serves as a proxy for the individual's constitutive bonding disposition.
+
+**Operative threshold**
+The minimum care_weight value (~0.075) at which care can win the argmax decision at typical agent energy levels. Below this value, care never fires regardless of child distress. Sets a practical lower bound on testable care emergence.
+
+**Roulette selection**
+A reproduction mechanism in which parents are selected with probability proportional to their current energy. Higher-energy mothers reproduce more frequently. Implemented at the terminal generation tick of each generation.
+
+**Tick**
+The fundamental time unit of the simulation. At each tick, all agents execute one action (care, forage, or self-maintain) synchronously. Approximately 100 ticks correspond to one generation at standard reproduction rates.
+
+---
+
+### C — Genome Parameters
+
+**care_weight**
+Genome parameter ∈ [0, 1]. Scales the utility of care actions in the argmax decision. The primary trait under selection in all phases. High care_weight → agent cares more frequently; selection gradient tracks whether this trait increases or decreases across generations.
+
+**forage_weight**
+Genome parameter ∈ [0, 1]. Scales the utility of foraging actions. Remains flat across all phases, used as a negative control to confirm that selection acts specifically on care rather than all genome parameters simultaneously.
+
+**infant_starvation_multiplier (mult)**
+Configuration parameter controlling how rapidly ChildAgents accumulate hunger relative to MotherAgents. At mult = 1.0 (Phase 3), infants and mothers hunger at the same rate. At mult = 1.15 (Phase 5), infants accumulate hunger 15% faster, reaching fatal starvation at approximately tick 108 without care intervention — the existential dependency condition.
+
+**birth_scatter_radius (scatter)**
+Configuration parameter controlling the maximum distance from the mother's position at which a newborn child is placed. Small scatter (= 2) implements natal philopatry: children remain close to their birth mother. Large scatter (= 8) implements high dispersal: children are placed far from their birth mother, diluting spatial kin structure.
+
+**learning_rate**
+Genome parameter ∈ [0, 1], added in Phase 4. Modulates the within-lifetime update to care_weight after each own-lineage care event: care_weight += learning_rate × (B_observed − care_cost). Under kin-conditional plasticity (Phase 4b), updates fire only for own-lineage events. Its monotonic increase across generations is the primary Baldwin Effect signature.
+
+**self_weight**
+Genome parameter ∈ [0, 1]. Scales the utility of self-maintenance (resting) actions. Partially controls fatigue accumulation and recovery.
+
+---
+
+### D — Experimental and Statistical Terms
+
+**Baseline-C0**
+The frozen reference run using fixed high-quality genomes (care = 0.7, forage = 0.85, self = 0.55, mutation = False, seed = 42). Establishes the upper bound on care behaviour achievable under these ecological conditions.
+
+**Baseline-R0**
+The reference run using random genomes drawn from Uniform(0, 1), mutation = False, seed = 42. Establishes the care level achievable by chance without evolutionary selection.
+
+**Cohen's d**
+A standardised effect size measuring the difference between two group means in units of the pooled standard deviation. d = 1.87 (Phase 5a vs Phase 3 gradient) is very large by conventional thresholds (small ≈ 0.2, medium ≈ 0.5, large ≈ 0.8).
+
+**Depleted baseline**
+The Phase 5 initialisation condition: care_weight drawn from Uniform(0, 0.50), mean ≈ 0.25. Below the Phase 3 eroded equilibrium of 0.42, representing a population whose care capacity has been driven down by prior selection or drift.
+
+**Existential B (Level 2 B)**
+The population-level selective consequence of infant dependency. With infant_starvation_multiplier = 1.15, low-care-weight genomes face lineage extinction (infants die before maturation). Distinguished from per-event B (hunger_reduced), which is the direct energetic benefit of a single care action.
+
+**Pearson's r (selection gradient)**
+Throughout this report, "Pearson's r" refers to the Pearson correlation coefficient between care_weight and generation number from birth_log.csv — the selection gradient statistic. Written in full to avoid symbol collision with Hamilton's r (coefficient of relatedness), which is always written as bare "r".
+
+**Zero-shot transfer**
+An experimental condition in which evolved genomes are loaded into a frozen environment (reproduction = False, mutation = False) and tested without further evolution. Measures the intrinsic behavioural expression of evolved genomes, independent of ongoing selection pressure. Used in Phase 2 (post-Phase 3 evolution) and Phase 4 (post-Phase 4b evolution) for genetic assimilation testing.
