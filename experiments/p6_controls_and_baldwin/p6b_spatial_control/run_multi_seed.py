@@ -1,4 +1,4 @@
-# experiments/phase09_spatial_control/run_multi_seed.py
+# experiments/p6_controls_and_baldwin/p6b_spatial_control/run_multi_seed.py
 """Phase 09: Spatial-Only Control — multi-seed runner (seeds 42–51).
 
 Runs Phase 09 (mult=1.0, scatter=2, cw~U(0,0.5)) for 10 seeds and reports
@@ -15,10 +15,10 @@ import os
 import json
 import math
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase09_spatial_control.run import run as run_p5d, _compute_selection_gradient
+from experiments.p6_controls_and_baldwin.p6b_spatial_control.run import run as run_p5d, _compute_selection_gradient
 
 try:
     import matplotlib.pyplot as plt

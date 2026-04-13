@@ -1,4 +1,4 @@
-# experiments/phase04_care_erosion/watch.py
+# experiments/p3_care_erosion/watch.py
 """
 Live visualisation of Baseline-C0 (balanced genome).
 Re-runs the same seed so the trajectory is identical to the logged run.

@@ -1,4 +1,4 @@
-# experiments/phase07_ecological_emergence/run_multi_seed.py
+# experiments/p5_enhanced_ecology/run_multi_seed.py
 """
 Phase 5a/5b/5c multi-seed runner (seeds 42–51).
 
@@ -23,7 +23,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase07_ecological_emergence.run import run as run_p5
+from experiments.p5_enhanced_ecology.run import run as run_p5
 
 try:
     import matplotlib.pyplot as plt
@@ -446,7 +446,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
             gens  = [g.get("generation", 0) for g in genomes]
 
             # Load selection gradient from birth_log
-            from experiments.phase07_ecological_emergence.run import _compute_selection_gradient
+            from experiments.p5_enhanced_ecology.run import _compute_selection_gradient
             grad = _compute_selection_gradient(os.path.join(evo_dir, "birth_log.csv"))
 
             # Determine emergence: care_weight increased from ~0.025 start

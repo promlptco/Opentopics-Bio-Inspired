@@ -1,4 +1,4 @@
-# experiments/phase08_dispersal_control/run.py
+# experiments/p6_controls_and_baldwin/p6a_dispersal_ablation/run.py
 """Phase 08: Dispersal Control — natal philopatry ablation.
 
 Scientific question:
@@ -19,17 +19,15 @@ import sys
 import os
 import json
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase07_ecological_emergence.run import (
+from experiments.p5_enhanced_ecology.run import (
     run as _run_p7,
     _load_genomes,
     _care_window_metrics,
-    INFANT_STARVATION_MULT,
-    CONTROL_SCATTER_RADIUS,
-    PHASE3_ZS_BASELINE,
 )
+from shared.constants import INFANT_STARVATION_MULT, CONTROL_SCATTER_RADIUS, PHASE3_ZS_BASELINE
 from config import Config
 from simulation.simulation import Simulation
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata

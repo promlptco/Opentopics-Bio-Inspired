@@ -1,4 +1,4 @@
-# experiments/phase03_survival_full/run.py
+# experiments/p3_survival_full/run.py
 """Phase 03: Survival Gate — Full Simulation Engine
 Same survival gate as Phase 02 but using the production Simulation class.
 Confirms all features can be disabled without breaking the engine.

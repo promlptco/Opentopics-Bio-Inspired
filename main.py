@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     if MODE == "survival":
         # Import survival simulation
-        from experiments.phase02_survival_minimal.run import SurvivalSimulation
+        from experiments.p2_survival_minimal.run import SurvivalSimulation
         
         config.width = 30
         config.height = 30

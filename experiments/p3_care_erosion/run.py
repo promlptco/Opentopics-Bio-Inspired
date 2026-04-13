@@ -1,4 +1,4 @@
-# experiments/phase04_care_erosion/run.py
+# experiments/p3_care_erosion/run.py
 """Phase 3: Maternal — supports 3 stages via `stage` parameter.
 
 Stages:

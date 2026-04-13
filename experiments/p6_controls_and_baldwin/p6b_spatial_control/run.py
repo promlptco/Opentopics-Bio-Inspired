@@ -1,4 +1,4 @@
-# experiments/phase09_spatial_control/run.py
+# experiments/p6_controls_and_baldwin/p6b_spatial_control/run.py
 """Phase 09: Spatial-Only Control
 
 Scientific question:
@@ -31,7 +31,7 @@ import os
 import json
 import random as _random
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, PROJECT_ROOT)
 
 from config import Config

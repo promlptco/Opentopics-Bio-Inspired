@@ -1,4 +1,4 @@
-# experiments/phase06_baldwin_effect/run.py
+# experiments/p4_plasticity_intro/run.py
 """Phase 4: Plasticity / Baldwin Effect Analysis
 
 Four stages:

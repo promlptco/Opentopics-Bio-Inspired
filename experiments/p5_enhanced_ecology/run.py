@@ -1,4 +1,4 @@
-# experiments/phase07_ecological_emergence/run.py
+# experiments/p5_enhanced_ecology/run.py
 """Phase 5: Ecological Emergence — selection gradient reversal via infant dependency.
 
 Scientific question:

@@ -1,4 +1,4 @@
-# experiments/phase06_baldwin_effect/make_thesis_plots.py
+# experiments/p4_plasticity_intro/make_thesis_plots.py
 """
 Generate the 4 cross-run thesis comparison plots.
 
@@ -9,7 +9,7 @@ Output: outputs/thesis_plots/
   phase_comparison_table.png         — all-metrics summary table
 
 Run from project root:
-  python experiments/phase06_baldwin_effect/make_thesis_plots.py
+  python experiments/p4_plasticity_intro/make_thesis_plots.py
 """
 import sys, os, csv, json
 import numpy as np

@@ -1,4 +1,4 @@
-# experiments/phase05_zeroshot_standard/run.py
+# experiments/p3_care_erosion/measure_baseline.py
 """Phase 2: Zero-Shot Transfer
 Load survival genomes into maternal world without plasticity.
 Test if agents perform care at all.

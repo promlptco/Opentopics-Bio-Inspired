@@ -13,16 +13,19 @@ The pipeline proceeds through five experimental phases:
 
 | Phase | Directory | Purpose |
 |-------|-----------|---------|
-| Phase 01 | `experiments/phase01_mechanics_tests/` | Unit tests for mutation, inheritance, reproduction |
-| Phase 03 | `experiments/phase03_survival_full/` | Survival gate — confirm baseline viability |
-| Phase 05 | `experiments/phase05_zeroshot_standard/` | Zero-shot baseline — evolved genome transfer, no further evolution |
-| Phase 04 | `experiments/phase04_care_erosion/` | Evolution with standard parameters — care erosion baseline |
-| Phase 06 | `experiments/phase06_baldwin_effect/` | Kin-conditional plasticity / Baldwin Effect |
-| Phase 07 | `experiments/phase07_ecological_emergence/` | Ecological emergence — natal philopatry + existential infant dependency |
-| Phase 08 | `experiments/phase08_dispersal_control/` | Control — high dispersal (scatter=8), tests philopatry contribution |
+| P1 | `experiments/p1_mechanics_tests/` | Unit tests for mutation, inheritance, reproduction |
+| P2 | `experiments/p2_survival_minimal/` | Minimal survival check |
+| P3 | `experiments/p3_survival_full/` | Survival gate — confirm baseline viability |
+| P3e | `experiments/p3_care_erosion/` | Evolution baseline (care erosion) + zero-shot measurement |
+| P4 | `experiments/p4_plasticity_intro/` | Kin-conditional plasticity / Baldwin Effect |
+| P5 | `experiments/p5_enhanced_ecology/` | Ecological emergence — natal philopatry + existential infant dependency |
+| P6a | `experiments/p6_controls_and_baldwin/p6a_dispersal_ablation/` | Control — high dispersal (scatter=8) |
+| P6b | `experiments/p6_controls_and_baldwin/p6b_spatial_control/` | Control — philopatry only (mult=1.0, scatter=2) |
+| P6c | `experiments/p6_controls_and_baldwin/p6c_depleted_baseline/` | Depleted-init zero-shot baseline |
+| P6d | `experiments/p6_controls_and_baldwin/p6d_baldwin_instinct/` | Baldwin instinct assimilation |
 
 Publication figures: `experiments/make_publication_figures.py`
-Cross-phase thesis plots: `experiments/phase06_baldwin_effect/make_thesis_plots.py`
+Cross-phase thesis plots: `experiments/p4_plasticity_intro/make_thesis_plots.py`
 
 ---
 
@@ -77,97 +80,97 @@ All flags are passed as keyword arguments to the `SimConfig` dataclass (`config.
 
 All commands are run from the **project root** directory.
 
-### Phase 0 — Evolution Sanity Tests
+### P1 — Mechanics Tests
 
 ```bash
-python experiments/phase01_mechanics_tests/test_01_mutation.py
-python experiments/phase01_mechanics_tests/test_02_inheritance.py
-python experiments/phase01_mechanics_tests/test_03_reproduction.py
-python experiments/phase01_mechanics_tests/test_04_population_stability.py
+python experiments/p1_mechanics_tests/test_01_mutation.py
+python experiments/p1_mechanics_tests/test_02_inheritance.py
+python experiments/p1_mechanics_tests/test_03_reproduction.py
+python experiments/p1_mechanics_tests/test_04_population_stability.py
 ```
 
 Or run all four:
 
 ```bash
-python experiments/phase01_mechanics_tests/run.py
+python experiments/p1_mechanics_tests/run.py
 ```
 
-### Phase 1 — Survival Gate
+### P3 — Survival Gate
 
 ```bash
-python experiments/phase03_survival_full/run.py
+python experiments/p3_survival_full/run.py
 ```
 
 Expects: 12/12 survival, avg energy > 0.85. Results written to `outputs/phase03_survival_full/`.
 
-### Phase 2 — Zero-Shot Baseline
+### P3e — Zero-Shot Baseline Measurement
 
 ```bash
-python experiments/phase05_zeroshot_standard/run.py
+python experiments/p3_care_erosion/measure_baseline.py
 ```
 
-Transfers evolved genomes from Phase 3 (run Phase 3 first). Outputs care window rate for baseline comparison. Results in `outputs/phase05_zeroshot_standard/`.
+Transfers evolved genomes from P3e evolution (run evolution first). Outputs care window rate for baseline comparison. Results in `outputs/phase05_zeroshot_standard/`.
 
-### Phase 3 — Evolution Baseline (Care Erosion)
+### P3e — Evolution Baseline (Care Erosion)
 
 Single seed:
 ```bash
-python experiments/phase04_care_erosion/run.py
+python experiments/p3_care_erosion/run.py
 ```
 
 Multi-seed (seeds 42–51, 10 runs):
 ```bash
-python experiments/phase04_care_erosion/run_multi_seed.py
+python experiments/p3_care_erosion/run_multi_seed.py
 ```
 
 Watch the simulation live (Baseline-C0 config):
 ```bash
-python experiments/phase04_care_erosion/watch.py
+python experiments/p3_care_erosion/watch.py
 ```
 
 Outputs: per-seed `generation_snapshots.json`, `top_genomes.json`, CI trajectory plot, hitchhiking check.
 Combined: `outputs/phase04_care_erosion/multi_seed_evolution/`
 
-### Phase 4 — Kin-Conditional Plasticity / Baldwin Effect
+### P4 — Kin-Conditional Plasticity / Baldwin Effect
 
 Single seed:
 ```bash
-python experiments/phase06_baldwin_effect/run.py
+python experiments/p4_plasticity_intro/run.py
 ```
 
 Multi-seed:
 ```bash
-python experiments/phase06_baldwin_effect/run_multi_seed.py
+python experiments/p4_plasticity_intro/run_multi_seed.py
 ```
 
 Cross-phase thesis plots (selection gradient, population trough, zero-shot comparison, phase table):
 ```bash
-python experiments/phase06_baldwin_effect/make_thesis_plots.py
+python experiments/p4_plasticity_intro/make_thesis_plots.py
 ```
 
 Output: `outputs/phase06_baldwin_effect/` and `outputs/thesis_plots/`
 
-### Phase 5a — Ecological Emergence (Natal Philopatry)
+### P5 — Ecological Emergence (Natal Philopatry)
 
 Single seed:
 ```bash
-python experiments/phase07_ecological_emergence/run.py
+python experiments/p5_enhanced_ecology/run.py
 ```
 
 Multi-seed (seeds 42–51):
 ```bash
-python experiments/phase07_ecological_emergence/run_multi_seed.py
+python experiments/p5_enhanced_ecology/run_multi_seed.py
 ```
 
 Output: `outputs/phase07_ecological_emergence/multi_seed_evolution/`
 
-### Phase 5b — Control (High Dispersal)
+### P6a — Dispersal Ablation Control
 
 ```bash
-python experiments/phase08_dispersal_control/run.py
+python experiments/p6_controls_and_baldwin/p6a_dispersal_ablation/run.py
 ```
 
-Uses `birth_scatter_radius=8`. Compares selection gradient vs Phase 5a (scatter=2).
+Uses `birth_scatter_radius=8`. Compares selection gradient vs P5 (scatter=2).
 
 ### Generate All Publication Figures
 

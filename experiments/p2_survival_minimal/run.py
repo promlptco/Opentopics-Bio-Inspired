@@ -1,4 +1,4 @@
-# experiments/phase02_survival_minimal/run.py
+# experiments/p2_survival_minimal/run.py
 """
 Phase 02: Survival Gate — Minimal Simulation
 Verify agents can survive with only: MOVE_TO_FOOD, PICK_FOOD, EAT, REST

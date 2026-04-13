@@ -19,7 +19,8 @@
       "Bash(mkdir -p \"C:/Users/User/.claude/plans\")",
       "Read(//c/Users/User/.claude/plans/**)",
       "Bash(ls experiments/phase5c_instinct/)",
-      "Bash(ls outputs/phase5c_instinct/)"
+      "Bash(ls outputs/phase5c_instinct/)",
+      "Bash(BASE=\"C:/Users/User/Desktop/FIBO_Study/3Y_2/FRA361_OPENTOPICS/Opentopics-Bio-Inspired/outputs\" echo \"=== phase11 seed outputs ===\")"
     ]
   }
 }

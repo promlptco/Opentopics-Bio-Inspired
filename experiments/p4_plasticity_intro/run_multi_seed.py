@@ -1,4 +1,4 @@
-# experiments/phase06_baldwin_effect/run_multi_seed.py
+# experiments/p4_plasticity_intro/run_multi_seed.py
 """
 Run Phase 4b (kin-conditional Baldwin Effect) across 10 seeds and produce:
   - Per-seed full outputs (generation_snapshots, top_genomes, logs, plots)
@@ -22,8 +22,8 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase06_baldwin_effect.run import run as run_p4b
-from experiments.phase05_zeroshot_standard.run import run as run_p2zs
+from experiments.p4_plasticity_intro.run import run as run_p4b
+from experiments.p3_care_erosion.measure_baseline import run as run_p2zs
 from utils.plotting import plot_start_vs_end_multiseed
 
 try:

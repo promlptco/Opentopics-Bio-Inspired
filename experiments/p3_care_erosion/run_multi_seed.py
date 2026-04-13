@@ -1,4 +1,4 @@
-# experiments/phase04_care_erosion/run_multi_seed.py
+# experiments/p3_care_erosion/run_multi_seed.py
 """
 Run evolution stage across N seeds and produce:
   - Per-seed generation_snapshots + full outputs
@@ -13,7 +13,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase04_care_erosion.run import run
+from experiments.p3_care_erosion.run import run
 from utils.plotting import plot_start_vs_end_multiseed
 
 try:

@@ -1,4 +1,4 @@
-# experiments/phase01_mechanics_tests/run.py
+# experiments/p1_mechanics_tests/run.py
 """Phase 01: Core Mechanics Validation (unit-test smoke run)"""
 import sys
 import os
