@@ -193,11 +193,11 @@ def candidate_configs(mode="sweep"):
         }]
 
     grid = {
-        "hunger_rate":   [0.004, 0.005, 0.012],
-        "move_cost":     [0.002, 0.0018, 0.008],
-        "eat_gain":      [0.15, 0.07, 0.25],
-        "init_food":     [30, 55, 90],
-        "rest_recovery": [0.02, 0.05, 0.10],
+        "hunger_rate":   [0.001, 0.005, 0.009],
+        "move_cost":     [0.0026, 0.0018, 0.0010],
+        "eat_gain":      [0.13, 0.07, 0.01],
+        "init_food":     [30, 55, 80],
+        "rest_recovery": [0.02, 0.05, 0.08],
     }
 
     configs = []
@@ -285,9 +285,9 @@ def select_auto_conditions(sweep_records):
         balanced = min(
             sweep_records,
             key=lambda r: (
-                abs(r["result"]["tail_mean_energy"] - 0.725)
+                abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.725)
                 + abs(r["result"]["final_pop"] - 15.0) * 0.2
-                + r["result"]["tail_energy_sd"]
+                + np.nan_to_num(r["result"]["tail_energy_sd"], nan=1.0)
             )
         )
 
@@ -309,7 +309,7 @@ def select_auto_conditions(sweep_records):
         easy = min(
             sweep_records,
             key=lambda r: (
-                abs(r["result"]["tail_mean_energy"] - 0.95)
+                abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.95)
                 + abs(r["result"]["final_pop"] - 15.0) * 0.2
             )
         )
@@ -333,7 +333,7 @@ def select_auto_conditions(sweep_records):
             sweep_records,
             key=lambda r: (
                 r["result"]["final_pop"]
-                + r["result"]["tail_mean_energy"]
+                + np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0)
             )
         )
 
