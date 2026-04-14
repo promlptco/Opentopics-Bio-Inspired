@@ -182,22 +182,30 @@ def candidate_configs(mode="sweep"):
     if mode == "single":
         # Your specific "Testing" set
         return [{
-            "hunger_rate": 0.012,
-            "move_cost": 0.008,
-            "eat_gain": 0.15,
-            "init_food": 50,
-            "rest_recovery": 0.02,
+            "hunger_rate": 0.005,
+            "move_cost": 0.0018,
+            "eat_gain": 0.07,
+            "init_food": 55,
+            "rest_recovery": 0.05,
             "name": "single_test"
         }]
     
     # Full Sweep Grid
     grid = {
-        "hunger_rate":   [0.004, 0.008, 0.012],
-        "move_cost":     [0.002, 0.005, 0.008],
-        "eat_gain":      [0.15, 0.20, 0.25],
-        "init_food":     [30, 60, 90],
-        "rest_recovery": [0.02, 0.05, 0.10],
+        "hunger_rate":   [0.004, 0.006, 0.008, 0.010, 0.012, 0.016],
+        "move_cost":     [0.005],
+        "eat_gain":      [0.20],
+        "init_food":     [60],
+        "rest_recovery": [0.05],
     }
+
+    # grid = {
+    #     "hunger_rate":   [0.004, 0.008, 0.012],
+    #     "move_cost":     [0.002, 0.005, 0.008],
+    #     "eat_gain":      [0.15, 0.20, 0.25],
+    #     "init_food":     [30, 60, 90],
+    #     "rest_recovery": [0.02, 0.05, 0.10],
+    # }
 
     configs = []
     keys = list(grid.keys())
