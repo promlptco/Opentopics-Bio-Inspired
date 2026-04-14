@@ -180,11 +180,11 @@ from itertools import product
 
 def candidate_configs():
     grid = {
-        "hunger_rate": [0.004, 0.006, 0.008, 0.010, 0.012, 0.016, 0.020],
-        "move_cost":   [0.002, 0.004, 0.006, 0.008],
-        "eat_gain":    [0.12, 0.16, 0.20, 0.24],
-        "init_food":   [25, 40, 55, 70, 85],
-        "rest_recovery": [0.04],
+        "hunger_rate":   [0.004, 0.008, 0.012], # Life expectancy: 250, 125, 83 ticks
+        "move_cost":     [0.002, 0.005, 0.008], # Search penalty relative to hunger
+        "eat_gain":      [0.15, 0.20, 0.25],    # Nutritional value (4-7 meals to full)
+        "init_food":     [30, 60, 90],          # Resource density (1:30 to 1:10 tiles)
+        "rest_recovery": [0.02, 0.05, 0.10],    # Recovery efficiency (1:1 to 1:5 ratio)
     }
 
     configs = []
@@ -313,8 +313,9 @@ def plot_single_condition(name, result, params, seed, duration, out_dir):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
 
     fig.suptitle(
-        f"Phase 2 Baseline Sweep — {name.upper()}\n"
-        f"Seed {seed} | hunger={params['hunger_rate']} | move={params['move_cost']} | "
+        f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
+        f"Runs: {len(results)} total | 5 seeds × {len(results)//5} repeats | "
+        f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
         f"eat={params['eat_gain']} | food={params['init_food']}",
         fontsize=14,
         fontweight="bold",
@@ -345,7 +346,7 @@ def plot_single_condition(name, result, params, seed, duration, out_dir):
     plt.close(fig)
 
 
-def plot_multiseed_condition(name, results, params, seeds, duration, out_dir):
+def plot_multiseed_condition(name, results, params, run_labels, duration, out_dir):
     ticks = np.arange(duration)
 
     energy_matrix = np.asarray([pad(r["energy_history"], duration) for r in results])
@@ -367,9 +368,9 @@ def plot_multiseed_condition(name, results, params, seeds, duration, out_dir):
         fontweight="bold",
     )
 
-    for i, seed in enumerate(seeds):
-        ax1.plot(ticks, energy_matrix[i], alpha=0.35, linewidth=1.0, label=f"seed {seed}")
-        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.35, linewidth=1.0, label=f"seed {seed}")
+    for i, label in enumerate(run_labels):
+        ax1.plot(ticks, energy_matrix[i], alpha=0.25, linewidth=0.9, label=str(label))
+        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.25, linewidth=0.9, label=str(label))
 
     ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="gray", alpha=0.2, label="Mean ± SD")
     ax1.plot(ticks, mean_e, color="black", linewidth=2.5, label="Mean")
@@ -501,29 +502,39 @@ def run_experiment(args):
     for name, rec in selected.items():
         params = rec["params"]
         results = []
+        result_tags = []
 
         for seed in validation_seeds:
-            result = run_one(
-                params,
-                seed,
-                args.duration,
-                args.tau,
-                args.perceptual_noise
-            )
-            results.append(result)
+            for rep in range(args.repeats):
+                run_seed = seed * 1000 + rep
 
-            print(
-                f"{name.upper()} seed {seed}: "
-                f"pop={result['final_pop']}/15 | "
-                f"meanE={result['mean_energy']:.3f} | "
-                f"finalE={result['final_energy']:.3f}"
-            )
+                result = run_one(
+                    params,
+                    run_seed,
+                    args.duration,
+                    args.tau,
+                    args.perceptual_noise
+                )
 
+                result["base_seed"] = seed
+                result["repeat"] = rep + 1
+                results.append(result)
+                result_tags.append(f"{seed}-r{rep + 1}")
+
+                print(
+                    f"{name.upper()} seed {seed} repeat {rep + 1}: "
+                    f"run_seed={run_seed} | "
+                    f"pop={result['final_pop']}/15 | "
+                    f"meanE={result['mean_energy']:.3f} | "
+                    f"finalE={result['final_energy']:.3f}"
+                )
+
+        # Plot and summary are now correctly indented inside the 'name' loop
         plot_multiseed_condition(
             name,
             results,
             params,
-            validation_seeds,
+            result_tags,
             args.duration,
             out_dir
         )
@@ -533,12 +544,14 @@ def run_experiment(args):
             "sweep_seed_42": rec["result"],
             "validation_42_46": [
                 {
-                    "seed": seed,
-                    "final_pop": result["final_pop"],
-                    "mean_energy": result["mean_energy"],
-                    "final_energy": result["final_energy"],
+                    "seed": res["base_seed"],
+                    "repeat": res["repeat"],
+                    "run_seed": res["base_seed"] * 1000 + (res["repeat"] - 1),
+                    "final_pop": res["final_pop"],
+                    "mean_energy": res["mean_energy"],
+                    "final_energy": res["final_energy"],
                 }
-                for seed, result in zip(validation_seeds, results)
+                for res in results
             ],
         }
 
@@ -552,6 +565,7 @@ if __name__ == "__main__":
     parser.add_argument("--duration", type=int, default=1000)
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
+    parser.add_argument("--repeats", type=int, default=3)
     args = parser.parse_args()
 
     run_experiment(args)
