@@ -1,11 +1,32 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+import numpy as np
 from agents.agent import Agent
 from evolution.genome import Genome
 
 if TYPE_CHECKING:
     from agents.child import ChildAgent
     from simulation.world import GridWorld
+
+# Global Softmax temperature (τ). Matches EXPERIMENT_DESIGN §1 Global Parameters.
+SOFTMAX_TAU: float = 0.1
+
+
+def softmax_probs(scores: dict[str, float], tau: float = SOFTMAX_TAU) -> dict[str, float]:
+    """Return Gibbs/Softmax probability for each action key.
+
+    P(a) = exp(u_a / τ) / Σ exp(u_i / τ)
+
+    Numerically stable: subtract max before exp to prevent overflow.
+    All values in [0,1] and sum to 1.0.
+    """
+    keys = list(scores.keys())
+    vals = np.array([scores[k] for k in keys], dtype=float)
+    # Subtract max for numerical stability
+    shifted = vals / tau - np.max(vals / tau)
+    exp_vals = np.exp(shifted)
+    probs = exp_vals / exp_vals.sum()
+    return {k: float(p) for k, p in zip(keys, probs)}
 
 class MotherAgent(Agent):
     def __init__(self, x: int, y: int, lineage_id: int, generation: int, genome: Genome):
@@ -60,13 +81,20 @@ class MotherAgent(Agent):
         m_care = 0.0
         if visible_children:
             m_care = max(self.calc_care_score(c) for c in visible_children)
-        
+
         m_forage = self.calc_forage_motivation()
         m_self = self.calc_self_motivation()
-        
+
         scores = {"care": m_care, "forage": m_forage, "self": m_self}
-        return max(scores, key=scores.get)
-    
+        # Softmax (Gibbs) sampling — stochastic selection proportional to utility.
+        # τ=0.1 approximates argmax but preserves exploration and naturalistic errors.
+        probs = softmax_probs(scores)
+        keys = list(probs.keys())
+        weights = [probs[k] for k in keys]
+        chosen_idx = np.random.choice(len(keys), p=weights)
+        return keys[chosen_idx]
+
+
     def choose_child(self, visible_children: list[ChildAgent]) -> ChildAgent | None:
         if not visible_children:
             return None

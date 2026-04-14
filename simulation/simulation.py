@@ -1,5 +1,6 @@
 from __future__ import annotations
 import random
+import numpy as np
 from config import Config
 from simulation.world import GridWorld
 from agents.mother import MotherAgent
@@ -21,6 +22,7 @@ class Simulation:
         self.children: list[ChildAgent] = []
         
         random.seed(config.seed)
+        np.random.seed(config.seed)
     
     def initialize(self, genomes: list[Genome] | None = None) -> None:
         # Spawn initial mothers with children

@@ -9,6 +9,8 @@ TESTS = [
     "test_02_inheritance.py",
     "test_03_reproduction.py",
     "test_04_population_stability.py",
+    "test_05_stochasticity_identity.py",
+    "test_06_softmax_calibration.py",
 ]
 
 phase_dir = os.path.dirname(os.path.abspath(__file__))
