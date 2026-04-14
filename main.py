@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     if MODE == "survival":
         # Import survival simulation
-        from experiments.p2_survival_minimal.run import SurvivalSimulation
+        from experiments.phase2_survival_minimal.run import SurvivalSimulation
         
         config.width = 30
         config.height = 30
@@ -51,9 +51,9 @@ if __name__ == "__main__":
                 sim.step()
                 sim.tick += 1
         
-        results = sim.get_results()
-        print(f"Surviving: {results['surviving_mothers']}")
-        print(f"Food eaten: {results['total_food_eaten']}")
+        alive = [m for m in sim.mothers if m.alive]
+        print(f"Surviving: {len(alive)}")
+        print(f"Food eaten: {sim.action_counts['EAT']}")
     
     else:  # maternal
         from simulation.simulation import Simulation
