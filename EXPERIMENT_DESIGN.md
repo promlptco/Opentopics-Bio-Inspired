@@ -87,17 +87,30 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 
 ---
 
-### Phase 2 · Survival Minimal
+### Phase 2 · Survival Minimal (Multi-Seed Stochastic Stress Test)
 
-**Purpose:** Confirm core foraging loop. Agents must sustain themselves before adding care complexity.
+**Purpose:** Confirm that the core foraging loop and decision-making architecture are stable under stochastic pressure and environmental scarcity. This serves as the foundation for Phase 3's reproduction gating.
 
 **Protocol:**
-- Foraging only. No reproduction, no care, no mutation.
-- Run until steady state or tick limit.
+- **Mode:** Foraging only. No reproduction, no care, no mutation.
+- **Decision Architecture:** Softmax (τ=0.1) Action Selection.
+- **Environmental Noise:** ±20% Foraging Variance (E gains are stochastic).
+- **Two Test Groups:**
+  1. **Normal Group**: Standard food density (x1.0). Target: 100% survival.
+  2. **Stress Group**: Aggressive reduction in food density (x0.2). Target: Find starvation thresholds.
+- **Parameter Re-balancing**: Tune `hunger_rate` and `move_cost` to center Mean Energy at **~0.70 - 0.75** for the Normal group.
+- **Duration**: 1,000 ticks across 5 seeds (42–46) per group.
 
-**Success criteria:** Agents do not starve. Energy remains positive.
+**Success criteria:**
+- Normal Group: Survival rate ≥ 90%, Mean Energy stable around 0.70.
+- Stress Group: Clearly identified collapse/extinction points below Normal group performance.
 
-**Outputs:** Energy-over-time plot for at least 3 seeds. Sanity gate only — no statistical analysis required.
+**Outputs:**
+- `energy_trajectory.png`: Mean ± SD band for group comparison.
+- `survival_curves.png`: Kaplan-Meier style population curves.
+- `action_distribution.png`: Bar chart verifying Softmax exploration (MOVE vs. EAT vs. REST).
+- `energy_histogram_t500.png`: Distribution centering verification.
+- `energy_over_time.png`: Individual per-seed trajectories for high-resolution debugging.
 
 ---
 

@@ -182,11 +182,11 @@ def candidate_configs(mode="sweep"):
     if mode == "single":
         # Your specific "Testing" set
         return [{
-            "hunger_rate": 0.008,
-            "move_cost": 0.004,
-            "eat_gain": 0.18,
-            "init_food": 75,
-            "rest_recovery": 0.05,
+            "hunger_rate": 0.012,
+            "move_cost": 0.008,
+            "eat_gain": 0.15,
+            "init_food": 50,
+            "rest_recovery": 0.02,
             "name": "single_test"
         }]
     
