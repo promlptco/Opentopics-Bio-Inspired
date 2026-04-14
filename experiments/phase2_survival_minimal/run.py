@@ -49,6 +49,7 @@ class SurvivalSimulation:
         self.population_history = []
         self.action_counts = {"MOVE": 0, "EAT": 0, "REST": 0, "PICK": 0}
         self.snapshot_energy_t500 = []
+        self._replenish_logic = None # Hook for custom logic
 
     def initialize(self):
         # Scale food density
@@ -144,9 +145,12 @@ class SurvivalSimulation:
                 self.world.remove_entity(mother.id)
 
         # Replenish food
-        food_target = int(self.config.init_food * self.food_mult)
-        if len(self.world.food_positions) < food_target // 2:
-            self._spawn_food(5)
+        if self._replenish_logic:
+            self._replenish_logic(self)
+        else:
+            food_target = int(self.config.init_food * self.food_mult)
+            if len(self.world.food_positions) < food_target // 2:
+                self._spawn_food(5)
 
         # Recording
         alive_now = [m for m in self.mothers if m.alive]
@@ -178,7 +182,12 @@ class SurvivalSimulation:
 
 def run_experiment(args):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase2_survival_minimal", f"{ts}_stress_test")
+    out_dir = os.path.join(
+        PROJECT_ROOT,
+        "outputs",
+        "phase2_survival_minimal",
+        f"{ts}_{args.mode}"
+    )
     os.makedirs(out_dir, exist_ok=True)
 
     def parse_seeds(s):
@@ -187,47 +196,361 @@ def run_experiment(args):
             return list(range(start, end + 1))
         return [int(s)]
 
-    normal_seeds = parse_seeds(args.seeds)
-    stress_seeds = parse_seeds(args.stress_seeds)
+    seeds = parse_seeds(args.seeds)
 
-    groups = {
-        "Normal": {"seeds": normal_seeds, "food_mult": 1.0, "histories": [], "pops": [], "actions": [], "t500": []},
-        "Stress": {"seeds": stress_seeds, "food_mult": 0.5, "histories": [], "pops": [], "actions": [], "t500": []}
-    }
+    def make_config():
+        cfg = Config()
+        cfg.max_ticks = args.duration
 
-    print(f"Starting Phase 2 Stress Test at {ts}")
+        # Shared baseline candidate config
+        cfg.initial_energy = 0.75
+        cfg.hunger_rate = 0.010
+        cfg.move_cost = 0.005
+        cfg.init_food = 45
+        cfg.eat_gain = 0.16
+        cfg.init_mothers = 15
+        cfg.rest_recovery = 0.04
+
+        return cfg
+
+    if args.mode == "seed_check":
+        groups = {
+            "Normal": {
+                "seeds": seeds,
+                "food_mult": 1.0,
+                "histories": [],
+                "pops": [],
+                "actions": [],
+                "t500": [],
+            }
+        }
+
+    elif args.mode == "stress_test":
+        groups = {
+            "Normal": {
+                "seeds": seeds,
+                "food_mult": 1.0,
+                "histories": [],
+                "pops": [],
+                "actions": [],
+                "t500": [],
+            },
+            "Stress": {
+                "seeds": seeds,
+                "food_mult": args.stress_food_mult,
+                "histories": [],
+                "pops": [],
+                "actions": [],
+                "t500": [],
+            },
+        }
+
+    print(f"Starting Phase 2: {args.mode}")
+    print(f"Seeds: {seeds}")
     print(f"Duration: {args.duration} ticks | Tau: {args.tau}")
+    print(f"Outputs: {out_dir}")
 
     for g_name, data in groups.items():
-        print(f"\nGroup: {g_name} (Food Density x{data['food_mult']})")
+        print(f"\nGroup: {g_name} | Food Density x{data['food_mult']}")
+
         for seed in data["seeds"]:
             set_seed(seed)
-            cfg = Config()
-            cfg.max_ticks = args.duration
-            cfg.initial_energy = 0.85
-            cfg.hunger_rate = 0.008    # Slightly faster drain
-            cfg.init_food = 70         # Slightly less food
-            cfg.init_mothers = 15
-            cfg.move_cost = 0.004      # Slightly more expensive
-            cfg.eat_gain = 0.25        # Less gain
-            cfg.rest_recovery = 0.05   # Faster recovery
-            
-            sim = SurvivalSimulation(cfg, tau=args.tau, food_mult=data["food_mult"])
+            cfg = make_config()
+
+            sim = SurvivalSimulation(
+                cfg,
+                tau=args.tau,
+                food_mult=data["food_mult"]
+            )
+
+            def baseline_replenish(sim_obj):
+                target = int(sim_obj.config.init_food * sim_obj.food_mult)
+                if len(sim_obj.world.food_positions) < target // 3:
+                    sim_obj._spawn_food(3)
+
+            sim._replenish_logic = baseline_replenish
+
             res = sim.run()
-            
+
             data["histories"].append(sim.energy_history)
             data["pops"].append(sim.population_history)
             data["actions"].append(sim.action_counts)
+
             if sim.snapshot_energy_t500:
                 data["t500"].extend(sim.snapshot_energy_t500)
-            
+
             status = "PASS" if res["passed"] else "FAIL"
-            print(f"  Seed {seed}: {status} | Pop: {res['final_pop']} | Energy: {res['avg_energy']:.3f}")
+            print(
+                f"  Seed {seed}: {status} | "
+                f"Final pop: {res['final_pop']} | "
+                f"Avg energy: {res['avg_energy']:.3f}"
+            )
 
     if args.plot_all:
-        plot_results(groups, args.duration, out_dir)
+        if args.mode == "seed_check":
+            plot_seed_readiness(groups, args.duration, out_dir)
+        elif args.mode == "stress_test":
+            plot_results(groups, args.duration, out_dir)
+            plot_stress_summary(groups, args.duration, out_dir)
 
     print(f"\nOutputs saved to: {out_dir}")
+
+def plot_seed_readiness(groups, duration, out_dir):
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    data = groups["Normal"]
+    seeds = data["seeds"]
+
+    fig, (ax_e, ax_p) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+    fig.suptitle(
+        "Phase 2 · Survival Minimal — Seed Readiness Check\n"
+        f"Same config for all seeds | Seeds: {seeds}",
+        fontsize=15,
+        fontweight="bold",
+    )
+
+    all_energy = []
+    all_pop = []
+
+    for i, seed in enumerate(seeds):
+        h = np.asarray(data["histories"][i], dtype=float)
+        p = np.asarray(data["pops"][i], dtype=float)
+
+        h_pad = np.full(duration, np.nan)
+        p_pad = np.full(duration, np.nan)
+
+        h_pad[:min(duration, len(h))] = h[:duration]
+        p_pad[:min(duration, len(p))] = p[:duration]
+
+        all_energy.append(h_pad)
+        all_pop.append(p_pad)
+
+        ax_e.plot(h_pad, alpha=0.65, linewidth=1.2, label=f"seed {seed}")
+        ax_p.step(np.arange(duration), p_pad, where="post", alpha=0.75, linewidth=1.2, label=f"seed {seed}")
+
+    all_energy = np.asarray(all_energy)
+    all_pop = np.asarray(all_pop)
+
+    ticks = np.arange(duration)
+    mean_e = np.nanmean(all_energy, axis=0)
+    std_e = np.nanstd(all_energy, axis=0)
+
+    ax_e.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="gray", alpha=0.15, label="Mean ± 1 SD")
+    ax_e.plot(ticks, mean_e, color="black", linewidth=2.4, label="Mean")
+
+    initial_count = int(np.nanmax(all_pop[:, 0]))
+    final_alive = all_pop[:, -1]
+
+    ax_e.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Death threshold")
+    ax_e.axhline(0.7, color="black", linestyle=":", alpha=0.4, label="Target energy 0.7")
+
+    ax_p.axhline(initial_count, color="gray", linestyle=":", alpha=0.8, label=f"Initial count ({initial_count})")
+    ax_p.axhline(0, color="red", linestyle="--", alpha=0.5, label="Extinction")
+
+    ax_e.set_title("Mean Agent Energy Across Seeds")
+    ax_e.set_ylabel("Mean energy")
+    ax_e.set_ylim(-0.05, 1.05)
+
+    ax_p.set_title("Alive Mother Count Across Seeds")
+    ax_p.set_ylabel("# alive mothers")
+    ax_p.set_xlabel("Tick")
+    ax_p.set_ylim(-0.5, initial_count + 2)
+
+    summary = (
+        f"final alive min = {int(np.nanmin(final_alive))}/{initial_count}\n"
+        f"final alive max = {int(np.nanmax(final_alive))}/{initial_count}\n"
+        f"final mean energy = {mean_e[-1]:.3f}\n"
+        f"final energy SD = {std_e[-1]:.3f}"
+    )
+
+    ax_e.text(
+        0.01, 0.04, summary,
+        transform=ax_e.transAxes,
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85)
+    )
+
+    for ax in (ax_e, ax_p):
+        ax.grid(True, linestyle="--", alpha=0.25)
+        ax.legend(loc="lower right", fontsize=8)
+
+    plt.tight_layout()
+    fig.savefig(os.path.join(out_dir, "seed_readiness_normal.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+def plot_stress_summary(groups, duration, out_dir):
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    fig, (ax_e, ax_p) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+    fig.suptitle(
+        "Phase 2 · Survival Minimal — Normal vs Stress Baseline Check",
+        fontsize=15,
+        fontweight="bold",
+    )
+
+    colors = {
+        "Normal": "#2166AC",
+        "Stress": "#D6604D",
+    }
+
+    for g_name, data in groups.items():
+        energy_matrix = []
+        pop_matrix = []
+
+        for h, p in zip(data["histories"], data["pops"]):
+            h = np.asarray(h, dtype=float)
+            p = np.asarray(p, dtype=float)
+
+            h_pad = np.full(duration, np.nan)
+            p_pad = np.full(duration, np.nan)
+
+            h_pad[:min(duration, len(h))] = h[:duration]
+            p_pad[:min(duration, len(p))] = p[:duration]
+
+            energy_matrix.append(h_pad)
+            pop_matrix.append(p_pad)
+
+        energy_matrix = np.asarray(energy_matrix)
+        pop_matrix = np.asarray(pop_matrix)
+
+        mean_e = np.nanmean(energy_matrix, axis=0)
+        std_e = np.nanstd(energy_matrix, axis=0)
+
+        mean_p = np.nanmean(pop_matrix, axis=0)
+        std_p = np.nanstd(pop_matrix, axis=0)
+
+        ticks = np.arange(duration)
+
+        ax_e.fill_between(ticks, mean_e - std_e, mean_e + std_e, color=colors[g_name], alpha=0.15)
+        ax_e.plot(ticks, mean_e, color=colors[g_name], linewidth=2.2, label=f"{g_name} energy")
+
+        ax_p.fill_between(ticks, mean_p - std_p, mean_p + std_p, color=colors[g_name], alpha=0.15)
+        ax_p.plot(ticks, mean_p, color=colors[g_name], linewidth=2.2, label=f"{g_name} alive")
+
+    ax_e.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Death threshold")
+    ax_e.axhline(0.7, color="black", linestyle=":", alpha=0.4, label="Target energy 0.7")
+
+    ax_p.axhline(0, color="red", linestyle="--", alpha=0.5, label="Extinction")
+
+    ax_e.set_title("Mean Energy: Normal vs Stress")
+    ax_e.set_ylabel("Mean energy")
+    ax_e.set_ylim(-0.05, 1.05)
+
+    ax_p.set_title("Alive Population: Normal vs Stress")
+    ax_p.set_ylabel("# alive mothers")
+    ax_p.set_xlabel("Tick")
+
+    for ax in (ax_e, ax_p):
+        ax.grid(True, linestyle="--", alpha=0.25)
+        ax.legend(loc="lower right", fontsize=9)
+
+    plt.tight_layout()
+    fig.savefig(os.path.join(out_dir, "stress_vs_normal_summary.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+def _plot_energy_individual(groups, duration, out_dir):
+    """Seed readiness check for Normal condition only."""
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    plt.style.use("default")
+
+    data = groups["Normal"]
+    seeds = data["seeds"]
+
+    fig, (ax_e, ax_p) = plt.subplots(
+        2, 1, figsize=(14, 8), sharex=True,
+        gridspec_kw={"height_ratios": [1.2, 1.0]}
+    )
+
+    fig.suptitle(
+        "Phase 2 · Survival Minimal — Seed Readiness Check\n"
+        f"Normal environment only | Seeds: {seeds}",
+        fontsize=16,
+        fontweight="bold",
+        y=0.98,
+    )
+
+    all_energy = []
+    all_pop = []
+
+    for i, seed in enumerate(seeds):
+        h = np.asarray(data["histories"][i], dtype=float)
+        p = np.asarray(data["pops"][i], dtype=float)
+
+        h_pad = np.full(duration, np.nan)
+        p_pad = np.full(duration, np.nan)
+
+        h_pad[:min(duration, len(h))] = h[:duration]
+        p_pad[:min(duration, len(p))] = p[:duration]
+
+        all_energy.append(h_pad)
+        all_pop.append(p_pad)
+
+        ax_e.plot(h_pad, linewidth=1.2, alpha=0.65, label=f"seed {seed}")
+        ax_p.step(np.arange(duration), p_pad, where="post", linewidth=1.2, alpha=0.75, label=f"seed {seed}")
+
+    all_energy = np.asarray(all_energy)
+    all_pop = np.asarray(all_pop)
+
+    ticks = np.arange(duration)
+    mean_e = np.nanmean(all_energy, axis=0)
+    std_e = np.nanstd(all_energy, axis=0)
+
+    ax_e.fill_between(
+        ticks, mean_e - std_e, mean_e + std_e,
+        color="gray", alpha=0.15, label="Mean ± 1 SD"
+    )
+    ax_e.plot(ticks, mean_e, color="black", linewidth=2.5, label="Mean")
+
+    initial_count = int(np.nanmax(all_pop[:, 0]))
+    final_pops = all_pop[:, -1]
+    min_final_pop = int(np.nanmin(final_pops))
+
+    ax_e.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Death threshold")
+    ax_e.axhline(0.7, color="black", linestyle=":", alpha=0.4, label="Target energy 0.7")
+
+    ax_p.axhline(initial_count, color="gray", linestyle=":", alpha=0.8, label=f"Initial count ({initial_count})")
+    ax_p.axhline(0, color="red", linestyle="--", alpha=0.5, label="Extinction")
+
+    ax_e.set_title("Mean Agent Energy Across Seeds", fontsize=13, fontweight="bold")
+    ax_e.set_ylabel("Mean energy")
+    ax_e.set_ylim(-0.05, 1.05)
+
+    ax_p.set_title("Alive Mother Count Across Seeds", fontsize=13, fontweight="bold")
+    ax_p.set_ylabel("# alive mothers")
+    ax_p.set_xlabel("Tick")
+    ax_p.set_ylim(-0.5, initial_count + 2)
+
+    summary_text = (
+        f"Seed readiness summary\n"
+        f"seeds = {seeds}\n"
+        f"final alive min = {min_final_pop}/{initial_count}\n"
+        f"final mean energy = {mean_e[-1]:.3f}\n"
+        f"final energy SD = {std_e[-1]:.3f}"
+    )
+
+    ax_e.text(
+        0.01, 0.04, summary_text,
+        transform=ax_e.transAxes,
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85)
+    )
+
+    for ax in (ax_e, ax_p):
+        ax.grid(True, linestyle="--", alpha=0.25)
+        ax.legend(loc="lower right", fontsize=8, frameon=True)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    fig.savefig(os.path.join(out_dir, "seed_readiness_normal.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig)
 
 def plot_results(groups, duration, out_dir):
     plt.style.use("default")
@@ -331,12 +654,19 @@ def plot_results(groups, duration, out_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--duration", type=int, default=1000)
+
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["seed_check", "stress_test"],
+        default="seed_check",
+    )
+
+    parser.add_argument("--duration", type=int, default=10000)
     parser.add_argument("--seeds", type=str, default="42-46")
-    parser.add_argument("--stress_seeds", type=str, default="42-46")
     parser.add_argument("--tau", type=float, default=0.1)
-    parser.add_argument("--target_energy", type=float, default=0.7)
+    parser.add_argument("--stress_food_mult", type=float, default=0.45)
     parser.add_argument("--plot_all", action="store_true")
+
     args = parser.parse_args()
-    
     run_experiment(args)
