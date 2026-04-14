@@ -119,10 +119,11 @@ class MotherAgent(Agent):
     
     # === Plasticity ===
     
-    def plastic_update(self, reward: float, plastic_gain: float) -> None:
+    def plastic_update(self, reward: float, plastic_gain: float,
+                       energy_cost: float = 0.0) -> None:
         delta = self.genome.learning_rate * reward * plastic_gain
         self.genome.care_weight = max(0.0, min(1.0, self.genome.care_weight + delta))
-        self.energy -= self.genome.learning_cost * abs(delta)
+        self.energy -= self.genome.learning_cost * abs(delta) + energy_cost
     
     # === State update ===
     

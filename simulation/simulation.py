@@ -250,7 +250,8 @@ class Simulation:
                     if success and self.config.plasticity_enabled:
                         is_own = (target.mother_id == mother.id)
                         if not self.config.plasticity_kin_conditional or is_own:
-                            mother.plastic_update(benefit, self.config.plastic_gain)
+                            mother.plastic_update(benefit, self.config.plastic_gain,
+                                                  energy_cost=self.config.plasticity_energy_cost)
                     mother.commit_ticks = 0  # done
                 else:
                     # Move toward

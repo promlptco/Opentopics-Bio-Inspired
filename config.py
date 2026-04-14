@@ -61,3 +61,10 @@ class Config:
     #   Tighter radius keeps kin spatially clustered (natal philopatry).
     #   Phase 5 sets this to 2; default 8 ~ random placement (current Phase 3/4 behaviour).
     birth_scatter_radius: int = 8
+
+    # Phase 6d — Baldwin Instinct Assimilation
+    # plasticity_energy_cost: fixed energy deducted per plastic_update call (in addition
+    #   to the variable learning_cost * |delta| already applied). Default 0.0 leaves all
+    #   prior experiments unaffected. Phase 6d may set this to a small positive value (e.g.
+    #   0.005) to make plasticity metabolically costly, strengthening the assimilation test.
+    plasticity_energy_cost: float = 0.0
