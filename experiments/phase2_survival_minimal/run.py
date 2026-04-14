@@ -4,6 +4,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datetime import datetime
+from itertools import product
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
@@ -84,11 +85,12 @@ class SurvivalSimulation:
 
             if nearest:
                 dist_to_food = self.world.get_distance(mother.pos, nearest)
+
+                # Perceptual noise prevents the foraging policy from being perfectly deterministic.
                 dist_to_food += random.gauss(0.0, self.perceptual_noise)
                 dist_to_food = max(0.0, dist_to_food)
 
-            u_forage = 1.0 - (dist_to_food / 30.0)
-            u_forage = max(0.0, u_forage)
+            u_forage = max(0.0, 1.0 - (dist_to_food / 30.0))
 
             if mother.pos in self.world.food_positions:
                 u_forage = 1.5
@@ -107,6 +109,7 @@ class SurvivalSimulation:
             selection = np.random.choice(list(probs.keys()), p=list(probs.values()))
 
             if selection == "EAT" and mother.held_food > 0:
+                # Foraging variance keeps food reward stochastic but bounded.
                 variance = random.uniform(0.8, 1.2)
                 mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
                 mother.held_food -= 1
@@ -138,11 +141,13 @@ class SurvivalSimulation:
 
         alive_now = [m for m in self.mothers if m.alive]
         self.population_history.append(len(alive_now))
+
         avg_e = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
         self.energy_history.append(avg_e)
 
     def run(self):
         self.initialize()
+
         for t in range(self.config.max_ticks):
             self.tick = t
             self.step()
@@ -176,28 +181,16 @@ def make_config(params, duration):
     return cfg
 
 
-from itertools import product
-
 def candidate_configs(mode="sweep"):
     if mode == "single":
-        # Your specific "Testing" set
         return [{
             "hunger_rate": 0.005,
             "move_cost": 0.0025,
             "eat_gain": 0.075,
             "init_food": 60,
             "rest_recovery": 0.04,
-            "name": "single_test"
+            "name": "single_test",
         }]
-    
-    # Full Sweep Grid
-    # grid = {
-    #     "hunger_rate":   [0.004, 0.006, 0.008, 0.010, 0.012, 0.016],
-    #     "move_cost":     [0.005],
-    #     "eat_gain":      [0.20],
-    #     "init_food":     [60],
-    #     "rest_recovery": [0.05],
-    # }
 
     grid = {
         "hunger_rate":   [0.004, 0.005, 0.012],
@@ -209,104 +202,13 @@ def candidate_configs(mode="sweep"):
 
     configs = []
     keys = list(grid.keys())
+
     for values in product(*[grid[k] for k in keys]):
         params = dict(zip(keys, values))
         params["name"] = "candidate"
         configs.append(params)
+
     return configs
-
-
-def score_config(result):
-    final_pop = result["final_pop"]
-    mean_energy = result["mean_energy"]
-    final_energy = result["final_energy"]
-
-    survival_rate = final_pop / 15.0
-
-    balanced_score = (
-        abs(mean_energy - 0.725)
-        + abs(final_energy - 0.725)
-        + abs(survival_rate - 1.0) * 2.0
-    )
-
-    easy_score = (
-        abs(mean_energy - 0.95)
-        + abs(final_energy - 0.95)
-        + abs(survival_rate - 1.0)
-    )
-
-    harsh_score = (
-        final_pop
-        + mean_energy
-        + final_energy
-    )
-
-    return balanced_score, easy_score, harsh_score
-
-
-def select_auto_conditions(sweep_records):
-    # Balanced: prefer 100% survival and mean energy 0.70–0.75
-    balanced_pool = [
-        r for r in sweep_records
-        if r["result"]["final_pop"] == 15
-        and 0.70 <= r["result"]["mean_energy"] <= 0.75
-    ]
-
-    if balanced_pool:
-        balanced = min(
-            balanced_pool,
-            key=lambda r: abs(r["result"]["mean_energy"] - 0.725)
-        )
-    else:
-        balanced = min(
-            sweep_records,
-            key=lambda r: score_config(r["result"])[0]
-        )
-
-    # Easy: high survival + saturated energy
-    easy_pool = [
-        r for r in sweep_records
-        if r["result"]["final_pop"] >= 14
-        and r["result"]["mean_energy"] >= 0.90
-    ]
-
-    if easy_pool:
-        easy = max(
-            easy_pool,
-            key=lambda r: r["result"]["mean_energy"]
-        )
-    else:
-        easy = min(
-            sweep_records,
-            key=lambda r: score_config(r["result"])[1]
-        )
-
-    # Harsh: extinction or near extinction
-    harsh_pool = [
-        r for r in sweep_records
-        if r["result"]["final_pop"] <= 2
-    ]
-
-    if harsh_pool:
-        harsh = min(
-            harsh_pool,
-            key=lambda r: r["result"]["mean_energy"]
-        )
-    else:
-        harsh = min(
-            sweep_records,
-            key=lambda r: score_config(r["result"])[2]
-        )
-
-    harsh["params"]["name"] = "harsh"
-    balanced["params"]["name"] = "balanced"
-    easy["params"]["name"] = "easy"
-
-    return {
-        "harsh": harsh,
-        "balanced": balanced,
-        "easy": easy,
-    }
 
 
 def run_one(params, seed, duration, tau, noise):
@@ -323,6 +225,129 @@ def pad(x, duration):
     return arr
 
 
+def summarize_repeats(repeat_results, duration, tail_window=200):
+    """
+    Summarize repeated runs for one config.
+
+    Important change:
+    We use tail_mean_energy instead of whole-episode mean_energy for selection.
+    Whole-episode mean can be misleading because initial_energy = 0.75 can bias the average.
+    Tail mean better reflects whether the ecology stabilizes near the target energy.
+    """
+    final_pops = np.array([r["final_pop"] for r in repeat_results], dtype=float)
+    mean_es = np.array([r["mean_energy"] for r in repeat_results], dtype=float)
+    final_es = np.array([r["final_energy"] for r in repeat_results], dtype=float)
+
+    tail_means = []
+    for r in repeat_results:
+        e = pad(r["energy_history"], duration)
+        tail_e = e[-tail_window:]
+        tail_means.append(np.nanmean(tail_e))
+
+    tail_means = np.array(tail_means, dtype=float)
+
+    return {
+        "final_pop": float(np.mean(final_pops)),
+        "final_pop_sd": float(np.std(final_pops)),
+        "mean_energy": float(np.mean(mean_es)),
+        "final_energy": float(np.mean(final_es)),
+        "tail_mean_energy": float(np.mean(tail_means)),
+        "tail_energy_sd": float(np.std(tail_means)),
+    }
+
+
+def select_auto_conditions(sweep_records):
+    """
+    Automatically select Harsh, Balanced, and Easy configs.
+
+    Important change:
+    Selection is based mainly on tail_mean_energy and repeat stability,
+    not only on mean_energy across the full episode.
+    """
+
+    balanced_pool = [
+        r for r in sweep_records
+        if r["result"]["final_pop"] >= 14.5
+        and 0.70 <= r["result"]["tail_mean_energy"] <= 0.75
+        and r["result"]["tail_energy_sd"] <= 0.08
+    ]
+
+    if balanced_pool:
+        balanced = min(
+            balanced_pool,
+            key=lambda r: (
+                abs(r["result"]["tail_mean_energy"] - 0.725)
+                + r["result"]["tail_energy_sd"]
+                + r["result"]["final_pop_sd"] * 0.05
+            )
+        )
+    else:
+        balanced = min(
+            sweep_records,
+            key=lambda r: (
+                abs(r["result"]["tail_mean_energy"] - 0.725)
+                + abs(r["result"]["final_pop"] - 15.0) * 0.2
+                + r["result"]["tail_energy_sd"]
+            )
+        )
+
+    easy_pool = [
+        r for r in sweep_records
+        if r["result"]["final_pop"] >= 14.5
+        and r["result"]["tail_mean_energy"] >= 0.90
+    ]
+
+    if easy_pool:
+        easy = max(
+            easy_pool,
+            key=lambda r: (
+                r["result"]["tail_mean_energy"]
+                - r["result"]["tail_energy_sd"] * 0.2
+            )
+        )
+    else:
+        easy = min(
+            sweep_records,
+            key=lambda r: (
+                abs(r["result"]["tail_mean_energy"] - 0.95)
+                + abs(r["result"]["final_pop"] - 15.0) * 0.2
+            )
+        )
+
+    harsh_pool = [
+        r for r in sweep_records
+        if r["result"]["final_pop"] <= 2.0
+        or r["result"]["tail_mean_energy"] <= 0.10
+    ]
+
+    if harsh_pool:
+        harsh = min(
+            harsh_pool,
+            key=lambda r: (
+                r["result"]["final_pop"]
+                + r["result"]["tail_mean_energy"]
+            )
+        )
+    else:
+        harsh = min(
+            sweep_records,
+            key=lambda r: (
+                r["result"]["final_pop"]
+                + r["result"]["tail_mean_energy"]
+            )
+        )
+
+    harsh["params"]["name"] = "harsh"
+    balanced["params"]["name"] = "balanced"
+    easy["params"]["name"] = "easy"
+
+    return {
+        "harsh": harsh,
+        "balanced": balanced,
+        "easy": easy,
+    }
+
+
 def plot_single_condition(name, result, params, seed, duration, out_dir):
     ticks = np.arange(duration)
     e = pad(result["energy_history"], duration)
@@ -333,7 +358,7 @@ def plot_single_condition(name, result, params, seed, duration, out_dir):
     fig.suptitle(
         f"Phase 2 Baseline Sweep — {name.upper()}\n"
         f"Seed {seed} | hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']}",
+        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}",
         fontsize=14,
         fontweight="bold",
     )
@@ -444,42 +469,70 @@ def run_experiment(args):
     )
     os.makedirs(out_dir, exist_ok=True)
 
-    sweep_seed = 42
     validation_seeds = list(range(42, 47))
 
     print(f"Phase 2 Baseline Calibration - Mode: {args.mode}")
     print(f"Output dir: {out_dir}")
     print(f"Duration: {args.duration} | Tau: {args.tau}")
+    print(f"Perceptual noise: {args.perceptual_noise}")
+    print(f"Repeats: {args.repeats}")
 
     if args.mode == "sweep":
         configs = candidate_configs(mode="sweep")
         sweep_records = []
-        print(f"\nStep 1: Auto sweep (Total configs: {len(configs)})")
+        print(f"\nStep 1: Auto sweep | Total configs: {len(configs)}")
+        print(f"Total sweep runs: {len(configs) * args.repeats}")
 
         for idx, params in enumerate(configs, start=1):
             repeat_results = []
+
             for rep in range(args.repeats):
-                sweep_run_seed = 100 + rep 
+                # Repeat seeds are deterministic and reproducible.
+                sweep_run_seed = 42000 + rep
                 res = run_one(params, sweep_run_seed, args.duration, args.tau, args.perceptual_noise)
                 repeat_results.append(res)
 
-            avg_pop = np.mean([r["final_pop"] for r in repeat_results])
-            avg_mean_e = np.mean([r["mean_energy"] for r in repeat_results])
-            avg_final_e = np.mean([r["final_energy"] for r in repeat_results])
+            summary_result = summarize_repeats(repeat_results, args.duration)
 
-            record = {"params": dict(params), "result": {"final_pop": avg_pop, "mean_energy": avg_mean_e, "final_energy": avg_final_e}, "full_result": repeat_results[0]}
+            record = {
+                "params": dict(params),
+                "result": summary_result,
+                "full_result": repeat_results[0],
+            }
             sweep_records.append(record)
-            
+
             if idx % 20 == 0 or idx == len(configs):
-                print(f"  [{idx:03d}/{len(configs)}] Last avg_pop={avg_pop:4.1f} | avg_meanE={avg_mean_e:.3f}")
+                print(
+                    f"  [{idx:03d}/{len(configs)}] "
+                    f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
+                    f"tailE={summary_result['tail_mean_energy']:.3f} ± {summary_result['tail_energy_sd']:.3f}"
+                )
 
         selected = select_auto_conditions(sweep_records)
+
+        print("\nSelected conditions:")
+        for name, rec in selected.items():
+            print(f"{name.upper()}: {rec['result']} | config={rec['params']}")
+
+            plot_single_condition(
+                name,
+                rec["full_result"],
+                rec["params"],
+                seed=42000,
+                duration=args.duration,
+                out_dir=out_dir,
+            )
+
     else:
-        # SINGLE mode
         single_config = candidate_configs(mode="single")[0]
-        # We wrap it in a mock selection dictionary to reuse the plotting code
-        selected = {"single": {"params": single_config, "result": {"mean_energy": 0, "final_pop": 0}}}
-        print(f"\nRunning Single Configuration: {single_config}")
+        selected = {
+            "single": {
+                "params": single_config,
+                "result": {},
+                "full_result": None,
+            }
+        }
+        print(f"\nRunning single configuration: {single_config}")
 
     print("\nStep 2: Multi-seed validation")
 
@@ -499,11 +552,13 @@ def run_experiment(args):
                     run_seed,
                     args.duration,
                     args.tau,
-                    args.perceptual_noise
+                    args.perceptual_noise,
                 )
 
                 result["base_seed"] = seed
                 result["repeat"] = rep + 1
+                result["run_seed"] = run_seed
+
                 results.append(result)
                 result_tags.append(f"{seed}-r{rep + 1}")
 
@@ -515,24 +570,26 @@ def run_experiment(args):
                     f"finalE={result['final_energy']:.3f}"
                 )
 
-        # Plot and summary are now correctly indented inside the 'name' loop
         plot_multiseed_condition(
             name,
             results,
             params,
             result_tags,
             args.duration,
-            out_dir
+            out_dir,
         )
+
+        validation_summary = summarize_repeats(results, args.duration)
 
         summary[name] = {
             "selected_config": params,
-            "sweep_seed_42": rec["result"],
+            "sweep_summary": rec["result"],
+            "validation_summary": validation_summary,
             "validation_42_46": [
                 {
                     "seed": res["base_seed"],
                     "repeat": res["repeat"],
-                    "run_seed": res["base_seed"] * 1000 + (res["repeat"] - 1),
+                    "run_seed": res["run_seed"],
                     "final_pop": res["final_pop"],
                     "mean_energy": res["mean_energy"],
                     "final_energy": res["final_energy"],
@@ -545,6 +602,7 @@ def run_experiment(args):
         json.dump(summary, f, indent=2)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
