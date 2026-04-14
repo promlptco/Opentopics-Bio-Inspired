@@ -313,9 +313,8 @@ def plot_single_condition(name, result, params, seed, duration, out_dir):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
 
     fig.suptitle(
-        f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Runs: {len(results)} total | 5 seeds × {len(results)//5} repeats | "
-        f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
+        f"Phase 2 Baseline Sweep — {name.upper()}\n"
+        f"Seed {seed} | hunger={params['hunger_rate']} | move={params['move_cost']} | "
         f"eat={params['eat_gain']} | food={params['init_food']}",
         fontsize=14,
         fontweight="bold",
@@ -442,31 +441,40 @@ def run_experiment(args):
     print(f"Total candidate configs: {len(configs)}")
 
     for idx, params in enumerate(configs, start=1):
-        result = run_one(
-            params,
-            sweep_seed,
-            args.duration,
-            args.tau,
-            args.perceptual_noise
-        )
+        repeat_results = []
+        for rep in range(args.repeats):
+            # Unique seed for each repeat in sweep (e.g., 100, 101, 102...)
+            sweep_run_seed = 100 + rep 
+            res = run_one(
+                params,
+                sweep_run_seed,
+                args.duration,
+                args.tau,
+                args.perceptual_noise
+            )
+            repeat_results.append(res)
+
+        # Average the results
+        avg_pop = np.mean([r["final_pop"] for r in repeat_results])
+        avg_mean_e = np.mean([r["mean_energy"] for r in repeat_results])
+        avg_final_e = np.mean([r["final_energy"] for r in repeat_results])
 
         record = {
             "params": dict(params),
             "result": {
-                "final_pop": result["final_pop"],
-                "mean_energy": result["mean_energy"],
-                "final_energy": result["final_energy"],
+                "final_pop": avg_pop,
+                "mean_energy": avg_mean_e,
+                "final_energy": avg_final_e,
             },
-            "full_result": result,
+            "full_result": repeat_results[0], # Keep first one for plotting if needed
         }
 
         sweep_records.append(record)
 
         print(
             f"[{idx:03d}/{len(configs)}] "
-            f"pop={result['final_pop']:02d}/15 | "
-            f"meanE={result['mean_energy']:.3f} | "
-            f"finalE={result['final_energy']:.3f} | "
+            f"avg_pop={avg_pop:4.1f}/15 | "
+            f"avg_meanE={avg_mean_e:.3f} | "
             f"h={params['hunger_rate']} m={params['move_cost']} "
             f"eat={params['eat_gain']} food={params['init_food']}"
         )
