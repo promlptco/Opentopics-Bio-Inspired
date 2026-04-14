@@ -23,12 +23,16 @@ Unless explicitly overridden by a phase, all runs use the following defaults:
 | Parameter | Value | Rationale |
 |---|---|---|
 | Grid type | 2D discrete grid-world | Spatial proximity is a key variable |
-| Decision architecture | Argmax over utility scores {Care, Forage, Self} | Deterministic, interpretable |
-| Kin recognition | None — targets chosen by max visible distress | Ensures any kin bias emerges structurally, not by explicit recognition |
+| Decision architecture | Softmax (Gibbs) Sampling over utility scores {Care, Forage, Self} | Stochastic selection proportional to utility — enables exploration and naturalistic errors |
+| Softmax Temperature (τ) | 0.1 | Controls sharpness of selection; low τ approximates Argmax, high τ approaches random |
+| Reproduction gate | Sigmoid Probability (midpoint = 0.95) | Replaces hard-threshold 0.95 — probabilistic reproduction proportional to energy level |
+| Kin recognition noise | Gaussian N(0, σ=0.1) | Adds perceptual noise to infant distress signal — allows occasional misidentification |
+| Foraging variance | ±20% Noise | Energy gained from foraging varies stochastically — models unstable environment |
+| Mutation rate | Stochastic P(mutate) | Mutation probability is stochastic per gene per reproduction event |
+| Mutation magnitude | Gaussian N(0, σ=0.05) per parameter, bounded | Small-step mutation; prevents drift explosion |
+| Kin recognition | None — targets chosen by max visible distress (+ noise) | Ensures any kin bias emerges structurally, not by explicit recognition |
 | Evolution duration | 5,000 ticks (~50 generations) | Sufficient for selection signal; computationally feasible |
 | Replication | 10 seeds (42–51) | Minimum for mean ± SD and sign-test |
-| Reproduction | Energy-threshold: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick | Effectively fitness-proportional — higher-energy mothers reproduce sooner and more often; no explicit probability sampling |
-| Mutation | Gaussian N(0, σ=0.05) per parameter, bounded | Small-step mutation; prevents drift explosion |
 | Primary metric | Pearson's r (care_weight vs. reproductive fitness) | Direct measure of selection gradient direction and magnitude |
 
 ### Statistical Validity Requirements
@@ -70,7 +74,12 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 
 **Protocol:**
 - Unit tests for: mutation boundedness (Gaussian, values stay in [0,1]), inheritance fidelity (parent → offspring copy is exact and independent), reproduction gate logic (energy threshold, cooldown, child-present block), population stability (no extinction, no explosion, deterministic across identical seeds).
-- Note: roulette wheel normalization was originally listed here but the simulation uses energy-threshold reproduction (not probability sampling). There is no roulette wheel to normalize. This test was intentionally omitted — see Session Notes.
+- Note: roulette wheel normalization was originally listed here but the simulation uses sigmoid-probability reproduction (not a fixed threshold). There is no roulette wheel to normalize. This test was intentionally omitted — see Session Notes.
+
+**Additional tests (amended 2026-04-14):**
+
+- **Test 05 · Stochasticity Identity:** Verify that identical seeds produce 100% identical results (deterministic reproduction), but changing the seed — even slightly — produces meaningfully different action sequences. Confirms stochastic mechanics are seed-controlled, not truly random.
+- **Test 06 · Softmax Calibration:** Verify that actions with higher utility are selected more frequently in proportion to the Softmax equation. Given two actions with clearly different utility scores, the higher-utility action must win at a rate consistent with Softmax(τ=0.1). Confirms the selection mechanism is correctly implemented.
 
 **Success criteria:** 100% pass rate. Any failure must be resolved before proceeding.
 
@@ -173,8 +182,10 @@ This phase defines the "functioning care" reference state used to interpret all 
 | care_weight init | Uniform(0.0, 1.0), Mean = 0.50 | Neutral starting point |
 | mutation | ON | Evolution active |
 | plasticity | OFF | Isolate evolutionary signal from learning |
-| Duration | 5,000 ticks | Standard evolution window |
+| Duration | 10,000 ticks | Extended from 5,000 — stochastic system requires more ticks for selection signal to emerge |
 | Seeds | 42–51 (10 seeds) | Statistical validity |
+
+**Additional metric (amended 2026-04-14):** Track intra-population variance of `care_weight` across ticks. Rising variance suggests stochasticity is maintaining genetic diversity; collapsing variance suggests fixation. Report alongside mean trajectory.
 
 **No zero-shot measurement in this phase.** Zero-shot is a separate instrument applied only as a comparison baseline in Phase 7. Running it here conflates behavioral measurement with evolutionary results.
 
@@ -481,3 +492,11 @@ No phase may hardcode a value measured in another phase. All cross-phase constan
 
 **2026-04-14** — Reproduction mechanism audit (Phase 1 restart):
 The global parameters table originally listed "Roulette wheel on accumulated energy" as the reproduction mechanism. Code audit of `simulation/simulation.py:_check_reproduction()` found this to be inaccurate. Actual mechanism: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick — energy-threshold, not probability sampling. The mechanism is still effectively fitness-proportional (higher-energy mothers reproduce sooner/more often) but there is no probability vector to normalize. Roulette wheel normalization test was removed from Phase 1 protocol and the global parameters table was corrected. No code change required.
+
+**2026-04-14** — Stochastic mechanics update (Global Parameters amended):
+Decision architecture updated from Argmax to Softmax (Gibbs) Sampling with τ=0.1. Reproduction gate updated from hard-threshold to sigmoid probability (midpoint=0.95). Kin recognition noise Gaussian N(0, σ=0.1) added. Foraging variance ±20% added. Mutation rate made stochastic per gene. Implementation notes:
+- Replace `reproduction_threshold` hard-check with `sigmoid_prob` (midpoint=0.95) in reproduction logic.
+- Use `numpy.random.choice` with Softmax-derived weights for action selection.
+- Record τ=0.1 and σ_percept=0.1 in `shared/constants.py`.
+- Phase 4 duration extended to 10,000 ticks to account for slower signal emergence under stochastic system.
+- Two new Phase 1 tests added: Test 05 (Stochasticity Identity) and Test 06 (Softmax Calibration).
