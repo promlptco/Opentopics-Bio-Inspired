@@ -178,23 +178,33 @@ def make_config(params, duration):
 
 from itertools import product
 
-def candidate_configs():
+def candidate_configs(mode="sweep"):
+    if mode == "single":
+        # Your specific "Testing" set
+        return [{
+            "hunger_rate": 0.008,
+            "move_cost": 0.004,
+            "eat_gain": 0.18,
+            "init_food": 75,
+            "rest_recovery": 0.05,
+            "name": "single_test"
+        }]
+    
+    # Full Sweep Grid
     grid = {
-        "hunger_rate":   [0.004, 0.008, 0.012], # Life expectancy: 250, 125, 83 ticks
-        "move_cost":     [0.002, 0.005, 0.008], # Search penalty relative to hunger
-        "eat_gain":      [0.15, 0.20, 0.25],    # Nutritional value (4-7 meals to full)
-        "init_food":     [30, 60, 90],          # Resource density (1:30 to 1:10 tiles)
-        "rest_recovery": [0.02, 0.05, 0.10],    # Recovery efficiency (1:1 to 1:5 ratio)
+        "hunger_rate":   [0.004, 0.008, 0.012],
+        "move_cost":     [0.002, 0.005, 0.008],
+        "eat_gain":      [0.15, 0.20, 0.25],
+        "init_food":     [30, 60, 90],
+        "rest_recovery": [0.02, 0.05, 0.10],
     }
 
     configs = []
     keys = list(grid.keys())
-
     for values in product(*[grid[k] for k in keys]):
         params = dict(zip(keys, values))
         params["name"] = "candidate"
         configs.append(params)
-
     return configs
 
 
@@ -361,21 +371,23 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
     fig.suptitle(
         f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Seeds {seeds} | hunger={params['hunger_rate']} | move={params['move_cost']} | "
+        f"Runs: {len(results)} total | hunger={params['hunger_rate']} | move={params['move_cost']} | "
         f"eat={params['eat_gain']} | food={params['init_food']}",
         fontsize=14,
         fontweight="bold",
     )
 
     for i, label in enumerate(run_labels):
-        ax1.plot(ticks, energy_matrix[i], alpha=0.25, linewidth=0.9, label=str(label))
-        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.25, linewidth=0.9, label=str(label))
+        # Only label the first run to keep the legend compact
+        l = "Individual Runs" if i == 0 else "_nolegend_"
+        ax1.plot(ticks, energy_matrix[i], alpha=0.15, linewidth=0.8, color="gray", label=l)
+        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.15, linewidth=0.8, color="gray", label=l)
 
-    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="gray", alpha=0.2, label="Mean ± SD")
-    ax1.plot(ticks, mean_e, color="black", linewidth=2.5, label="Mean")
+    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="blue", alpha=0.15, label="Mean ± SD")
+    ax1.plot(ticks, mean_e, color="blue", linewidth=2.0, label="Group Mean")
 
-    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="gray", alpha=0.2, label="Mean ± SD")
-    ax2.plot(ticks, mean_p, color="black", linewidth=2.5, label="Mean")
+    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="green", alpha=0.15, label="Mean ± SD")
+    ax2.plot(ticks, mean_p, color="green", linewidth=2.0, label="Group Mean")
 
     ax1.axhline(0.70, color="gray", linestyle=":", label="Target 0.70")
     ax1.axhline(0.75, color="gray", linestyle="--", alpha=0.6, label="Target 0.75")
@@ -428,82 +440,41 @@ def run_experiment(args):
     sweep_seed = 42
     validation_seeds = list(range(42, 47))
 
-    print("Phase 2 Auto Baseline Calibration")
+    print(f"Phase 2 Baseline Calibration - Mode: {args.mode}")
     print(f"Output dir: {out_dir}")
-    print(f"Duration: {args.duration}")
-    print(f"Tau: {args.tau}")
-    print(f"Perceptual noise: {args.perceptual_noise}")
+    print(f"Duration: {args.duration} | Tau: {args.tau}")
 
-    configs = candidate_configs()
-    sweep_records = []
+    if args.mode == "sweep":
+        configs = candidate_configs(mode="sweep")
+        sweep_records = []
+        print(f"\nStep 1: Auto sweep (Total configs: {len(configs)})")
 
-    print(f"\nStep 1: Auto sweep with seed {sweep_seed}")
-    print(f"Total candidate configs: {len(configs)}")
+        for idx, params in enumerate(configs, start=1):
+            repeat_results = []
+            for rep in range(args.repeats):
+                sweep_run_seed = 100 + rep 
+                res = run_one(params, sweep_run_seed, args.duration, args.tau, args.perceptual_noise)
+                repeat_results.append(res)
 
-    for idx, params in enumerate(configs, start=1):
-        repeat_results = []
-        for rep in range(args.repeats):
-            # Unique seed for each repeat in sweep (e.g., 100, 101, 102...)
-            sweep_run_seed = 100 + rep 
-            res = run_one(
-                params,
-                sweep_run_seed,
-                args.duration,
-                args.tau,
-                args.perceptual_noise
-            )
-            repeat_results.append(res)
+            avg_pop = np.mean([r["final_pop"] for r in repeat_results])
+            avg_mean_e = np.mean([r["mean_energy"] for r in repeat_results])
+            avg_final_e = np.mean([r["final_energy"] for r in repeat_results])
 
-        # Average the results
-        avg_pop = np.mean([r["final_pop"] for r in repeat_results])
-        avg_mean_e = np.mean([r["mean_energy"] for r in repeat_results])
-        avg_final_e = np.mean([r["final_energy"] for r in repeat_results])
+            record = {"params": dict(params), "result": {"final_pop": avg_pop, "mean_energy": avg_mean_e, "final_energy": avg_final_e}, "full_result": repeat_results[0]}
+            sweep_records.append(record)
+            
+            if idx % 20 == 0 or idx == len(configs):
+                print(f"  [{idx:03d}/{len(configs)}] Last avg_pop={avg_pop:4.1f} | avg_meanE={avg_mean_e:.3f}")
 
-        record = {
-            "params": dict(params),
-            "result": {
-                "final_pop": avg_pop,
-                "mean_energy": avg_mean_e,
-                "final_energy": avg_final_e,
-            },
-            "full_result": repeat_results[0], # Keep first one for plotting if needed
-        }
+        selected = select_auto_conditions(sweep_records)
+    else:
+        # SINGLE mode
+        single_config = candidate_configs(mode="single")[0]
+        # We wrap it in a mock selection dictionary to reuse the plotting code
+        selected = {"single": {"params": single_config, "result": {"mean_energy": 0, "final_pop": 0}}}
+        print(f"\nRunning Single Configuration: {single_config}")
 
-        sweep_records.append(record)
-
-        print(
-            f"[{idx:03d}/{len(configs)}] "
-            f"avg_pop={avg_pop:4.1f}/15 | "
-            f"avg_meanE={avg_mean_e:.3f} | "
-            f"h={params['hunger_rate']} m={params['move_cost']} "
-            f"eat={params['eat_gain']} food={params['init_food']}"
-        )
-
-    selected = select_auto_conditions(sweep_records)
-
-    print("\nSelected conditions:")
-    for name, rec in selected.items():
-        params = rec["params"]
-        result = rec["result"]
-
-        print(
-            f"{name.upper()}: "
-            f"pop={result['final_pop']}/15 | "
-            f"meanE={result['mean_energy']:.3f} | "
-            f"finalE={result['final_energy']:.3f} | "
-            f"config={params}"
-        )
-
-        plot_single_condition(
-            name,
-            rec["full_result"],
-            params,
-            sweep_seed,
-            args.duration,
-            out_dir
-        )
-
-    print("\nStep 2: Multi-seed validation with selected configs")
+    print("\nStep 2: Multi-seed validation")
 
     summary = {}
 
@@ -574,6 +545,7 @@ if __name__ == "__main__":
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--mode", type=str, choices=["sweep", "single"], default="sweep")
     args = parser.parse_args()
 
     run_experiment(args)
