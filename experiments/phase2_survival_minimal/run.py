@@ -183,29 +183,29 @@ def candidate_configs(mode="sweep"):
         # Your specific "Testing" set
         return [{
             "hunger_rate": 0.005,
-            "move_cost": 0.0018,
-            "eat_gain": 0.07,
-            "init_food": 55,
-            "rest_recovery": 0.05,
+            "move_cost": 0.0025,
+            "eat_gain": 0.075,
+            "init_food": 60,
+            "rest_recovery": 0.04,
             "name": "single_test"
         }]
     
     # Full Sweep Grid
-    grid = {
-        "hunger_rate":   [0.004, 0.006, 0.008, 0.010, 0.012, 0.016],
-        "move_cost":     [0.005],
-        "eat_gain":      [0.20],
-        "init_food":     [60],
-        "rest_recovery": [0.05],
-    }
-
     # grid = {
-    #     "hunger_rate":   [0.004, 0.008, 0.012],
-    #     "move_cost":     [0.002, 0.005, 0.008],
-    #     "eat_gain":      [0.15, 0.20, 0.25],
-    #     "init_food":     [30, 60, 90],
-    #     "rest_recovery": [0.02, 0.05, 0.10],
+    #     "hunger_rate":   [0.004, 0.006, 0.008, 0.010, 0.012, 0.016],
+    #     "move_cost":     [0.005],
+    #     "eat_gain":      [0.20],
+    #     "init_food":     [60],
+    #     "rest_recovery": [0.05],
     # }
+
+    grid = {
+        "hunger_rate":   [0.004, 0.005, 0.012],
+        "move_cost":     [0.002, 0.0018, 0.008],
+        "eat_gain":      [0.15, 0.07, 0.25],
+        "init_food":     [30, 55, 90],
+        "rest_recovery": [0.02, 0.05, 0.10],
+    }
 
     configs = []
     keys = list(grid.keys())
@@ -380,13 +380,12 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     fig.suptitle(
         f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
         f"Runs: {len(results)} total | hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']}",
+        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}",
         fontsize=14,
         fontweight="bold",
     )
 
     for i, label in enumerate(run_labels):
-        # Only label the first run to keep the legend compact
         l = "Individual Runs" if i == 0 else "_nolegend_"
         ax1.plot(ticks, energy_matrix[i], alpha=0.15, linewidth=0.8, color="gray", label=l)
         ax2.step(ticks, pop_matrix[i], where="post", alpha=0.15, linewidth=0.8, color="gray", label=l)
