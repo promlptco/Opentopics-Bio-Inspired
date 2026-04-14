@@ -69,7 +69,7 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 **Purpose:** Verify genetic operators before any evolutionary run. A bug here invalidates everything downstream.
 
 **Protocol:**
-- Unit tests for: mutation boundedness, inheritance fidelity (parent → offspring), population stability under neutral fitness, roulette wheel normalization.
+- Unit tests for: mutation boundedness using guassian, inheritance fidelity (parent → offspring), population stability, roulette wheel normalization.
 
 **Success criteria:** 100% pass rate. Any failure must be resolved before proceeding.
 
@@ -158,6 +158,8 @@ This phase defines the "functioning care" reference state used to interpret all 
 ### Phase 4 · Evolution Baseline
 
 **Purpose:** Observe how care_weight evolves under selection in a standard ecological environment. This is an **open empirical question** — outcome is not known in advance.
+
+**NOTE: Before do this phase we must test the asynchronus evolution --> output: 100% pass or not**
 
 > ⚠️ **Naming rule:** Directory is `phase4_evolution_baseline`. Do NOT rename to "care_erosion" until results confirm the direction. Naming a phase after its expected outcome introduces methodological bias.
 
