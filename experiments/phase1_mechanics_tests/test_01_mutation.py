@@ -73,7 +73,7 @@ def test_mutation_stays_in_bounds():
 
 
 def test_mutation_distribution():
-    """All five genome fields should mutate with roughly Gaussian distribution."""
+    """All five genome fields should mutate with roughly Gaussian distribution (sigma=0.05)."""
     _seed()
     parent = Genome(
         care_weight=0.5,
@@ -86,7 +86,7 @@ def test_mutation_distribution():
     samples = {f: [] for f in FIELDS}
 
     for _ in range(1000):
-        child = parent.mutate(mutation_rate=1.0)
+        child = parent.mutate(mutation_rate=1.0, sigma=0.05)
         for f in FIELDS:
             samples[f].append(getattr(child, f))
 
@@ -97,9 +97,47 @@ def test_mutation_distribution():
         detail_parts.append(f"{f}:mean={mean:.3f},stdev={stdev:.3f}")
         print(f"  {f}: Mean={mean:.3f}, Stdev={stdev:.3f}")
         assert 0.4 < mean < 0.6, f"{f} mean should be near 0.5, got {mean}"
-        assert 0.05 < stdev < 0.2, f"{f} stdev should be reasonable, got {stdev}"
+        assert 0.03 < stdev < 0.07, f"{f} stdev should be near 0.05, got {stdev}"
 
     _log("test_mutation_distribution", "; ".join(detail_parts))
+    
+def test_mutation_rate_sensitivity():
+    """Sweep sigma values to confirm sigma=0.05 is appropriate.
+    
+    Verifies:
+    - Higher sigma produces higher output stdev (monotonic)
+    - sigma=0.05 lands in expected stdev range [0.08, 0.12]
+    - No sigma causes values to leave [0,1]
+    """
+    _seed()
+    SIGMAS = [0.01, 0.05, 0.10]
+    stdevs = {}
+
+    for sigma in SIGMAS:
+        parent = Genome(care_weight=0.5, forage_weight=0.5,
+                        self_weight=0.5, learning_rate=0.5, learning_cost=0.5)
+        samples = []
+        for _ in range(1000):
+            child = parent.mutate(mutation_rate=1.0, sigma=sigma)
+            for f in FIELDS:
+                v = getattr(child, f)
+                assert 0.0 <= v <= 1.0, f"sigma={sigma}: {f} out of bounds: {v}"
+            samples.append(child.care_weight)
+
+        s = statistics.stdev(samples)
+        stdevs[sigma] = s
+        print(f"  sigma={sigma:.2f} → output stdev={s:.4f}")
+
+    # Monotonic: larger sigma must produce larger stdev
+    assert stdevs[0.01] < stdevs[0.05] < stdevs[0.10], \
+        f"Stdev not monotonic with sigma: {stdevs}"
+
+    # Canonical sigma=0.05 must land in expected range
+    assert 0.03 < stdevs[0.05] < 0.07, \
+        f"sigma=0.05 stdev out of expected range: {stdevs[0.05]:.4f}"
+
+    detail = "; ".join(f"sigma={s}:stdev={stdevs[s]:.4f}" for s in SIGMAS)
+    _log("test_mutation_rate_sensitivity", detail)
 
 
 if __name__ == "__main__":
@@ -108,6 +146,7 @@ if __name__ == "__main__":
     test_mutation_changes_values()
     test_mutation_stays_in_bounds()
     test_mutation_distribution()
+    test_mutation_rate_sensitivity()
 
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)

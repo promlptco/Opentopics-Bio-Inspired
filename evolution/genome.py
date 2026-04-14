@@ -10,13 +10,13 @@ class Genome:
     learning_rate: float = 0.1
     learning_cost: float = 0.05
     
-    def mutate(self, mutation_rate: float = 0.1) -> Genome:
+    def mutate(self, mutation_rate: float = 0.1, sigma: float = 0.05) -> Genome:
         def mutate_gene(value: float) -> float:
             if random.random() < mutation_rate:
-                delta = random.gauss(0, 0.1)
+                delta = random.gauss(0, sigma)
                 return max(0.0, min(1.0, value + delta))
             return value
-        
+
         return Genome(
             care_weight=mutate_gene(self.care_weight),
             forage_weight=mutate_gene(self.forage_weight),
