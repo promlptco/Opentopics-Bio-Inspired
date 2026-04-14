@@ -191,13 +191,13 @@ def candidate_configs(mode="sweep"):
             "rest_recovery": 0.04,
             "name": "single_test",
         }]
-
+        
     grid = {
-        "hunger_rate":   [0.001, 0.005, 0.009],
-        "move_cost":     [0.0026, 0.0018, 0.0010],
-        "eat_gain":      [0.13, 0.07, 0.01],
-        "init_food":     [30, 55, 80],
-        "rest_recovery": [0.02, 0.05, 0.08],
+        "hunger_rate":   [0.005],
+        "move_cost":     [0.001],
+        "eat_gain":      [0.07],
+        "init_food":     [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 70, 80],
+        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10]
     }
 
     configs = []
