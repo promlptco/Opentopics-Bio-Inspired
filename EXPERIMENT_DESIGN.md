@@ -27,7 +27,7 @@ Unless explicitly overridden by a phase, all runs use the following defaults:
 | Kin recognition | None — targets chosen by max visible distress | Ensures any kin bias emerges structurally, not by explicit recognition |
 | Evolution duration | 5,000 ticks (~50 generations) | Sufficient for selection signal; computationally feasible |
 | Replication | 10 seeds (42–51) | Minimum for mean ± SD and sign-test |
-| Reproduction | Roulette wheel on accumulated energy | Fitness-proportional |
+| Reproduction | Energy-threshold: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick | Effectively fitness-proportional — higher-energy mothers reproduce sooner and more often; no explicit probability sampling |
 | Mutation | Gaussian N(0, σ=0.05) per parameter, bounded | Small-step mutation; prevents drift explosion |
 | Primary metric | Pearson's r (care_weight vs. reproductive fitness) | Direct measure of selection gradient direction and magnitude |
 
@@ -69,7 +69,8 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 **Purpose:** Verify genetic operators before any evolutionary run. A bug here invalidates everything downstream.
 
 **Protocol:**
-- Unit tests for: mutation boundedness using guassian, inheritance fidelity (parent → offspring), population stability, roulette wheel normalization.
+- Unit tests for: mutation boundedness (Gaussian, values stay in [0,1]), inheritance fidelity (parent → offspring copy is exact and independent), reproduction gate logic (energy threshold, cooldown, child-present block), population stability (no extinction, no explosion, deterministic across identical seeds).
+- Note: roulette wheel normalization was originally listed here but the simulation uses energy-threshold reproduction (not probability sampling). There is no roulette wheel to normalize. This test was intentionally omitted — see Session Notes.
 
 **Success criteria:** 100% pass rate. Any failure must be resolved before proceeding.
 
@@ -471,3 +472,12 @@ No phase may hardcode a value measured in another phase. All cross-phase constan
 - **Pause before each phase.** Present the plan. Wait for questions. Proceed only after explicit approval.
 - **Pause after each phase.** Do not continue until the user has pushed to origin.
 - **If something unexpected happens, stop and report it.** Do not explain it away or proceed around it. Unexpected results must be understood before the pipeline continues.
+
+---
+
+## Session Notes
+
+*(append only — dated)*
+
+**2026-04-14** — Reproduction mechanism audit (Phase 1 restart):
+The global parameters table originally listed "Roulette wheel on accumulated energy" as the reproduction mechanism. Code audit of `simulation/simulation.py:_check_reproduction()` found this to be inaccurate. Actual mechanism: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick — energy-threshold, not probability sampling. The mechanism is still effectively fitness-proportional (higher-energy mothers reproduce sooner/more often) but there is no probability vector to normalize. Roulette wheel normalization test was removed from Phase 1 protocol and the global parameters table was corrected. No code change required.

@@ -21,7 +21,15 @@
       "Bash(ls experiments/phase5c_instinct/)",
       "Bash(ls outputs/phase5c_instinct/)",
       "Bash(BASE=\"C:/Users/User/Desktop/FIBO_Study/3Y_2/FRA361_OPENTOPICS/Opentopics-Bio-Inspired/outputs\" echo \"=== phase11 seed outputs ===\")",
-      "Bash(sort find:*)"
+      "Bash(sort find:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(PYTHONIOENCODING=utf-8 python -m experiments.phase1_mechanics_tests.test_01_mutation)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m experiments.phase1_mechanics_tests.test_02_inheritance)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m experiments.phase1_mechanics_tests.test_03_reproduction)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m experiments.phase1_mechanics_tests.test_04_population_stability)",
+      "Bash(echo \"---T01_EXIT:$?\")",
+      "Bash(echo \"---T02_EXIT:$?\")",
+      "Bash(echo \"---T03_EXIT:$?\")"
     ]
   }
 }

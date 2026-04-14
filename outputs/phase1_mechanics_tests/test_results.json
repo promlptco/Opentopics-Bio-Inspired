@@ -1,0 +1,56 @@
+{
+  "phase": "phase1_mechanics_tests",
+  "run_date": "2026-04-14",
+  "status": "PASS",
+  "tags": ["test01_42_1", "test02_42_1", "test03_42_1", "test04_42_1"],
+  "tests": [
+    {
+      "tag": "test01_42_1",
+      "module": "test_01_mutation",
+      "status": "PASS",
+      "cases": [
+        {"test_name": "test_mutation_changes_values", "status": "PASS", "detail": "mutations_occurred=100/100"},
+        {"test_name": "test_mutation_stays_in_bounds", "status": "PASS", "detail": "1000 mutations all in [0,1]"},
+        {"test_name": "test_mutation_distribution",   "status": "PASS", "detail": "mean=0.499;stdev=0.098"}
+      ]
+    },
+    {
+      "tag": "test02_42_1",
+      "module": "test_02_inheritance",
+      "status": "PASS",
+      "cases": [
+        {"test_name": "test_copy_is_exact",            "status": "PASS", "detail": "all 5 fields match parent"},
+        {"test_name": "test_copy_is_independent",      "status": "PASS", "detail": "child mutation does not alias parent"},
+        {"test_name": "test_inheritance_with_mutation","status": "PASS", "detail": "mutation_rate=0.0 preserves all values"}
+      ]
+    },
+    {
+      "tag": "test03_42_1",
+      "module": "test_03_reproduction",
+      "status": "PASS",
+      "cases": [
+        {"test_name": "test_can_reproduce_threshold",     "status": "PASS", "detail": "energy=0.5 blocked; energy=0.9 allowed (threshold=0.8)"},
+        {"test_name": "test_cannot_reproduce_with_child", "status": "PASS", "detail": "own_child_id=99 blocks reproduction"},
+        {"test_name": "test_cannot_reproduce_on_cooldown","status": "PASS", "detail": "cooldown=10 blocks reproduction"},
+        {"test_name": "test_cooldown_ticks_down",         "status": "PASS", "detail": "5->4->3 after two ticks"}
+      ]
+    },
+    {
+      "tag": "test04_42_1",
+      "module": "test_04_population_stability",
+      "status": "PASS",
+      "cases": [
+        {"test_name": "test_no_immediate_extinction",   "status": "PASS", "detail": "alive_at_t100=20"},
+        {"test_name": "test_no_immediate_explosion",    "status": "PASS", "detail": "total_at_t100=30;max_population=200"},
+        {"test_name": "test_deterministic_with_seed",   "status": "PASS", "detail": "run1=5;run2=5;seed=12345"},
+        {"test_name": "test_no_food_causes_extinction", "status": "PASS", "detail": "alive_at_t200=0;rest_recovery=0;children_enabled=False;reproduction_enabled=False"}
+      ]
+    }
+  ],
+  "total_cases": 13,
+  "passed": 13,
+  "failed": 0,
+  "fix_notes": [
+    "test04 test_no_food_causes_extinction: added rest_recovery=0.0 (default 0.03 > hunger_rate 0.008 — resting agents gained net energy), children_enabled=False and reproduction_enabled=False (maturation at tick 100 injected new mothers with energy=1.0)"
+  ]
+}

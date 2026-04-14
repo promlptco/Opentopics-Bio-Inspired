@@ -1,0 +1,47 @@
+Phase 1 Mechanics Tests — Run Log
+Date: 2026-04-14
+Status: ALL PASSED (13/13)
+==================================================
+
+--- test_01_mutation ---
+Mutations occurred: 100/100
+[PASS] test_mutation_changes_values
+[PASS] test_mutation_stays_in_bounds
+       Mean: 0.499, Stdev: 0.098
+[PASS] test_mutation_distribution
+=== All mutation tests PASSED ===
+
+--- test_02_inheritance ---
+[PASS] test_copy_is_exact
+[PASS] test_copy_is_independent
+[PASS] test_inheritance_with_mutation
+=== All inheritance tests PASSED ===
+
+--- test_03_reproduction ---
+[PASS] test_can_reproduce_threshold
+[PASS] test_cannot_reproduce_with_child
+[PASS] test_cannot_reproduce_on_cooldown
+[PASS] test_cooldown_ticks_down
+=== All reproduction tests PASSED ===
+
+--- test_04_population_stability ---
+       Alive after 100 ticks: 20 (10 mothers + 10 children)
+[PASS] test_no_immediate_extinction
+       Total population after 100 ticks: 30
+[PASS] test_no_immediate_explosion
+       Run 1: 5, Run 2: 5
+[PASS] test_deterministic_with_seed
+       Alive without food: 0
+[PASS] test_no_food_causes_extinction
+=== All population stability tests PASSED ===
+
+==================================================
+FIX NOTES (test_no_food_causes_extinction):
+  Original test failed because two mechanisms supplied energy without food:
+  1. rest_recovery=0.03 > hunger_rate=0.008 — agents choosing "self" domain
+     gained net energy while resting even with no food available.
+  2. children_enabled=True (default) — initial children matured at tick 100
+     into new MotherAgents with energy=1.0, resetting the energy budget.
+  Fix: added rest_recovery=0.0, children_enabled=False, reproduction_enabled=False
+  to isolate the starvation mechanic. Test now correctly verifies agents die
+  from hunger when no energy source exists.
