@@ -17,6 +17,10 @@ sys.path.insert(0, PROJECT_ROOT)
 
 import math
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # headless — no display needed
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from agents.mother import softmax_probs, SOFTMAX_TAU
 
 MODULE_NUM = "06"
@@ -259,8 +263,258 @@ def test_boundary_single_action():
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Plotting
 # ---------------------------------------------------------------------------
+
+# Canonical scenarios (care, forage, self) used for bar chart panels
+_SCENARIOS: list[dict] = [
+    {
+        "label": "High Contrast\n(care=0.9, forage=0.5, self=0.1)",
+        "scores": {"care": 0.9, "forage": 0.5, "self": 0.1},
+    },
+    {
+        "label": "Moderate\n(care=0.7, forage=0.4, self=0.2)",
+        "scores": {"care": 0.7, "forage": 0.4, "self": 0.2},
+    },
+    {
+        "label": "Near-Equal\n(care=0.5, forage=0.45, self=0.4)",
+        "scores": {"care": 0.5, "forage": 0.45, "self": 0.4},
+    },
+]
+
+_ACTION_COLORS = {
+    "care":   "#2166AC",   # strong blue
+    "forage": "#1A9850",   # strong green
+    "self":   "#D6604D",   # warm red
+}
+
+# Temperature sensitivity panel uses this fixed scenario
+_TEMP_SCENARIO = {"care": 0.7, "forage": 0.4, "self": 0.2}
+_TEMP_TAUS     = [0.05, 0.1, 0.2, 0.5, 1.0]
+
+
+def _sample_freqs(
+    scores: dict[str, float],
+    tau: float,
+    n_trials: int,
+    n_samples: int,
+    base_seed: int,
+) -> dict[str, np.ndarray]:
+    """Return per-action arrays of shape (n_trials,) with observed frequency [0, 1].
+
+    Each trial is seeded independently so the set of trials is reproducible
+    but each trial is a different draw from the same distribution.
+    """
+    probs = softmax_probs(scores, tau=tau)
+    keys  = list(probs.keys())
+    weights = np.array([probs[k] for k in keys])
+
+    freq: dict[str, list[float]] = {k: [] for k in keys}
+    for t in range(n_trials):
+        np.random.seed(base_seed + t)
+        chosen = np.random.choice(len(keys), size=n_samples, p=weights)
+        for i, k in enumerate(keys):
+            freq[k].append(np.sum(chosen == i) / n_samples)
+
+    return {k: np.array(freq[k]) for k in keys}
+
+
+def plot_softmax_calibration(
+    out_dir: str,
+    n_trials: int = 30,
+    n_samples: int = 5_000,
+    base_seed: int = DEFAULT_SEED,
+) -> str:
+    """Generate a 2×2 Softmax calibration figure and save to *out_dir*.
+
+    Layout:
+      Row 1: scenario panels — High Contrast | Moderate | Near-Equal
+      Row 2: Temperature sensitivity panel (full width)
+
+    Bar chart design (panels 1–3):
+      - Actions on X-axis: care / forage / self
+      - Y-axis: frequency %
+      - Two bars per action: Observed (mean over trials) and Theoretical
+      - Error bars on Observed bar: ± 1 SD across trials
+
+    Temperature panel:
+      - X-axis: τ ∈ {0.05, 0.1, 0.5, 1.0}
+      - Grouped bars per action, showing how theoretical probability shifts with τ
+
+    Returns the path of the saved image.
+    """
+    ACTIONS = ["care", "forage", "self"]
+    TAU     = SOFTMAX_TAU  # 0.1
+
+    # ── Figure layout: 1×3 top panels + 1 bottom spanning panel ──────────
+    plt.style.use("default")
+    fig = plt.figure(figsize=(17, 10), facecolor="#FAFAFA")
+    fig.patch.set_facecolor("#FAFAFA")
+
+    # Grid: 2 rows, 3 columns. Bottom panel spans all 3 columns.
+    gs = fig.add_gridspec(
+        2, 3,
+        height_ratios=[1.0, 0.85],
+        hspace=0.45, wspace=0.35,
+    )
+    axes_top  = [fig.add_subplot(gs[0, c]) for c in range(3)]
+    ax_bottom = fig.add_subplot(gs[1, :])
+
+    fig.suptitle(
+        f"Softmax Calibration — Test 06  │  τ={TAU}  │  "
+        f"{n_trials} trials × {n_samples:,} samples each",
+        fontsize=13, fontweight="bold", color="#1A1A1A", y=1.01,
+    )
+
+    # Shared bar geometry
+    x       = np.arange(len(ACTIONS))  # 0, 1, 2
+    bar_w   = 0.30
+    gap     = 0.04
+
+    def _style_ax(ax: plt.Axes, title: str) -> None:
+        ax.set_facecolor("#FFFFFF")
+        ax.set_title(title, fontsize=9.5, fontweight="bold",
+                     color="#1A1A1A", pad=7)
+        for spine in ax.spines.values():
+            spine.set_edgecolor("#CCCCCC")
+            spine.set_linewidth(0.8)
+        ax.tick_params(colors="#333333", labelsize=8.5)
+        ax.set_axisbelow(True)
+        ax.grid(axis="y", color="#EBEBEB", linewidth=0.7, linestyle="--")
+
+    # ── Panels 1–3: scenario bar charts ──────────────────────────────────
+    for scenario, ax in zip(_SCENARIOS, axes_top):
+        scores = scenario["scores"]
+
+        # Theoretical probabilities
+        theory = softmax_probs(scores, tau=TAU)
+
+        # Observed frequencies across trials (per action)
+        freq_data = _sample_freqs(scores, TAU, n_trials, n_samples, base_seed)
+
+        # Draw bars: observed first, then theoretical, side by side
+        for i, action in enumerate(ACTIONS):
+            obs_arr   = freq_data[action] * 100.0  # → %
+            obs_mean  = obs_arr.mean()
+            obs_std   = obs_arr.std(ddof=1)
+            theory_pct = theory[action] * 100.0
+            color      = _ACTION_COLORS[action]
+
+            # Observed bar (slightly left)
+            ax.bar(
+                x[i] - bar_w / 2 - gap / 2,
+                obs_mean, bar_w,
+                color=color, alpha=0.75,
+                edgecolor="#FFFFFF", linewidth=0.6,
+                yerr=obs_std, capsize=4,
+                error_kw=dict(elinewidth=1.5, ecolor="#333333", capthick=1.5),
+                label="Observed" if i == 0 else "",
+            )
+
+            # Theoretical bar (slightly right, hatched)
+            ax.bar(
+                x[i] + bar_w / 2 + gap / 2,
+                theory_pct, bar_w,
+                color=color, alpha=0.30,
+                edgecolor=color, linewidth=1.2,
+                hatch="//",
+                label="Theoretical" if i == 0 else "",
+            )
+
+            # Annotate observed mean above bar
+            ax.text(
+                x[i] - bar_w / 2 - gap / 2,
+                obs_mean + obs_std + 0.8,
+                f"{obs_mean:.1f}%",
+                ha="center", va="bottom", fontsize=7, color="#333333",
+            )
+            # Annotate theoretical value
+            ax.text(
+                x[i] + bar_w / 2 + gap / 2,
+                theory_pct + 0.8,
+                f"{theory_pct:.1f}%",
+                ha="center", va="bottom", fontsize=7, color="#666666",
+            )
+
+        _style_ax(ax, scenario["label"])
+        ax.set_xticks(x)
+        ax.set_xticklabels([a.capitalize() for a in ACTIONS], fontsize=9)
+        ax.set_ylabel("Frequency (%)", fontsize=8.5, color="#444444")
+        ax.set_xlabel("Action (motivation)", fontsize=8.5, color="#444444")
+        ax.set_ylim(0, 110)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
+
+        # Legend: first panel only (shared)
+        if scenario is _SCENARIOS[0]:
+            obs_patch    = mpatches.Patch(color="#888888", alpha=0.75, label="Observed (mean ± 1 SD)")
+            theory_patch = mpatches.Patch(facecolor="#CCCCCC", edgecolor="#888888",
+                                          hatch="//", label=f"Theoretical Softmax(τ={TAU})")
+            ax.legend(
+                handles=[obs_patch, theory_patch],
+                fontsize=7.5, loc="upper right",
+                facecolor="#FFFFFF", edgecolor="#CCCCCC", framealpha=0.95,
+            )
+
+    # ── Bottom panel: Temperature sensitivity ────────────────────────────
+    tau_x   = np.arange(len(_TEMP_TAUS))
+    bar_w_t = 0.18
+
+    for j, action in enumerate(ACTIONS):
+        color = _ACTION_COLORS[action]
+        theory_vals = [
+            softmax_probs(_TEMP_SCENARIO, tau=tau)[action] * 100.0
+            for tau in _TEMP_TAUS
+        ]
+        offset = (j - 1) * (bar_w_t + 0.03)
+        ax_bottom.bar(
+            tau_x + offset, theory_vals, bar_w_t,
+            color=color, alpha=0.75,
+            edgecolor="#FFFFFF", linewidth=0.5,
+            label=action.capitalize(),
+        )
+        # Value labels
+        for xi, val in zip(tau_x + offset, theory_vals):
+            ax_bottom.text(
+                xi, val + 0.6, f"{val:.1f}%",
+                ha="center", va="bottom", fontsize=6.8, color="#333333",
+            )
+
+    # Mark canonical τ
+    canonical_idx = _TEMP_TAUS.index(TAU)
+    ax_bottom.axvspan(
+        tau_x[canonical_idx] - 0.40, tau_x[canonical_idx] + 0.40,
+        color="#2166AC", alpha=0.08, zorder=0,
+    )
+    ax_bottom.text(
+        tau_x[canonical_idx], -8,
+        f"τ={TAU}\n(canonical)",
+        ha="center", va="top", fontsize=7.5, color="#2166AC",
+        fontweight="bold",
+    )
+
+    _style_ax(
+        ax_bottom,
+        f"Temperature Sensitivity  │  Theoretical Softmax(care=0.7, forage=0.4, self=0.2)",
+    )
+    ax_bottom.set_xticks(tau_x)
+    ax_bottom.set_xticklabels([f"τ = {t}" for t in _TEMP_TAUS], fontsize=9)
+    ax_bottom.set_ylabel("Theoretical Frequency (%)", fontsize=8.5, color="#444444")
+    ax_bottom.set_xlabel("Softmax Temperature (τ)",    fontsize=8.5, color="#444444")
+    ax_bottom.set_ylim(0, 115)
+    ax_bottom.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
+    ax_bottom.legend(
+        fontsize=8.5, loc="upper right",
+        facecolor="#FFFFFF", edgecolor="#CCCCCC", framealpha=0.95,
+    )
+
+    # ── Save ─────────────────────────────────────────────────────────────
+    save_path = os.path.join(out_dir, "softmax_calibration.png")
+    fig.savefig(save_path, dpi=150, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    plt.close(fig)
+    return save_path
+
+
 
 if __name__ == "__main__":
     import csv
@@ -282,10 +536,16 @@ if __name__ == "__main__":
 
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
+
+    # Save test log
     with open(os.path.join(out_dir, "logs.csv"), "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["test_name", "status", "detail"])
         writer.writeheader()
         writer.writerows(_results)
 
+    # Generate calibration plot
+    plot_path = plot_softmax_calibration(out_dir)
+    print(f"Plot saved  → {plot_path}")
+
     print(f"\n=== All Softmax calibration tests PASSED ===")
-    print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Logs saved  → outputs/phase1_mechanics_tests/{TAG}/logs.csv")

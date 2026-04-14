@@ -1,0 +1,45 @@
+{
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "n_seeds": 3,
+  "n_passed": 3,
+  "all_passed": true,
+  "seed_results": [
+    {
+      "seed": 42,
+      "surviving_mothers": 12,
+      "extinction_tick": null,
+      "total_food_picked": 355,
+      "total_food_eaten": 353,
+      "avg_energy_overall": 0.8900952777777776,
+      "final_energy": 0.8677499999999999,
+      "final_tick": 300,
+      "passed": true
+    },
+    {
+      "seed": 43,
+      "surviving_mothers": 12,
+      "extinction_tick": null,
+      "total_food_picked": 433,
+      "total_food_eaten": 433,
+      "avg_energy_overall": 0.9294566666666666,
+      "final_energy": 0.8659999999999998,
+      "final_tick": 300,
+      "passed": true
+    },
+    {
+      "seed": 44,
+      "surviving_mothers": 12,
+      "extinction_tick": null,
+      "total_food_picked": 409,
+      "total_food_eaten": 408,
+      "avg_energy_overall": 0.9264597222222222,
+      "final_energy": 0.9003333333333332,
+      "final_tick": 300,
+      "passed": true
+    }
+  ]
+}
