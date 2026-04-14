@@ -183,14 +183,16 @@ def make_config(params, duration):
 
 def candidate_configs(mode="sweep"):
     if mode == "single":
+        # Confirmed Balanced baseline from auto-sweep: baseline_20260415_015935
         return [{
             "hunger_rate": 0.005,
-            "move_cost": 0.0025,
-            "eat_gain": 0.075,
-            "init_food": 60,
-            "rest_recovery": 0.04,
+            "move_cost": 0.001,
+            "eat_gain": 0.07,
+            "init_food": 70,
+            "rest_recovery": 0.005,
             "name": "single_test",
         }]
+
         
     grid = {
         "hunger_rate":   [0.005],

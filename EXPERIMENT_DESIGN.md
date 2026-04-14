@@ -87,30 +87,77 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 
 ---
 
-### Phase 2 · Survival Minimal (Multi-Seed Stochastic Stress Test)
+### Phase 2 · Survival Minimal (Baseline Calibration & Sensitivity Analysis)
 
-**Purpose:** Confirm that the core foraging loop and decision-making architecture are stable under stochastic pressure and environmental scarcity. This serves as the foundation for Phase 3's reproduction gating.
+**Purpose:** Confirm that the core foraging loop and decision-making architecture are stable under stochastic pressure, and identify a canonical "Balanced" baseline parameter set that places the population at the **Edge of Stability** — alive under normal conditions, but susceptible to collapse when any single ecological parameter is worsened.
 
-**Protocol:**
+**Protocol (Executed):**
 - **Mode:** Foraging only. No reproduction, no care, no mutation.
 - **Decision Architecture:** Softmax (τ=0.1) Action Selection.
-- **Environmental Noise:** ±20% Foraging Variance (E gains are stochastic).
-- **Two Test Groups:**
-  1. **Normal Group**: Standard food density (x1.0). Target: 100% survival.
-  2. **Stress Group**: Aggressive reduction in food density (x0.2). Target: Find starvation thresholds.
-- **Parameter Re-balancing**: Tune `hunger_rate` and `move_cost` to center Mean Energy at **~0.70 - 0.75** for the Normal group.
-- **Duration**: 1,000 ticks across 5 seeds (42–46) per group.
+- **Environmental Noise:** ±20% Foraging Variance (E gains are stochastic, `variance = U(0.8, 1.2)`).
+- **Perceptual Noise:** Gaussian N(0, σ=0.1) added to perceived distance-to-food.
+- **Grid:** 30×30, 15 mothers, `initial_energy = 0.75`.
+- **Calibration Method:** Bio-Energetic Equilibrium — iterative tuning toward `Energy In ≈ Energy Out`.
+  - **Energy Out per cycle** ≈ `hunger_rate × T + move_cost × D` (T = cycle length, D ≈ 8 steps avg)
+  - **Energy In per cycle** = `eat_gain × U(0.8, 1.2)`
+  - **Target:** Equilibrium slightly below 1.0, placing population ~1-2 agents below 100% survival.
+- **Duration**: 1,000 ticks across 5 seeds (42–46) × 3 repeats per seed.
 
-**Success criteria:**
-- Normal Group: Survival rate ≥ 90%, Mean Energy stable around 0.70.
-- Stress Group: Clearly identified collapse/extinction points below Normal group performance.
+**Three Canonical Conditions (selected by auto-sweep, validated Seeds 42–46 × 3 repeats):**
+
+| Condition | `hunger_rate` | `move_cost` | `eat_gain` | `init_food` | `rest_recovery` |
+|---|---|---|---|---|---|
+| **Balanced** | 0.005 | 0.001 | 0.07 | **70** | 0.005 |
+| **Easy** | 0.005 | 0.001 | 0.07 | **80** | 0.05 |
+| **Harsh** | 0.005 | 0.001 | 0.07 | **20** | 0.005 |
+
+> **Note:** Core energy parameters (`hunger_rate`, `move_cost`, `eat_gain`) are identical across all three conditions — only `init_food` and `rest_recovery` vary. The environmental stress is driven entirely by food availability.
+
+**Validation Results (Seeds 42–46 × 3 repeats = 15 runs per condition):**
+
+| Condition | Survival Rate | Mean Energy | Tail Energy (last 200t) | Interpretation |
+|---|---|---|---|---|
+| **Balanced** | **1.00 ± 0.00** (15/15) | 0.779 ± 0.026 | **0.703 ± 0.038** | Stable. Tail energy on-target at 0.70–0.75. |
+| **Easy** | **1.00 ± 0.00** (15/15) | 0.935 ± 0.011 | **0.943 ± 0.018** | Energy-saturated. Clear contrast to Balanced. |
+| **Harsh** | **0.05 ± 0.05** (0.73/15) | 0.343 ± 0.016 | NaN (extinction) | Near-complete extinction. Collapse confirmed. |
+
+
+---
+
+#### Phase 2 · OVAT Sensitivity Analysis
+
+**Purpose:** Map the non-linear response of the system to each of the 5 ecological parameters, one at a time (One-Variable-at-a-Time / OVAT), to empirically justify the Balanced baseline and identify the Key Evolutionary Driver for Phase 3 and beyond.
+
+**Protocol:**
+- One parameter varied per set; all others fixed at the Balanced Baseline above.
+- 5 seeds (42–46) × 3 repeats per seed = **15 runs per parameter value**.
+- Metric: Late-run tail_mean_energy (last 200 ticks) and survival rate (0.0–1.0).
+- Script: `experiments/phase2_survival_minimal/sensitivity_sweep.py`
+
+**Results Summary & Tipping Points:**
+
+| Set | Parameter | Baseline Value | Tipping Point | Collapse |
+|---|---|---|---|---|
+| A | `hunger_rate` | 0.005 | ≈ 0.006 (+0.001) | < 20% survival at 0.008; full extinction at 0.012 |
+| B | `move_cost` | 0.001 | ≈ 0.003 (+0.002) | < 50% survival at 0.004; extinction slope continues |
+| C | `eat_gain` | 0.07 | ≈ 0.055 (−0.015) | < 20% survival at 0.04; full extinction at 0.03 |
+| D | `init_food` | **70** | ≈ 40 (−43%) | < 50% survival at 36; near-extinction at 20 |
+| E | `rest_recovery` | **0.005** | None detected | Flat response — nearly irrelevant (0.97–1.00 across all values) |
+
+
+**Key Findings:**
+1. **`hunger_rate` is the Key Evolutionary Driver (Set A):** The steepest collapse slope. A shift of +0.001 from baseline (0.005 → 0.006) drops survival from 99% to 94%. +0.002 drops it to 79%. Full extinction occurs at 0.012. This confirms hunger as the primary selection force.
+2. **`move_cost` has moderate leverage (Set B):** Collapse begins around +0.002, but the decline is more gradual than hunger_rate — reflecting that Chebyshev pathfinding limits actual step counts.
+3. **`eat_gain` shows a clear nutritional threshold (Set C):** Survival collapses sharply below 0.055. The baseline (0.07) sits safely above the 80% threshold, providing a known margin.
+4. **`init_food` shows a non-linear cliff at 40 (Set D):** Above 50, survival is stable. Between 30–40, survival drops sharply. The confirmed baseline (`init_food=70`) sits **30 units above** this cliff, providing a generous safety margin.
+5. **`rest_recovery` is negligible (Set E):** Survival remains ≥ 96% across the entire tested range (0.005–0.11). This parameter is not an evolutionary lever. The confirmed baseline (`rest_recovery=0.005`) is the minimum tested value, confirming this is the safest axis to hold fixed.
+
 
 **Outputs:**
-- `energy_trajectory.png`: Mean ± SD band for group comparison.
-- `survival_curves.png`: Kaplan-Meier style population curves.
-- `action_distribution.png`: Bar chart verifying Softmax exploration (MOVE vs. EAT vs. REST).
-- `energy_histogram_t500.png`: Distribution centering verification.
-- `energy_over_time.png`: Individual per-seed trajectories for high-resolution debugging.
+- `outputs/phase2_survival_minimal/sensitivity/<timestamp>/sensitivity_map.png` — 5-panel OVAT map.
+- `outputs/phase2_survival_minimal/sensitivity/<timestamp>/set_A_hunger_rate.csv` (and B–E).
+- `outputs/phase2_survival_minimal/sensitivity/<timestamp>/sensitivity_summary.json`.
+
 
 ---
 
