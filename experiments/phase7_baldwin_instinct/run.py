@@ -40,9 +40,7 @@ import os
 import json
 import random as _random
 
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
 from config import Config
@@ -56,7 +54,10 @@ PHASE_NAME = "phase11_instinct_assimilation"
 # Ecological parameters — matched to P5 (Phase 07) full ecology
 INFANT_STARVATION_MULT  = 1.15   # infant pressure (P5 calibrated)
 BIRTH_SCATTER_RADIUS    = 2      # tight natal philopatry (P5 calibrated)
-PLASTICITY_ENERGY_COST  = 0.0    # fixed cost per plastic update (0 = same as P4)
+PLASTICITY_ENERGY_COST  = 0.005  # fixed energy cost per plastic_update call.
+# Must be > 0 to create metabolic pressure driving genetic assimilation (Baldwin Effect).
+# Value calibrated against hunger_rate=0.008/tick: cost of ~1 care event ≈ 60% of one
+# hunger tick — meaningful but not lethal. Config comment suggests 0.005 as the working point.
 
 # Stage durations
 STAGE1_TICKS = 10_000   # evolution + plasticity
@@ -231,12 +232,29 @@ def run_evolution(seed: int = 42) -> str:
     generate_all_plots(output_dir)
 
     n = len([m for m in sim.mothers if m.alive])
-    final_cw = _avg_cw(sim)
-    rate     = _care_rate(sim.logger.care_records, pop_hist)
+    final_cw      = _avg_cw(sim)
+    rate          = _care_rate(sim.logger.care_records, pop_hist)
+    child_energy  = _avg_child_energy(sim)
+
+    # Save Stage 1 reference metrics so run_instinct() can compare C2 and C3.
+    # Without this file, stage1_rate and stage1_child_energy are None, and
+    # criteria C2/C3 always fail regardless of actual Stage 2 outcomes.
+    stage1_metrics = {
+        "stage":               "evolution",
+        "seed":                seed,
+        "care_rate":           round(rate, 6),           # C2 reference
+        "avg_child_energy_end": round(child_energy, 4),  # C3 reference
+        "avg_care_weight_end": round(final_cw, 4),
+        "surviving_mothers":   n,
+    }
+    with open(os.path.join(output_dir, "instinct_stage_metrics.json"), "w") as f:
+        json.dump(stage1_metrics, f, indent=2)
+
     print(f"\n[{PHASE_NAME} | stage=evolution | seed={seed}] Output: {output_dir}")
     print(f"  Surviving mothers   : {n}")
     print(f"  Final avg cw        : {final_cw:.4f}")
     print(f"  Care rate (s/m-t)   : {rate:.5f}")
+    print(f"  Avg child energy    : {child_energy:.4f}")
     print(f"  → Run stage 'instinct' with --source-dir {output_dir}")
     return output_dir
 

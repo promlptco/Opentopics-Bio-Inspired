@@ -13,12 +13,10 @@ import os
 import json
 import math
 
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.p6_controls_and_baldwin.p6d_assimilation.run import (
+from experiments.phase7_baldwin_instinct.run import (
     run_evolution,
     run_instinct,
     PHASE_NAME,

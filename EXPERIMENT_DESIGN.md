@@ -402,34 +402,50 @@ Connect each experimental result back to the theoretical prediction: care evolve
 ```
 experiments/
   phase1_mechanics_tests/
-  phase2_survival_minimal/
-  phase3_survival_full/
-      sweep_motivations.py        ← Phase 3a
-      visualize_actions.py        ← Phase 3b
-      results/
-  phase4_evolution_baseline/      ← NOT renamed until results confirm direction
       run.py
-      run_multi_seed.py
-      results/
+      test_01_mutation.py
+      test_02_inheritance.py
+      test_03_reproduction.py
+      test_04_population_stability.py
+  phase2_survival_minimal/
+      run.py
+  phase3_survival_full/
+      run.py
+  phase4_evolution_baseline/      ← outputs exist in outputs/phase04_care_erosion/
   phase5_ecology_sweep/
-      run_spatial.py              ← Spatial only sweep
-      run_infant.py               ← Infant only sweep (scatter={5,8})
-      run_joint.py                ← Joint factorial
-      results/
+      run_joint.py                ← Spatial + Infant (mult=1.15, scatter=2) — Phase 07 result
+      run_joint_multi.py          ← multi-seed runner (seeds 42–51)
+      run_spatial.py              ← Spatial only (mult=1.0, scatter=2) — Phase 09 result
+      run_spatial_multi.py        ← multi-seed runner (seeds 42–51)
+      run_dispersal_control.py    ← Dispersal ablation (mult=1.15, scatter=8) — Phase 08 result
   phase6_plasticity_test/
-      run_cell_6a.py              ← poor eco, plasticity OFF
-      run_cell_6b.py              ← poor eco, plasticity ON
-      run_cell_6c.py              ← good eco, plasticity OFF
-      run_cell_6d.py              ← good eco, plasticity ON
-      results/
+      run.py                      ← Baldwin Effect: stages evolution_plastic_kin / zeroshot_plastic_kin
+      run_multi_seed.py           ← multi-seed runner (seeds 42–51)
   phase7_baldwin_instinct/
-      measure_baseline.py         ← depleted baseline measurement (setup step)
-      run_stage1.py               ← plasticity ON, 10,000 ticks
-      run_stage2.py               ← plasticity OFF, 10,000 ticks
-      results/
+      measure_baseline.py         ← depleted-init zero-shot baseline (setup step, single seed)
+      measure_baseline_multi.py   ← multi-seed baseline (seeds 42–51) → sets DEPLETED_BASELINE
+      run.py                      ← dispatcher: stage='evolution' (10 000 t) or 'instinct' (10 000 t)
+      run_stage1.py               ← thin entry point: plasticity ON, 10,000 ticks
+      run_stage2.py               ← thin entry point: plasticity OFF, 10,000 ticks
+      run_multi_seed.py           ← full two-stage run across seeds 42–51
 shared/
   constants.py
 ```
+
+**Notes on divergence from original design:**
+- Phase 3a (motivation sweep) and Phase 3b (action visualization) scripts were not implemented as
+  standalone files; the canonical genome was selected manually from early runs.
+- Phase 4 source scripts (`p3_care_erosion/`) were not retained. All outputs are preserved in
+  `outputs/phase04_care_erosion/`. Results are final — re-running is not required.
+- Phase 5 "Infant only" sweep (`run_infant.py`) was not run; the spatial+infant joint condition
+  proved sufficient to reverse the gradient. This gap is documented in §3.1.
+- Phase 6 was implemented as a Baldwin Effect (kin-conditional plasticity) test rather than the
+  four-cell [poor eco | good eco] × [plasticity ON | OFF] factorial. The P5 ecology conditions
+  already establish the good-ecology baseline. Phase 6 result: lr swept 8/10 seeds, no full
+  assimilation at population level (p=0.815 on care_weight). Full assimilation test deferred to
+  Phase 7 with stronger ecological support (mult=1.15 + scatter=2 + `plasticity_energy_cost > 0`).
+- `run_infant.py` is noted as a gap; it is not required for the thesis conclusion since the
+  existing results already support both sub-claims (ecological emergence and philopatry dominance).
 
 ### Shared Constants (`shared/constants.py`)
 

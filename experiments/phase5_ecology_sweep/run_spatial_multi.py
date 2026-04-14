@@ -15,10 +15,10 @@ import os
 import json
 import math
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.p6_controls_and_baldwin.p6b_spatial_control.run import run as run_p5d, _compute_selection_gradient
+from experiments.phase5_ecology_sweep.run_spatial import run as run_p5d, _compute_selection_gradient
 
 try:
     import matplotlib.pyplot as plt

@@ -22,8 +22,11 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.p4_plasticity_intro.run import run as run_p4b
-from experiments.p3_care_erosion.measure_baseline import run as run_p2zs
+from experiments.phase6_plasticity_test.run import run as run_p4b
+# Note: p3_care_erosion (Phase 4 zero-shot baseline) scripts were not retained.
+# The zero-shot baseline (PHASE3_ZS_BASELINE=0.09069) is frozen in shared/constants.py.
+# run_p2zs is no longer callable; paired comparisons use the frozen constant instead.
+# from experiments.p3_care_erosion.measure_baseline import run as run_p2zs  # REMOVED
 from utils.plotting import plot_start_vs_end_multiseed
 
 try:

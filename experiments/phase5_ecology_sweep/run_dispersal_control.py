@@ -19,10 +19,10 @@ import sys
 import os
 import json
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.p5_enhanced_ecology.run import (
+from experiments.phase5_ecology_sweep.run_joint import (
     run as _run_p7,
     _load_genomes,
     _care_window_metrics,

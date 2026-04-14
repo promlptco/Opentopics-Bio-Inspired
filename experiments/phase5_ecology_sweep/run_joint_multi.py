@@ -23,7 +23,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.p5_enhanced_ecology.run import run as run_p5
+from experiments.phase5_ecology_sweep.run_joint import run as run_p5
 
 try:
     import matplotlib.pyplot as plt
