@@ -1,12 +1,10 @@
-import sys, os, argparse, random, json
-import numpy as np
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
+import sys
+import os
+import argparse
+import random
 from datetime import datetime
-from itertools import product
+
+import numpy as np
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
@@ -17,42 +15,24 @@ from agents.mother import MotherAgent, softmax_probs
 from evolution.genome import Genome
 from utils.experiment import set_seed
 
+from experiments.phase2_survival_minimal.config import (
+    INIT_MOTHERS,
+    INITIAL_ENERGY,
+    VALIDATION_SEEDS,
+    DEFAULT_SWEEP_SEED_BASE,
+    DEFAULT_PERCEPTION_RADIUS,
+    SELECTION_TARGETS,
+    candidate_configs,
+)
 
-# ============================================================
-# Easy-to-edit constants
-# ============================================================
-
-INIT_MOTHERS = 15
-INITIAL_ENERGY = 0.75
-
-VALIDATION_SEEDS = list(range(42, 47))
-DEFAULT_SWEEP_SEED_BASE = 42000
-DEFAULT_PERCEPTION_RADIUS = 8.0
-TAIL_WINDOW = 200
-
-SELECTION_TARGETS = {
-    "balanced": {
-        "min_final_pop": 14.0,
-        "energy_low": 0.70,
-        "energy_high": 0.78,
-        "target_energy": 0.725,
-        "max_tail_sd": 0.05,
-    },
-    "easy": {
-        "min_final_pop": 14.5,
-        "min_energy": 0.90,
-        "target_energy": 0.95,
-        "max_tail_sd": 0.08,
-    },
-    "harsh": {
-        "min_final_pop": 1.0,
-        "max_final_pop": 5.0,
-        "energy_low": 0.05,
-        "energy_high": 0.55,
-        "target_pop": 3.0,
-        "target_energy": 0.30,
-    },
-}
+from experiments.phase2_survival_minimal.plot import (
+    safe,
+    summarize_repeats,
+    plot_multiseed_condition,
+    print_validation_runs,
+    save_summary_json,
+    save_validation_csv,
+)
 
 
 class SurvivalSimulation:
@@ -184,8 +164,8 @@ class SurvivalSimulation:
         alive_now = [m for m in self.mothers if m.alive]
         self.population_history.append(len(alive_now))
 
-        avg_e = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
-        self.energy_history.append(avg_e)
+        avg_energy = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
+        self.energy_history.append(avg_energy)
 
     def run(self):
         self.initialize()
@@ -223,41 +203,10 @@ def make_config(params, duration):
     cfg.init_food = params["init_food"]
     cfg.rest_recovery = params["rest_recovery"]
 
+    # Used when FORAGE movement increases fatigue.
+    cfg.fatigue_rate = params.get("fatigue_rate", getattr(cfg, "fatigue_rate", 0.01))
+
     return cfg
-
-
-def candidate_configs(mode="sweep"):
-    if mode == "single":
-        return [
-            {
-                "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-                "hunger_rate": 0.005,
-                "move_cost": 0.001,
-                "eat_gain": 0.07,
-                "init_food": 60,
-                "rest_recovery": 0.005,
-                "name": "single_test",
-            }
-        ]
-
-    grid = {
-        "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
-        "hunger_rate": [0.005],
-        "move_cost": [0.0005],
-        "eat_gain": [0.07],
-        "init_food": [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
-        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10, 0.15],
-    }
-
-    keys = list(grid.keys())
-    configs = []
-
-    for values in product(*[grid[k] for k in keys]):
-        params = dict(zip(keys, values))
-        params["name"] = "candidate"
-        configs.append(params)
-
-    return configs
 
 
 def run_one(params, seed, duration, tau, noise):
@@ -265,47 +214,6 @@ def run_one(params, seed, duration, tau, noise):
     cfg = make_config(params, duration)
     sim = SurvivalSimulation(cfg, tau=tau, perceptual_noise=noise)
     return sim.run()
-
-
-def pad(x, duration):
-    arr = np.full(duration, np.nan)
-    x = np.asarray(x, dtype=float)
-    arr[: min(duration, len(x))] = x[:duration]
-    return arr
-
-
-def safe(value, nan=0.0):
-    return float(np.nan_to_num(value, nan=nan))
-
-
-def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
-    final_pops = np.array([r["final_pop"] for r in repeat_results], dtype=float)
-    mean_es = np.array([r["mean_energy"] for r in repeat_results], dtype=float)
-    final_es = np.array([r["final_energy"] for r in repeat_results], dtype=float)
-
-    tail_means = []
-    for r in repeat_results:
-        e = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
-        tail_means.append(np.mean(e[-tail_window:]))
-
-    tail_means = np.array(tail_means, dtype=float)
-
-    return {
-        "final_pop": float(np.mean(final_pops)),
-        "final_pop_sd": float(np.std(final_pops)),
-        "mean_energy": float(np.mean(mean_es)),
-        "final_energy": float(np.mean(final_es)),
-        "tail_mean_energy": float(np.mean(tail_means)),
-        "tail_energy_sd": float(np.std(tail_means)),
-    }
-
-
-def config_title(params):
-    return (
-        f"perception={params.get('perception_radius', DEFAULT_PERCEPTION_RADIUS)} | "
-        f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}"
-    )
 
 
 def validate_params(params, args):
@@ -333,10 +241,6 @@ def validate_params(params, args):
 
     return results, labels, summarize_repeats(results, args.duration)
 
-
-# ============================================================
-# Selection rules
-# ============================================================
 
 def is_valid_condition(name, result):
     if name == "balanced":
@@ -380,7 +284,6 @@ def strict_sort_key(name, record):
         )
 
     if name == "easy":
-        t = SELECTION_TARGETS["easy"]
         return (
             -safe(r["tail_mean_energy"]),
             safe(r["tail_energy_sd"], nan=1.0),
@@ -408,28 +311,25 @@ def fallback_sort_key(name, record):
 
     if name == "balanced":
         t = SELECTION_TARGETS["balanced"]
-        pop_gap = max(0.0, t["min_final_pop"] - r["final_pop"])
-        energy_gap = abs(safe(r["tail_mean_energy"]) - t["target_energy"])
         return (
-            pop_gap,
+            max(0.0, t["min_final_pop"] - r["final_pop"]),
             p["init_food"],
-            energy_gap,
+            abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
             safe(r["tail_energy_sd"], nan=1.0),
         )
 
     if name == "easy":
         t = SELECTION_TARGETS["easy"]
-        pop_gap = max(0.0, t["min_final_pop"] - r["final_pop"])
-        energy_gap = max(0.0, t["min_energy"] - safe(r["tail_mean_energy"]))
         return (
-            pop_gap,
-            energy_gap,
+            max(0.0, t["min_final_pop"] - r["final_pop"]),
+            max(0.0, t["min_energy"] - safe(r["tail_mean_energy"])),
             safe(r["tail_energy_sd"], nan=1.0),
             -p["init_food"],
         )
 
     if name == "harsh":
         t = SELECTION_TARGETS["harsh"]
+
         if r["final_pop"] < t["min_final_pop"]:
             pop_gap = t["min_final_pop"] - r["final_pop"]
         elif r["final_pop"] > t["max_final_pop"]:
@@ -458,7 +358,9 @@ def build_validation_pool(name, sweep_records):
         relaxed = [
             r for r in sweep_records
             if r["result"]["final_pop"] >= t["min_final_pop"] - 1.0
-            and t["energy_low"] - 0.05 <= safe(r["result"]["tail_mean_energy"]) <= t["energy_high"] + 0.05
+            and t["energy_low"] - 0.05
+            <= safe(r["result"]["tail_mean_energy"])
+            <= t["energy_high"] + 0.05
         ]
 
     elif name == "easy":
@@ -473,7 +375,9 @@ def build_validation_pool(name, sweep_records):
         t = SELECTION_TARGETS["harsh"]
         relaxed = [
             r for r in sweep_records
-            if t["min_final_pop"] - 1.0 <= r["result"]["final_pop"] <= t["max_final_pop"] + 3.0
+            if t["min_final_pop"] - 1.0
+            <= r["result"]["final_pop"]
+            <= t["max_final_pop"] + 3.0
         ]
 
     else:
@@ -508,7 +412,11 @@ def select_condition_by_validation(name, sweep_records, args):
             "sweep_summary": rec["result"],
             "validation_results": results,
             "validation_labels": labels,
-            "selection_status": "validated_pass" if is_valid_condition(name, validation_summary) else "validated_fail",
+            "selection_status": (
+                "validated_pass"
+                if is_valid_condition(name, validation_summary)
+                else "validated_fail"
+            ),
         }
 
         checked.append(candidate)
@@ -540,100 +448,19 @@ def select_condition_by_validation(name, sweep_records, args):
     return best_fallback, checked
 
 
-# ============================================================
-# Plotting
-# ============================================================
+def build_validation_summary(results):
+    return [
+        {
+            "seed": r["base_seed"],
+            "repeat": r["repeat"],
+            "run_seed": r["run_seed"],
+            "final_pop": r["final_pop"],
+            "mean_energy": r["mean_energy"],
+            "final_energy": r["final_energy"],
+        }
+        for r in results
+    ]
 
-def plot_multiseed_condition(name, results, params, run_labels, duration, out_dir):
-    ticks = np.arange(duration)
-
-    energy_matrix = np.asarray(
-        [np.nan_to_num(pad(r["energy_history"], duration), nan=0.0) for r in results]
-    )
-    pop_matrix = np.asarray(
-        [np.nan_to_num(pad(r["population_history"], duration), nan=0.0) for r in results]
-    )
-
-    mean_e = np.mean(energy_matrix, axis=0)
-    std_e = np.std(energy_matrix, axis=0)
-
-    mean_p = np.mean(pop_matrix, axis=0)
-    std_p = np.std(pop_matrix, axis=0)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
-
-    fig.suptitle(
-        f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Runs: {len(results)} total | {config_title(params)}",
-        fontsize=14,
-        fontweight="bold",
-    )
-
-    for i in range(len(results)):
-        label = "Individual Runs" if i == 0 else "_nolegend_"
-        ax1.plot(ticks, energy_matrix[i], alpha=0.15, linewidth=0.8, color="gray", label=label)
-        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.15, linewidth=0.8, color="gray", label=label)
-
-    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="blue", alpha=0.15, label="Mean ± SD")
-    ax1.plot(ticks, mean_e, color="blue", linewidth=2.0, label="Group Mean")
-
-    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="green", alpha=0.15, label="Mean ± SD")
-    ax2.plot(ticks, mean_p, color="green", linewidth=2.0, label="Group Mean")
-
-    ax1.axhline(0.70, color="gray", linestyle=":", label="Target 0.70")
-    ax1.axhline(0.75, color="gray", linestyle="--", alpha=0.6, label="Target 0.75")
-    ax1.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Death")
-
-    ax2.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Extinction")
-    ax2.axhline(INIT_MOTHERS, color="gray", linestyle=":", label="Initial count")
-
-    ax1.set_title("Energy Trajectory: Mean ± SD")
-    ax1.set_ylabel("Mean energy")
-    ax1.set_ylim(-0.05, 1.05)
-
-    ax2.set_title("Alive Population: Mean ± SD")
-    ax2.set_ylabel("# alive mothers")
-    ax2.set_xlabel("Tick")
-    ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
-
-    summary = (
-        f"final alive mean = {np.mean(pop_matrix[:, -1]):.2f}/15\n"
-        f"final energy mean = {mean_e[-1]:.3f}\n"
-        f"final energy SD = {std_e[-1]:.3f}"
-    )
-
-    ax1.text(
-        0.01,
-        0.04,
-        summary,
-        transform=ax1.transAxes,
-        fontsize=9,
-        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
-    )
-
-    for ax in (ax1, ax2):
-        ax.grid(True, linestyle="--", alpha=0.25)
-        ax.legend(loc="lower right", fontsize=7)
-
-    plt.tight_layout()
-    fig.savefig(os.path.join(out_dir, f"validation_{name}.png"), dpi=200, bbox_inches="tight")
-    plt.close(fig)
-
-
-def print_validation_runs(name, results):
-    for r in results:
-        print(
-            f"{name.upper()} seed {r['base_seed']} repeat {r['repeat']}: "
-            f"run_seed={r['run_seed']} | "
-            f"pop={r['final_pop']}/15 | "
-            f"meanE={r['mean_energy']:.3f} | "
-            f"finalE={r['final_energy']:.3f}"
-        )
-
-
-# ============================================================
-# Main experiment
-# ============================================================
 
 def run_experiment(args):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -652,30 +479,37 @@ def run_experiment(args):
     print(f"Repeats: {args.repeats}")
 
     if args.mode == "single":
+        name = "single"
         params = candidate_configs(mode="single")[0]
         results, labels, val_summary = validate_params(params, args)
 
         plot_multiseed_condition(
-            "single",
-            results,
-            params,
-            labels,
-            args.duration,
-            out_dir,
+            name=name,
+            results=results,
+            params=params,
+            run_labels=labels,
+            duration=args.duration,
+            out_dir=out_dir,
         )
+        save_validation_csv(name, results, out_dir)
 
         summary = {
-            "single": {
+            name: {
                 "selected_config": params,
                 "selection_status": "single_mode",
                 "validation_summary": val_summary,
+                "validation_runs": build_validation_summary(results),
             }
         }
 
-        with open(os.path.join(out_dir, "auto_baseline_summary.json"), "w") as f:
-            json.dump(summary, f, indent=2)
+        save_summary_json(summary, out_dir)
 
         print(f"\nDone. Outputs saved to: {out_dir}")
+        print("Generated plots:")
+        print("  - validation_single.png")
+        print("Generated logs:")
+        print("  - validation_single.csv")
+        print("  - auto_baseline_summary.json")
         return
 
     configs = candidate_configs(mode="sweep")
@@ -725,9 +559,13 @@ def run_experiment(args):
 
     print("\nFinal selected conditions:")
     for name, rec in selected.items():
-        print(f"{name.upper()}: {rec['result']} | config={rec['params']} | status={rec['selection_status']}")
+        print(
+            f"{name.upper()}: {rec['result']} | "
+            f"config={rec['params']} | "
+            f"status={rec['selection_status']}"
+        )
 
-    print("\nStep 3: Plot validation only")
+    print("\nStep 3: Plot and save validation outputs")
 
     summary = {}
 
@@ -746,23 +584,14 @@ def run_experiment(args):
             duration=args.duration,
             out_dir=out_dir,
         )
+        save_validation_csv(name, results, out_dir)
 
         summary[name] = {
             "selected_config": params,
             "selection_status": rec["selection_status"],
             "sweep_summary": rec["sweep_summary"],
             "validation_summary": rec["result"],
-            "validation_42_46": [
-                {
-                    "seed": r["base_seed"],
-                    "repeat": r["repeat"],
-                    "run_seed": r["run_seed"],
-                    "final_pop": r["final_pop"],
-                    "mean_energy": r["mean_energy"],
-                    "final_energy": r["final_energy"],
-                }
-                for r in results
-            ],
+            "validation_runs": build_validation_summary(results),
         }
 
     summary["_candidate_validation_trace"] = {
@@ -778,14 +607,18 @@ def run_experiment(args):
         for name, trace in traces.items()
     }
 
-    with open(os.path.join(out_dir, "auto_baseline_summary.json"), "w") as f:
-        json.dump(summary, f, indent=2)
+    save_summary_json(summary, out_dir)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
     print("Generated plots:")
     print("  - validation_balanced.png")
     print("  - validation_easy.png")
     print("  - validation_harsh.png")
+    print("Generated logs:")
+    print("  - validation_balanced.csv")
+    print("  - validation_easy.csv")
+    print("  - validation_harsh.csv")
+    print("  - auto_baseline_summary.json")
 
 
 if __name__ == "__main__":
