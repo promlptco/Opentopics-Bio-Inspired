@@ -1,3 +1,44 @@
+"""
+experiments/phase2_survival_minimal/run.py
+
+Phase 2 Survival-Minimal Baseline Calibration.
+
+This script runs mother-only survival experiments to select baseline
+environment settings for:
+  - balanced
+  - easy
+  - harsh
+
+Usage:
+  # Full baseline sweep and validation
+  python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3
+
+  # Same as above, because sweep is default mode
+  python experiments/phase2_survival_minimal/run.py
+
+  # Quick single-config validation
+  python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --repeats 3
+
+  # Custom stochasticity / perception noise
+  python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3 --tau 0.1 --perceptual_noise 0.1
+
+Outputs:
+  outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
+    ├── validation_balanced.png
+    ├── validation_easy.png
+    ├── validation_harsh.png
+    ├── validation_balanced.csv
+    ├── validation_easy.csv
+    ├── validation_harsh.csv
+    └── auto_baseline_summary.json
+
+Single mode outputs:
+  outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
+    ├── validation_single.png
+    ├── validation_single.csv
+    └── auto_baseline_summary.json
+"""
+
 import sys
 import os
 import argparse
@@ -249,6 +290,8 @@ def is_valid_condition(name, result):
             result["final_pop"] >= t["min_final_pop"]
             and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
             and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
+            and abs(safe(result["tail_energy_slope"])) <= t["max_abs_energy_slope"]
+            and abs(safe(result["tail_pop_slope"])) <= t["max_abs_pop_slope"]
         )
 
     if name == "easy":

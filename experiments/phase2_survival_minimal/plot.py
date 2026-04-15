@@ -32,9 +32,16 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
     final_es = np.array([r["final_energy"] for r in repeat_results], dtype=float)
 
     tail_means = []
+    energy_slopes = []
+    pop_slopes = []
+    
     for r in repeat_results:
         e = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
+        p = np.nan_to_num(pad(r["population_history"], duration), nan=0.0)
+
         tail_means.append(np.mean(e[-tail_window:]))
+        energy_slopes.append(tail_slope(r["energy_history"], duration, tail_window))
+        pop_slopes.append(tail_slope(r["population_history"], duration, tail_window))
 
     tail_means = np.array(tail_means, dtype=float)
 
@@ -45,6 +52,8 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
         "final_energy": float(np.mean(final_es)),
         "tail_mean_energy": float(np.mean(tail_means)),
         "tail_energy_sd": float(np.std(tail_means)),
+        "tail_energy_slope": float(np.mean(energy_slopes)),
+        "tail_pop_slope": float(np.mean(pop_slopes)),
     }
 
 
@@ -55,6 +64,14 @@ def config_title(params):
         f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}"
     )
 
+def tail_slope(series, duration, tail_window=TAIL_WINDOW):
+    y = np.nan_to_num(pad(series, duration), nan=0.0)[-tail_window:]
+    x = np.arange(len(y), dtype=float)
+
+    if len(y) < 2:
+        return 0.0
+
+    return float(np.polyfit(x, y, 1)[0])
 
 def plot_multiseed_condition(name, results, params, run_labels, duration, out_dir):
     ticks = np.arange(duration)

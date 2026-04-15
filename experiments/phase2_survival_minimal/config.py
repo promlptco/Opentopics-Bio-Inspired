@@ -8,10 +8,12 @@ INITIAL_ENERGY = 0.75
 
 VALIDATION_SEEDS = list(range(42, 47))
 DEFAULT_SWEEP_SEED_BASE = 42000
-DEFAULT_PERCEPTION_RADIUS = 8.0
+DEFAULT_PERCEPTION_RADIUS = 30.0
 TAIL_WINDOW = 200
 
-
+# ====================================================================
+# Balanced baseline used as the reference point for sensitivity sweep.
+# ====================================================================
 BALANCED_BASELINE = {
     "perception_radius": DEFAULT_PERCEPTION_RADIUS,
     "hunger_rate": 0.005,
@@ -20,32 +22,6 @@ BALANCED_BASELINE = {
     "init_food": 60,
     "rest_recovery": 0.005,
 }
-
-
-SELECTION_TARGETS = {
-    "balanced": {
-        "min_final_pop": 14.0,
-        "energy_low": 0.70,
-        "energy_high": 0.78,
-        "target_energy": 0.725,
-        "max_tail_sd": 0.05,
-    },
-    "easy": {
-        "min_final_pop": 14.5,
-        "min_energy": 0.90,
-        "target_energy": 0.95,
-        "max_tail_sd": 0.08,
-    },
-    "harsh": {
-        "min_final_pop": 1.0,
-        "max_final_pop": 5.0,
-        "energy_low": 0.05,
-        "energy_high": 0.55,
-        "target_pop": 3.0,
-        "target_energy": 0.30,
-    },
-}
-
 
 SENSITIVITY_SWEEPS = {
     "A": {
@@ -126,16 +102,50 @@ SENSITIVITY_SUBPLOT_CONFIG = [
 ]
 
 
-HIDE_BASELINE_FOR = set()
+HIDE_BASELINE_FOR = set(["hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery"])
 # Example:
-# HIDE_BASELINE_FOR = {"rest_recovery", "init_food"}
+# HIDE_BASELINE_FOR = {"rest_recovery", "init_food"}    
 
+# ====================================================================
+# Candidate grid for run.py baseline selection -- sweep or single test.
+# ====================================================================
+
+SELECTION_TARGETS = {
+    "balanced": {
+        "min_final_pop": 14.0,
+        "energy_low": 0.70,
+        "energy_high": 0.75,
+        "target_energy": 0.725,
+        "max_tail_sd": 0.05,
+        "max_abs_energy_slope": 0.00005,
+        "max_abs_pop_slope": 0.002,
+    },
+    "easy": {
+        "min_final_pop": 14.5,
+        "min_energy": 0.90,
+        "target_energy": 0.95,
+        "max_tail_sd": 0.08,
+    },
+    "harsh": {
+        "min_final_pop": 0.5,
+        "max_final_pop": 5.0,
+        "energy_low": 0.05,
+        "energy_high": 0.55,
+        "target_pop": 3.0,
+        "target_energy": 0.30,
+    },
+}
 
 def candidate_configs(mode="sweep"):
     if mode == "single":
         return [
             {
-                **BALANCED_BASELINE,
+                "perception_radius": DEFAULT_PERCEPTION_RADIUS,
+                "hunger_rate": 0.0045,
+                "move_cost": 0.0005,
+                "eat_gain": 0.08,
+                "init_food": 45,
+                "rest_recovery": 0.005,
                 "name": "single_test",
             }
         ]
@@ -143,11 +153,13 @@ def candidate_configs(mode="sweep"):
     grid = {
         "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
         "hunger_rate": [0.005],
-        "move_cost": [0.0005],
+        "move_cost": [0.001],
         "eat_gain": [0.07],
         "init_food": [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
         "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10, 0.15],
     }
+    # After we rough sensitivity sweep we got a balanced hunger_rate, move_cost and eat_gain, 
+    # so we keep those fixed and do a finer sweep on init_food and rest_recovery to find good candidates around the balanced baseline then saperate the easy and harsh alongside.
 
     keys = list(grid.keys())
     configs = []
