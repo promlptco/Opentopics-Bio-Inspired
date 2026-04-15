@@ -140,11 +140,17 @@ def summarize_runs(run_results, duration, tail_window=200):
         energy = pad_series(r["energy_history"], duration)
         pop = pad_series(r["population_history"], duration)
 
+        # Convert post-extinction padding from NaN to 0.0.
+        # This ensures early-collapse runs contribute late-run energy/population = 0,
+        # instead of contaminating the tail summary with NaN.
+        energy = np.nan_to_num(energy, nan=0.0)
+        pop = np.nan_to_num(pop, nan=0.0)
+
         tail_energy = energy[-tail_window:]
         tail_pop = pop[-tail_window:]
 
-        tail_energy_means.append(np.nanmean(tail_energy))
-        tail_pop_means.append(np.nanmean(tail_pop))
+        tail_energy_means.append(np.mean(tail_energy))
+        tail_pop_means.append(np.mean(tail_pop))
 
     tail_energy_means = np.asarray(tail_energy_means, dtype=float)
     tail_pop_means = np.asarray(tail_pop_means, dtype=float)
@@ -159,12 +165,10 @@ def summarize_runs(run_results, duration, tail_window=200):
         "mean_energy_sd": float(np.std(mean_energies)),
         "final_energy_mean": float(np.mean(final_energies)),
         "final_energy_sd": float(np.std(final_energies)),
-        # Use nanmean/nanstd so early extinctions (all-NaN tail) don't corrupt the summary.
-        # nan_to_num converts any remaining NaN (all-extinct runs) to 0.0 safely.
-        "tail_energy_mean": float(np.nan_to_num(np.nanmean(tail_energy_means), nan=0.0)),
-        "tail_energy_sd":   float(np.nan_to_num(np.nanstd(tail_energy_means),  nan=0.0)),
-        "tail_pop_mean":    float(np.nan_to_num(np.nanmean(tail_pop_means),    nan=0.0)),
-        "tail_pop_sd":      float(np.nan_to_num(np.nanstd(tail_pop_means),     nan=0.0)),
+        "tail_energy_mean": float(np.mean(tail_energy_means)),
+        "tail_energy_sd": float(np.std(tail_energy_means)),
+        "tail_pop_mean": float(np.mean(tail_pop_means)),
+        "tail_pop_sd": float(np.std(tail_pop_means)),
     }
 
 

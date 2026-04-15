@@ -243,8 +243,13 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
     tail_means = []
     for r in repeat_results:
         e = pad(r["energy_history"], duration)
+
+        # Convert post-extinction padding to zeros so early-collapse runs
+        # contribute late-run energy = 0 instead of NaN.
+        e = np.nan_to_num(e, nan=0.0)
+
         tail_e = e[-tail_window:]
-        tail_means.append(np.nanmean(tail_e))
+        tail_means.append(np.mean(tail_e))
 
     tail_means = np.array(tail_means, dtype=float)
 
@@ -254,7 +259,7 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
         "mean_energy": float(np.mean(mean_es)),
         "final_energy": float(np.mean(final_es)),
         "tail_mean_energy": float(np.mean(tail_means)),
-        "tail_energy_sd": float(np.std(tail_means)),
+        "tail_energy_sd": float(np.std(tail_means)),    
     }
 
 
@@ -397,7 +402,7 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     pop_matrix = np.asarray([pad(r["population_history"], duration) for r in results])
 
     mean_e = np.nanmean(energy_matrix, axis=0)
-    std_e = np.nanstd(energy_matrix, axis=0)
+    std_e = np.nanstd(energy_matrix, axis=0)    
 
     mean_p = np.nanmean(pop_matrix, axis=0)
     std_p = np.nanstd(pop_matrix, axis=0)
@@ -580,6 +585,7 @@ def run_experiment(args):
             args.duration,
             out_dir,
         )
+        
 
         validation_summary = summarize_repeats(results, args.duration)
 
