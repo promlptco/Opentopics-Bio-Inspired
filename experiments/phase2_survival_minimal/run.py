@@ -80,17 +80,21 @@ class SurvivalSimulation:
             mother.tick_age()
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
 
+            perception_radius = getattr(self.config, "perception_radius", 8) # configurable perception radius
+
             nearest = self._nearest_food(mother.pos)
-            dist_to_food = 30.0
+            dist_to_food = perception_radius
 
             if nearest:
-                dist_to_food = self.world.get_distance(mother.pos, nearest)
+                true_dist = self.world.get_distance(mother.pos, nearest)
+                noisy_dist = max(0.0, true_dist + random.gauss(0.0, self.perceptual_noise))
 
-                # Perceptual noise prevents the foraging policy from being perfectly deterministic.
-                dist_to_food += random.gauss(0.0, self.perceptual_noise)
-                dist_to_food = max(0.0, dist_to_food)
+                if noisy_dist <= perception_radius:
+                    dist_to_food = noisy_dist
+                else:
+                    nearest = None
 
-            u_forage = max(0.0, 1.0 - (dist_to_food / 30.0))
+            u_forage = max(0.0, 1.0 - (dist_to_food / perception_radius))
 
             if mother.pos in self.world.food_positions:
                 u_forage = 1.5
@@ -173,6 +177,7 @@ def make_config(params, duration):
     cfg.max_ticks = duration
     cfg.init_mothers = 15
     cfg.initial_energy = 0.75
+    cfg.perception_radius = params.get("perception_radius", 8) # configurable perception radius
     cfg.hunger_rate = params["hunger_rate"]
     cfg.move_cost = params["move_cost"]
     cfg.eat_gain = params["eat_gain"]
@@ -198,7 +203,7 @@ def candidate_configs(mode="sweep"):
         "hunger_rate":   [0.005],
         "move_cost":     [0.001],
         "eat_gain":      [0.07],
-        "init_food":     [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 70, 80],
+        "init_food":     [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
         "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10]
     }
 
@@ -243,9 +248,6 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
     tail_means = []
     for r in repeat_results:
         e = pad(r["energy_history"], duration)
-
-        # Convert post-extinction padding to zeros so early-collapse runs
-        # contribute late-run energy = 0 instead of NaN.
         e = np.nan_to_num(e, nan=0.0)
 
         tail_e = e[-tail_window:]
@@ -265,18 +267,19 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
 
 def select_auto_conditions(sweep_records):
     """
-    Automatically select Harsh, Balanced, and Easy configs.
-
-    Important change:
-    Selection is based mainly on tail_mean_energy and repeat stability,
-    not only on mean_energy across the full episode.
+    Select three ecological regimes:
+    - Harsh: severe pressure, but not complete extinction.
+    - Balanced: high survival with late-run energy near 0.70–0.75.
+    - Easy: high survival with saturated late-run energy.
     """
 
+    # 1) Balanced: usable baseline
+    # Goal: most/all agents survive, and late-run energy stays near target.
     balanced_pool = [
         r for r in sweep_records
-        if r["result"]["final_pop"] >= 14.5
-        and 0.70 <= r["result"]["tail_mean_energy"] <= 0.75
-        and r["result"]["tail_energy_sd"] <= 0.08
+        if r["result"]["final_pop"] >= 14.0
+        and 0.70 <= np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) <= 0.78
+        and np.nan_to_num(r["result"]["tail_energy_sd"], nan=1.0) <= 0.08
     ]
 
     if balanced_pool:
@@ -285,7 +288,7 @@ def select_auto_conditions(sweep_records):
             key=lambda r: (
                 abs(r["result"]["tail_mean_energy"] - 0.725)
                 + r["result"]["tail_energy_sd"]
-                + r["result"]["final_pop_sd"] * 0.05
+                + abs(r["result"]["final_pop"] - 15.0) * 0.10
             )
         )
     else:
@@ -293,15 +296,17 @@ def select_auto_conditions(sweep_records):
             sweep_records,
             key=lambda r: (
                 abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.725)
-                + abs(r["result"]["final_pop"] - 15.0) * 0.2
+                + abs(r["result"]["final_pop"] - 15.0) * 0.20
                 + np.nan_to_num(r["result"]["tail_energy_sd"], nan=1.0)
             )
         )
 
+    # 2) Easy: abundant condition
+    # Goal: all agents survive and energy is clearly saturated.
     easy_pool = [
         r for r in sweep_records
         if r["result"]["final_pop"] >= 14.5
-        and r["result"]["tail_mean_energy"] >= 0.90
+        and np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) >= 0.90
     ]
 
     if easy_pool:
@@ -309,7 +314,7 @@ def select_auto_conditions(sweep_records):
             easy_pool,
             key=lambda r: (
                 r["result"]["tail_mean_energy"]
-                - r["result"]["tail_energy_sd"] * 0.2
+                - np.nan_to_num(r["result"]["tail_energy_sd"], nan=0.0) * 0.20
             )
         )
     else:
@@ -317,30 +322,41 @@ def select_auto_conditions(sweep_records):
             sweep_records,
             key=lambda r: (
                 abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.95)
-                + abs(r["result"]["final_pop"] - 15.0) * 0.2
+                + abs(r["result"]["final_pop"] - 15.0) * 0.20
             )
         )
 
+    # 3) Harsh: severe but not total extinction
+    # Goal: strong pressure with some survivors, not pop=0 everywhere.
     harsh_pool = [
         r for r in sweep_records
-        if r["result"]["final_pop"] <= 2.0
-        or r["result"]["tail_mean_energy"] <= 0.10
+        if 1.0 <= r["result"]["final_pop"] <= 5.0
+        and 0.05 <= np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) <= 0.40
     ]
 
     if harsh_pool:
         harsh = min(
             harsh_pool,
             key=lambda r: (
-                r["result"]["final_pop"]
-                + r["result"]["tail_mean_energy"]
+                abs(r["result"]["final_pop"] - 3.0)
+                + abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.25)
+                + np.nan_to_num(r["result"]["tail_energy_sd"], nan=1.0) * 0.25
             )
         )
     else:
+        # Fallback: avoid full extinction if possible.
+        non_extinct_pool = [
+            r for r in sweep_records
+            if r["result"]["final_pop"] > 0.0
+        ]
+
+        pool = non_extinct_pool if non_extinct_pool else sweep_records
+
         harsh = min(
-            sweep_records,
+            pool,
             key=lambda r: (
-                r["result"]["final_pop"]
-                + np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0)
+                abs(r["result"]["final_pop"] - 3.0)
+                + abs(np.nan_to_num(r["result"]["tail_mean_energy"], nan=0.0) - 0.25)
             )
         )
 
@@ -398,8 +414,15 @@ def plot_single_condition(name, result, params, seed, duration, out_dir):
 def plot_multiseed_condition(name, results, params, run_labels, duration, out_dir):
     ticks = np.arange(duration)
 
-    energy_matrix = np.asarray([pad(r["energy_history"], duration) for r in results])
-    pop_matrix = np.asarray([pad(r["population_history"], duration) for r in results])
+    energy_matrix = np.asarray([
+        np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
+        for r in results
+    ])
+
+    pop_matrix = np.asarray([
+        np.nan_to_num(pad(r["population_history"], duration), nan=0.0)
+        for r in results
+    ])
 
     mean_e = np.nanmean(energy_matrix, axis=0)
     std_e = np.nanstd(energy_matrix, axis=0)    
@@ -445,7 +468,7 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     ax2.set_ylim(-0.5, 16.5)
 
     summary = (
-        f"final alive mean = {np.nanmean(pop_matrix[:, -1]):.2f}/15\n"
+        f"final alive mean = {np.mean(pop_matrix[:, -1]):.2f}/15\n"
         f"final energy mean = {mean_e[-1]:.3f}\n"
         f"final energy SD = {std_e[-1]:.3f}"
     )
