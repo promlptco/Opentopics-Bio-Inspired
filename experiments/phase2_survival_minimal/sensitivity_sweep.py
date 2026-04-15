@@ -41,13 +41,13 @@ from experiments.phase2_survival_minimal.run import SurvivalSimulation, make_con
 from utils.experiment import set_seed
 
 
-# Confirmed Balanced baseline from auto-sweep: baseline_20260415_015935
+# Confirmed Balanced baseline from auto-sweep: original balanced validate
 BASELINE = {
     "hunger_rate": 0.005,
     "move_cost": 0.001,
     "eat_gain": 0.07,
-    "init_food": 70,
-    "rest_recovery": 0.005,
+    "init_food": 60,
+    "rest_recovery": 0.005
 }
 
 
@@ -328,16 +328,18 @@ def plot_sensitivity_map(all_results, baseline, out_dir):
         ax_energy.set_ylabel("Tail Mean Energy", color=energy_color, fontsize=9)
         ax_energy.tick_params(axis="y", labelcolor=energy_color)
 
-        # Baseline is shown as a clean vertical reference line, without star marker.
-        baseline_val = float(baseline[key])
-        ax_surv.axvline(
-            baseline_val,
-            color="black",
-            linestyle="--",
-            linewidth=1.1,
-            alpha=0.65,
-            label=f"Baseline = {baseline_val:g}",
-        )
+        # HIDE_BASELINE_FOR = {"rest_recovery"}  # Baseline line is less meaningful for discrete count parameter.
+        # # Baseline is shown as a clean vertical reference line, without star marker.
+        # if key not in HIDE_BASELINE_FOR:
+        # baseline_val = float(baseline[key])
+        # ax_surv.axvline(
+        #     baseline_val,
+        #     color="black",
+        #     linestyle="--",
+        #     linewidth=1.1,
+        #     alpha=0.65,
+        #     label=f"Baseline = {baseline_val:g}",
+        # )
 
         ax_surv.set_xlabel(xlabel, fontsize=9)
         ax_surv.set_title(f"Set {set_id} · {key}", fontsize=10, fontweight="bold")

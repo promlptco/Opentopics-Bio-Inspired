@@ -19,16 +19,15 @@ from utils.experiment import set_seed
 
 
 # ============================================================
-# Easy-to-edit experiment constants
+# Easy-to-edit constants
 # ============================================================
 
 INIT_MOTHERS = 15
 INITIAL_ENERGY = 0.75
+
 VALIDATION_SEEDS = list(range(42, 47))
-
-DEFAULT_PERCEPTION_RADIUS = 30
 DEFAULT_SWEEP_SEED_BASE = 42000
-
+DEFAULT_PERCEPTION_RADIUS = 8.0
 TAIL_WINDOW = 200
 
 SELECTION_TARGETS = {
@@ -37,21 +36,21 @@ SELECTION_TARGETS = {
         "energy_low": 0.70,
         "energy_high": 0.78,
         "target_energy": 0.725,
-        "max_tail_sd": 0.08,
+        "max_tail_sd": 0.05,
     },
     "easy": {
         "min_final_pop": 14.5,
         "min_energy": 0.90,
-        "sd_penalty": 0.20,
+        "target_energy": 0.95,
+        "max_tail_sd": 0.08,
     },
     "harsh": {
         "min_final_pop": 1.0,
         "max_final_pop": 5.0,
         "energy_low": 0.05,
-        "energy_high": 0.40,
+        "energy_high": 0.55,
         "target_pop": 3.0,
-        "target_energy": 0.25,
-        "sd_penalty": 0.25,
+        "target_energy": 0.30,
     },
 }
 
@@ -244,10 +243,10 @@ def candidate_configs(mode="sweep"):
     grid = {
         "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
         "hunger_rate": [0.005],
-        "move_cost": [0.001],
+        "move_cost": [0.0005],
         "eat_gain": [0.07],
         "init_food": [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
-        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10],
+        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10, 0.15],
     }
 
     keys = list(grid.keys())
@@ -275,6 +274,10 @@ def pad(x, duration):
     return arr
 
 
+def safe(value, nan=0.0):
+    return float(np.nan_to_num(value, nan=nan))
+
+
 def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
     final_pops = np.array([r["final_pop"] for r in repeat_results], dtype=float)
     mean_es = np.array([r["mean_energy"] for r in repeat_results], dtype=float)
@@ -282,8 +285,7 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
 
     tail_means = []
     for r in repeat_results:
-        e = pad(r["energy_history"], duration)
-        e = np.nan_to_num(e, nan=0.0)
+        e = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
         tail_means.append(np.mean(e[-tail_window:]))
 
     tail_means = np.array(tail_means, dtype=float)
@@ -298,11 +300,7 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
     }
 
 
-def _safe(value, nan=0.0):
-    return float(np.nan_to_num(value, nan=nan))
-
-
-def _config_title(params):
+def config_title(params):
     return (
         f"perception={params.get('perception_radius', DEFAULT_PERCEPTION_RADIUS)} | "
         f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
@@ -310,59 +308,20 @@ def _config_title(params):
     )
 
 
-def is_balanced_valid(summary_result):
-    b = SELECTION_TARGETS["balanced"]
-    return (
-        summary_result["final_pop"] >= b["min_final_pop"]
-        and b["energy_low"] <= _safe(summary_result["tail_mean_energy"]) <= b["energy_high"]
-        and _safe(summary_result["tail_energy_sd"], nan=1.0) <= b["max_tail_sd"]
-    )
-
-
-def balanced_validation_sort_key(record):
-    b = SELECTION_TARGETS["balanced"]
-    result = record["result"]
-    params = record["params"]
-
-    return (
-        params["init_food"],
-        abs(_safe(result["tail_mean_energy"]) - b["target_energy"]),
-        _safe(result["tail_energy_sd"], nan=1.0),
-        abs(result["final_pop"] - INIT_MOTHERS),
-        params["rest_recovery"],
-    )
-
-
-def balanced_fallback_sort_key(record):
-    b = SELECTION_TARGETS["balanced"]
-    result = record["result"]
-    params = record["params"]
-
-    pop_gap = max(0.0, b["min_final_pop"] - result["final_pop"])
-
-    return (
-        pop_gap,
-        params["init_food"],
-        abs(_safe(result["tail_mean_energy"]) - b["target_energy"]),
-        _safe(result["tail_energy_sd"], nan=1.0),
-        abs(result["final_pop"] - INIT_MOTHERS),
-    )
-
-
-def validate_condition(params, args):
+def validate_params(params, args):
     results = []
-    result_tags = []
+    labels = []
 
     for seed in VALIDATION_SEEDS:
         for rep in range(args.repeats):
             run_seed = seed * 1000 + rep
 
             result = run_one(
-                params,
-                run_seed,
-                args.duration,
-                args.tau,
-                args.perceptual_noise,
+                params=params,
+                seed=run_seed,
+                duration=args.duration,
+                tau=args.tau,
+                noise=args.perceptual_noise,
             )
 
             result["base_seed"] = seed
@@ -370,207 +329,220 @@ def validate_condition(params, args):
             result["run_seed"] = run_seed
 
             results.append(result)
-            result_tags.append(f"{seed}-r{rep + 1}")
+            labels.append(f"{seed}-r{rep + 1}")
 
-    validation_summary = summarize_repeats(results, args.duration)
-
-    return results, result_tags, validation_summary
+    return results, labels, summarize_repeats(results, args.duration)
 
 
-def select_easy_and_harsh_from_sweep(sweep_records):
-    e = SELECTION_TARGETS["easy"]
-    h = SELECTION_TARGETS["harsh"]
+# ============================================================
+# Selection rules
+# ============================================================
 
-    easy_pool = [
-        r
-        for r in sweep_records
-        if r["result"]["final_pop"] >= e["min_final_pop"]
-        and _safe(r["result"]["tail_mean_energy"]) >= e["min_energy"]
-    ]
-
-    if easy_pool:
-        easy = max(
-            easy_pool,
-            key=lambda r: (
-                _safe(r["result"]["tail_mean_energy"])
-                - _safe(r["result"]["tail_energy_sd"]) * e["sd_penalty"],
-                r["params"]["init_food"],
-            ),
+def is_valid_condition(name, result):
+    if name == "balanced":
+        t = SELECTION_TARGETS["balanced"]
+        return (
+            result["final_pop"] >= t["min_final_pop"]
+            and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
+            and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
         )
+
+    if name == "easy":
+        t = SELECTION_TARGETS["easy"]
+        return (
+            result["final_pop"] >= t["min_final_pop"]
+            and safe(result["tail_mean_energy"]) >= t["min_energy"]
+            and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
+        )
+
+    if name == "harsh":
+        t = SELECTION_TARGETS["harsh"]
+        return (
+            t["min_final_pop"] <= result["final_pop"] <= t["max_final_pop"]
+            and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
+        )
+
+    return False
+
+
+def strict_sort_key(name, record):
+    r = record["result"]
+    p = record["params"]
+
+    if name == "balanced":
+        t = SELECTION_TARGETS["balanced"]
+        return (
+            p["init_food"],
+            abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
+            safe(r["tail_energy_sd"], nan=1.0),
+            abs(r["final_pop"] - INIT_MOTHERS),
+            p["rest_recovery"],
+        )
+
+    if name == "easy":
+        t = SELECTION_TARGETS["easy"]
+        return (
+            -safe(r["tail_mean_energy"]),
+            safe(r["tail_energy_sd"], nan=1.0),
+            -r["final_pop"],
+            -p["init_food"],
+            p["rest_recovery"],
+        )
+
+    if name == "harsh":
+        t = SELECTION_TARGETS["harsh"]
+        return (
+            abs(r["final_pop"] - t["target_pop"]),
+            abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
+            p["init_food"],
+            safe(r["tail_energy_sd"], nan=1.0),
+            p["rest_recovery"],
+        )
+
+    return (999,)
+
+
+def fallback_sort_key(name, record):
+    r = record["result"]
+    p = record["params"]
+
+    if name == "balanced":
+        t = SELECTION_TARGETS["balanced"]
+        pop_gap = max(0.0, t["min_final_pop"] - r["final_pop"])
+        energy_gap = abs(safe(r["tail_mean_energy"]) - t["target_energy"])
+        return (
+            pop_gap,
+            p["init_food"],
+            energy_gap,
+            safe(r["tail_energy_sd"], nan=1.0),
+        )
+
+    if name == "easy":
+        t = SELECTION_TARGETS["easy"]
+        pop_gap = max(0.0, t["min_final_pop"] - r["final_pop"])
+        energy_gap = max(0.0, t["min_energy"] - safe(r["tail_mean_energy"]))
+        return (
+            pop_gap,
+            energy_gap,
+            safe(r["tail_energy_sd"], nan=1.0),
+            -p["init_food"],
+        )
+
+    if name == "harsh":
+        t = SELECTION_TARGETS["harsh"]
+        if r["final_pop"] < t["min_final_pop"]:
+            pop_gap = t["min_final_pop"] - r["final_pop"]
+        elif r["final_pop"] > t["max_final_pop"]:
+            pop_gap = r["final_pop"] - t["max_final_pop"]
+        else:
+            pop_gap = 0.0
+
+        return (
+            pop_gap,
+            abs(r["final_pop"] - t["target_pop"]),
+            abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
+            p["init_food"],
+        )
+
+    return (999,)
+
+
+def build_validation_pool(name, sweep_records):
+    valid = [r for r in sweep_records if is_valid_condition(name, r["result"])]
+
+    if valid:
+        return sorted(valid, key=lambda r: strict_sort_key(name, r))
+
+    if name == "balanced":
+        t = SELECTION_TARGETS["balanced"]
+        relaxed = [
+            r for r in sweep_records
+            if r["result"]["final_pop"] >= t["min_final_pop"] - 1.0
+            and t["energy_low"] - 0.05 <= safe(r["result"]["tail_mean_energy"]) <= t["energy_high"] + 0.05
+        ]
+
+    elif name == "easy":
+        t = SELECTION_TARGETS["easy"]
+        relaxed = [
+            r for r in sweep_records
+            if r["result"]["final_pop"] >= t["min_final_pop"] - 1.0
+            and safe(r["result"]["tail_mean_energy"]) >= t["min_energy"] - 0.05
+        ]
+
+    elif name == "harsh":
+        t = SELECTION_TARGETS["harsh"]
+        relaxed = [
+            r for r in sweep_records
+            if t["min_final_pop"] - 1.0 <= r["result"]["final_pop"] <= t["max_final_pop"] + 3.0
+        ]
+
     else:
-        easy = min(
-            sweep_records,
-            key=lambda r: (
-                abs(_safe(r["result"]["tail_mean_energy"]) - 0.95),
-                abs(r["result"]["final_pop"] - INIT_MOTHERS) * 0.20,
-            ),
-        )
+        relaxed = []
 
-    harsh_pool = [
-        r
-        for r in sweep_records
-        if h["min_final_pop"] <= r["result"]["final_pop"] <= h["max_final_pop"]
-        and h["energy_low"] <= _safe(r["result"]["tail_mean_energy"]) <= h["energy_high"]
-    ]
+    if relaxed:
+        return sorted(relaxed, key=lambda r: fallback_sort_key(name, r))
 
-    if harsh_pool:
-        harsh = min(
-            harsh_pool,
-            key=lambda r: (
-                abs(r["result"]["final_pop"] - h["target_pop"]),
-                abs(_safe(r["result"]["tail_mean_energy"]) - h["target_energy"]),
-                _safe(r["result"]["tail_energy_sd"], nan=1.0) * h["sd_penalty"],
-                r["params"]["init_food"],
-            ),
-        )
-    else:
-        non_extinct_pool = [r for r in sweep_records if r["result"]["final_pop"] > 0.0]
-        pool = non_extinct_pool if non_extinct_pool else sweep_records
-
-        harsh = min(
-            pool,
-            key=lambda r: (
-                abs(r["result"]["final_pop"] - h["target_pop"]),
-                abs(_safe(r["result"]["tail_mean_energy"]) - h["target_energy"]),
-                r["params"]["init_food"],
-            ),
-        )
-
-    harsh["params"]["name"] = "harsh"
-    easy["params"]["name"] = "easy"
-
-    return {"harsh": harsh, "easy": easy}
+    return sorted(sweep_records, key=lambda r: fallback_sort_key(name, r))
 
 
-def build_balanced_validation_pool(sweep_records):
-    """
-    Balanced is intentionally selected by validation, not by sweep only.
+def select_condition_by_validation(name, sweep_records, args):
+    pool = build_validation_pool(name, sweep_records)
 
-    Policy:
-    1. Candidate must first look plausible in sweep.
-    2. Then each candidate is re-tested using validation seeds.
-    3. The first validation-passing candidate after sorting is selected.
+    if not pool:
+        raise RuntimeError(f"No candidates available for {name} validation.")
 
-    Sort order:
-    - lowest init_food first
-    - then closest energy target
-    - then lower energy SD
-    - then closer final population to 15
-    """
-    b = SELECTION_TARGETS["balanced"]
-
-    strict_pool = [
-        r
-        for r in sweep_records
-        if r["result"]["final_pop"] >= b["min_final_pop"]
-        and b["energy_low"] <= _safe(r["result"]["tail_mean_energy"]) <= b["energy_high"]
-        and _safe(r["result"]["tail_energy_sd"], nan=1.0) <= b["max_tail_sd"]
-    ]
-
-    if strict_pool:
-        return sorted(strict_pool, key=balanced_validation_sort_key)
-
-    relaxed_pool = [
-        r
-        for r in sweep_records
-        if r["result"]["final_pop"] >= b["min_final_pop"] - 1.0
-        and b["energy_low"] - 0.05 <= _safe(r["result"]["tail_mean_energy"]) <= b["energy_high"] + 0.05
-    ]
-
-    if relaxed_pool:
-        return sorted(relaxed_pool, key=balanced_validation_sort_key)
-
-    return sorted(sweep_records, key=balanced_fallback_sort_key)
-
-
-def select_balanced_by_validation(sweep_records, args):
-    validation_pool = build_balanced_validation_pool(sweep_records)
-
-    print("\nSelecting BALANCED using validation-first rule:")
-    print("Rule: final_pop >= 14/15 first, then lowest init_food.")
+    print(f"\nSelecting {name.upper()} using validation-first rule.")
 
     best_fallback = None
-    validated_records = []
+    checked = []
 
-    for idx, rec in enumerate(validation_pool, start=1):
+    for idx, rec in enumerate(pool, start=1):
         params = dict(rec["params"])
-        params["name"] = "balanced"
+        params["name"] = name
 
-        results, tags, validation_summary = validate_condition(params, args)
+        results, labels, validation_summary = validate_params(params, args)
 
-        candidate_record = {
+        candidate = {
             "params": params,
             "result": validation_summary,
             "sweep_summary": rec["result"],
-            "full_result": results[0],
             "validation_results": results,
-            "validation_tags": tags,
-            "selection_status": "validated_pass" if is_balanced_valid(validation_summary) else "validated_fail",
+            "validation_labels": labels,
+            "selection_status": "validated_pass" if is_valid_condition(name, validation_summary) else "validated_fail",
         }
 
-        validated_records.append(candidate_record)
+        checked.append(candidate)
 
         print(
-            f"  BALANCED candidate {idx:03d}/{len(validation_pool)} | "
+            f"  {name.upper()} candidate {idx:03d}/{len(pool)} | "
             f"food={params['init_food']} | rest={params['rest_recovery']} | "
             f"val_pop={validation_summary['final_pop']:.2f}/15 | "
-            f"tailE={validation_summary['tail_mean_energy']:.3f} ± {validation_summary['tail_energy_sd']:.3f}"
+            f"tailE={validation_summary['tail_mean_energy']:.3f} ± "
+            f"{validation_summary['tail_energy_sd']:.3f}"
         )
 
-        if best_fallback is None or balanced_fallback_sort_key(candidate_record) < balanced_fallback_sort_key(best_fallback):
-            best_fallback = candidate_record
+        if best_fallback is None or fallback_sort_key(name, candidate) < fallback_sort_key(name, best_fallback):
+            best_fallback = candidate
 
-        if is_balanced_valid(validation_summary):
-            print("  -> BALANCED selected from validation PASS.")
-            return candidate_record, validated_records
+        if is_valid_condition(name, validation_summary):
+            print(f"  -> {name.upper()} selected from validation PASS.")
+            return candidate, checked
 
-    print("\nWARNING: No BALANCED candidate passed strict validation.")
-    print("Fallback selected by closest validation result. Check summary JSON before reporting.")
+    if best_fallback is None:
+        raise RuntimeError(f"{name.upper()} validation failed before creating fallback.")
 
-    best_fallback["params"]["name"] = "balanced"
+    print(f"\nWARNING: No {name.upper()} candidate passed strict validation.")
+    print("Fallback selected by closest validation result. Check JSON before reporting.")
+
     best_fallback["selection_status"] = "fallback_no_strict_validation_pass"
+    best_fallback["params"]["name"] = name
 
-    return best_fallback, validated_records
+    return best_fallback, checked
 
 
-def plot_single_condition(name, result, params, seed, duration, out_dir):
-    ticks = np.arange(duration)
-    e = np.nan_to_num(pad(result["energy_history"], duration), nan=0.0)
-    p = np.nan_to_num(pad(result["population_history"], duration), nan=0.0)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
-
-    fig.suptitle(
-        f"Phase 2 Baseline Sweep — {name.upper()}\n"
-        f"Seed {seed} | {_config_title(params)}",
-        fontsize=14,
-        fontweight="bold",
-    )
-
-    ax1.plot(ticks, e, color="black", linewidth=2, label="Mean energy")
-    ax1.axhline(0.70, color="gray", linestyle=":", label="Target 0.70")
-    ax1.axhline(0.75, color="gray", linestyle="--", alpha=0.6, label="Target 0.75")
-    ax1.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Death")
-    ax1.set_ylabel("Mean energy")
-    ax1.set_ylim(-0.05, 1.05)
-    ax1.set_title("Energy Trajectory")
-
-    ax2.step(ticks, p, where="post", color="black", linewidth=2, label="Alive population")
-    ax2.axhline(0.0, color="red", linestyle="--", alpha=0.5, label="Extinction")
-    ax2.axhline(INIT_MOTHERS, color="gray", linestyle=":", label="Initial count")
-    ax2.set_ylabel("# alive mothers")
-    ax2.set_xlabel("Tick")
-    ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
-    ax2.set_title("Alive Population")
-
-    for ax in (ax1, ax2):
-        ax.grid(True, linestyle="--", alpha=0.25)
-        ax.legend(loc="lower right", fontsize=8)
-
-    plt.tight_layout()
-    fig.savefig(os.path.join(out_dir, f"sweep_{name}.png"), dpi=200, bbox_inches="tight")
-    plt.close(fig)
-
+# ============================================================
+# Plotting
+# ============================================================
 
 def plot_multiseed_condition(name, results, params, run_labels, duration, out_dir):
     ticks = np.arange(duration)
@@ -578,7 +550,6 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     energy_matrix = np.asarray(
         [np.nan_to_num(pad(r["energy_history"], duration), nan=0.0) for r in results]
     )
-
     pop_matrix = np.asarray(
         [np.nan_to_num(pad(r["population_history"], duration), nan=0.0) for r in results]
     )
@@ -593,12 +564,12 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
     fig.suptitle(
         f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Runs: {len(results)} total | {_config_title(params)}",
+        f"Runs: {len(results)} total | {config_title(params)}",
         fontsize=14,
         fontweight="bold",
     )
 
-    for i, _label in enumerate(run_labels):
+    for i in range(len(results)):
         label = "Individual Runs" if i == 0 else "_nolegend_"
         ax1.plot(ticks, energy_matrix[i], alpha=0.15, linewidth=0.8, color="gray", label=label)
         ax2.step(ticks, pop_matrix[i], where="post", alpha=0.15, linewidth=0.8, color="gray", label=label)
@@ -650,15 +621,19 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
 
 def print_validation_runs(name, results):
-    for result in results:
+    for r in results:
         print(
-            f"{name.upper()} seed {result['base_seed']} repeat {result['repeat']}: "
-            f"run_seed={result['run_seed']} | "
-            f"pop={result['final_pop']}/15 | "
-            f"meanE={result['mean_energy']:.3f} | "
-            f"finalE={result['final_energy']:.3f}"
+            f"{name.upper()} seed {r['base_seed']} repeat {r['repeat']}: "
+            f"run_seed={r['run_seed']} | "
+            f"pop={r['final_pop']}/15 | "
+            f"meanE={r['mean_energy']:.3f} | "
+            f"finalE={r['final_energy']:.3f}"
         )
 
+
+# ============================================================
+# Main experiment
+# ============================================================
 
 def run_experiment(args):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -666,7 +641,7 @@ def run_experiment(args):
         PROJECT_ROOT,
         "outputs",
         "phase2_survival_minimal",
-        f"{ts}_auto_baseline_calibration",
+        f"{ts}_validation_selected_baselines",
     )
     os.makedirs(out_dir, exist_ok=True)
 
@@ -676,130 +651,141 @@ def run_experiment(args):
     print(f"Perceptual noise: {args.perceptual_noise}")
     print(f"Repeats: {args.repeats}")
 
-    balanced_validated_records = []
-
-    if args.mode == "sweep":
-        configs = candidate_configs(mode="sweep")
-        sweep_records = []
-
-        print(f"\nStep 1: Auto sweep | Total configs: {len(configs)}")
-        print(f"Total sweep runs: {len(configs) * args.repeats}")
-
-        for idx, params in enumerate(configs, start=1):
-            repeat_results = []
-
-            for rep in range(args.repeats):
-                sweep_run_seed = DEFAULT_SWEEP_SEED_BASE + rep
-                res = run_one(params, sweep_run_seed, args.duration, args.tau, args.perceptual_noise)
-                repeat_results.append(res)
-
-            summary_result = summarize_repeats(repeat_results, args.duration)
-
-            record = {
-                "params": dict(params),
-                "result": summary_result,
-                "full_result": repeat_results[0],
-            }
-            sweep_records.append(record)
-
-            if idx % 20 == 0 or idx == len(configs):
-                print(
-                    f"  [{idx:03d}/{len(configs)}] "
-                    f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
-                    f"tailE={summary_result['tail_mean_energy']:.3f} ± "
-                    f"{summary_result['tail_energy_sd']:.3f}"
-                )
-
-        selected = select_easy_and_harsh_from_sweep(sweep_records)
-
-        balanced_rec, balanced_validated_records = select_balanced_by_validation(sweep_records, args)
-        selected["balanced"] = balanced_rec
-
-        print("\nSelected conditions:")
-        for name, rec in selected.items():
-            print(f"{name.upper()}: {rec['result']} | config={rec['params']}")
-
-            if name != "balanced":
-                plot_single_condition(
-                    name,
-                    rec["full_result"],
-                    rec["params"],
-                    seed=DEFAULT_SWEEP_SEED_BASE,
-                    duration=args.duration,
-                    out_dir=out_dir,
-                )
-
-    else:
-        single_config = candidate_configs(mode="single")[0]
-        selected = {
-            "single": {
-                "params": single_config,
-                "result": {},
-                "full_result": None,
-                "selection_status": "single_mode",
-            }
-        }
-        print(f"\nRunning single configuration: {single_config}")
-
-    print("\nStep 2: Multi-seed validation")
-
-    summary = {}
-
-    for name, rec in selected.items():
-        params = rec["params"]
-
-        if name == "balanced" and "validation_results" in rec:
-            results = rec["validation_results"]
-            result_tags = rec["validation_tags"]
-            validation_summary = rec["result"]
-            print("\nBALANCED validation already completed during selection. Reusing cached validation results.")
-            print_validation_runs(name, results)
-        else:
-            results, result_tags, validation_summary = validate_condition(params, args)
-            print_validation_runs(name, results)
+    if args.mode == "single":
+        params = candidate_configs(mode="single")[0]
+        results, labels, val_summary = validate_params(params, args)
 
         plot_multiseed_condition(
-            name,
+            "single",
             results,
             params,
-            result_tags,
+            labels,
             args.duration,
             out_dir,
         )
 
+        summary = {
+            "single": {
+                "selected_config": params,
+                "selection_status": "single_mode",
+                "validation_summary": val_summary,
+            }
+        }
+
+        with open(os.path.join(out_dir, "auto_baseline_summary.json"), "w") as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"\nDone. Outputs saved to: {out_dir}")
+        return
+
+    configs = candidate_configs(mode="sweep")
+    sweep_records = []
+
+    print(f"\nStep 1: Auto sweep | Total configs: {len(configs)}")
+    print(f"Total sweep runs: {len(configs) * args.repeats}")
+
+    for idx, params in enumerate(configs, start=1):
+        repeat_results = []
+
+        for rep in range(args.repeats):
+            sweep_run_seed = DEFAULT_SWEEP_SEED_BASE + rep
+            res = run_one(
+                params=params,
+                seed=sweep_run_seed,
+                duration=args.duration,
+                tau=args.tau,
+                noise=args.perceptual_noise,
+            )
+            repeat_results.append(res)
+
+        summary_result = summarize_repeats(repeat_results, args.duration)
+
+        sweep_records.append(
+            {
+                "params": dict(params),
+                "result": summary_result,
+            }
+        )
+
+        if idx % 20 == 0 or idx == len(configs):
+            print(
+                f"  [{idx:03d}/{len(configs)}] "
+                f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
+                f"tailE={summary_result['tail_mean_energy']:.3f} ± "
+                f"{summary_result['tail_energy_sd']:.3f}"
+            )
+
+    print("\nStep 2: Validation-first selection for all conditions")
+
+    selected = {}
+    traces = {}
+
+    for name in ["balanced", "easy", "harsh"]:
+        selected[name], traces[name] = select_condition_by_validation(name, sweep_records, args)
+
+    print("\nFinal selected conditions:")
+    for name, rec in selected.items():
+        print(f"{name.upper()}: {rec['result']} | config={rec['params']} | status={rec['selection_status']}")
+
+    print("\nStep 3: Plot validation only")
+
+    summary = {}
+
+    for name, rec in selected.items():
+        results = rec["validation_results"]
+        labels = rec["validation_labels"]
+        params = rec["params"]
+
+        print_validation_runs(name, results)
+
+        plot_multiseed_condition(
+            name=name,
+            results=results,
+            params=params,
+            run_labels=labels,
+            duration=args.duration,
+            out_dir=out_dir,
+        )
+
         summary[name] = {
             "selected_config": params,
-            "selection_status": rec.get("selection_status", "selected"),
-            "sweep_summary": rec.get("sweep_summary", rec.get("result", {})),
-            "validation_summary": validation_summary,
+            "selection_status": rec["selection_status"],
+            "sweep_summary": rec["sweep_summary"],
+            "validation_summary": rec["result"],
             "validation_42_46": [
                 {
-                    "seed": res["base_seed"],
-                    "repeat": res["repeat"],
-                    "run_seed": res["run_seed"],
-                    "final_pop": res["final_pop"],
-                    "mean_energy": res["mean_energy"],
-                    "final_energy": res["final_energy"],
+                    "seed": r["base_seed"],
+                    "repeat": r["repeat"],
+                    "run_seed": r["run_seed"],
+                    "final_pop": r["final_pop"],
+                    "mean_energy": r["mean_energy"],
+                    "final_energy": r["final_energy"],
                 }
-                for res in results
+                for r in results
             ],
         }
 
-    if balanced_validated_records:
-        summary["_balanced_candidate_validation_trace"] = [
+    summary["_candidate_validation_trace"] = {
+        name: [
             {
-                "selected_config": rec["params"],
-                "selection_status": rec["selection_status"],
-                "sweep_summary": rec["sweep_summary"],
-                "validation_summary": rec["result"],
+                "selected_config": r["params"],
+                "selection_status": r["selection_status"],
+                "sweep_summary": r["sweep_summary"],
+                "validation_summary": r["result"],
             }
-            for rec in balanced_validated_records
+            for r in trace
         ]
+        for name, trace in traces.items()
+    }
 
     with open(os.path.join(out_dir, "auto_baseline_summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
+    print("Generated plots:")
+    print("  - validation_balanced.png")
+    print("  - validation_easy.png")
+    print("  - validation_harsh.png")
 
 
 if __name__ == "__main__":
