@@ -80,7 +80,9 @@ class SurvivalSimulation:
             mother.tick_age()
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
 
-            perception_radius = getattr(self.config, "perception_radius", 8) # configurable perception radius
+            # FIXED: perception is now controlled by config.perception_radius.
+            # This replaces the old implicit global-like range of 30.0.
+            perception_radius = getattr(self.config, "perception_radius", 8)
 
             nearest = self._nearest_food(mother.pos)
             dist_to_food = perception_radius
@@ -89,6 +91,7 @@ class SurvivalSimulation:
                 true_dist = self.world.get_distance(mother.pos, nearest)
                 noisy_dist = max(0.0, true_dist + random.gauss(0.0, self.perceptual_noise))
 
+                # FIXED: food outside perception radius is treated as unseen.
                 if noisy_dist <= perception_radius:
                     dist_to_food = noisy_dist
                 else:
@@ -113,7 +116,6 @@ class SurvivalSimulation:
             selection = np.random.choice(list(probs.keys()), p=list(probs.values()))
 
             if selection == "EAT" and mother.held_food > 0:
-                # Foraging variance keeps food reward stochastic but bounded.
                 variance = random.uniform(0.8, 1.2)
                 mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
                 mother.held_food -= 1
@@ -177,7 +179,10 @@ def make_config(params, duration):
     cfg.max_ticks = duration
     cfg.init_mothers = 15
     cfg.initial_energy = 0.75
-    cfg.perception_radius = params.get("perception_radius", 8) # configurable perception radius
+
+    # FIXED: perception_radius is now part of the experiment config.
+    cfg.perception_radius = params.get("perception_radius", 8)
+
     cfg.hunger_rate = params["hunger_rate"]
     cfg.move_cost = params["move_cost"]
     cfg.eat_gain = params["eat_gain"]
@@ -188,23 +193,26 @@ def make_config(params, duration):
 
 def candidate_configs(mode="sweep"):
     if mode == "single":
-        # Confirmed Balanced baseline from auto-sweep: baseline_20260415_015935
         return [{
+            "perception_radius": 8,
             "hunger_rate": 0.005,
             "move_cost": 0.001,
             "eat_gain": 0.07,
-            "init_food": 70,
+            "init_food": 60,
             "rest_recovery": 0.005,
             "name": "single_test",
         }]
 
-        
     grid = {
-        "hunger_rate":   [0.005],
-        "move_cost":     [0.001],
-        "eat_gain":      [0.07],
-        "init_food":     [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
-        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10]
+        # FIXED: perception_radius is included explicitly, even if not swept.
+        # This makes selected_config and plot titles honest and reproducible.
+        "perception_radius": [8],
+
+        "hunger_rate": [0.005],
+        "move_cost": [0.001],
+        "eat_gain": [0.07],
+        "init_food": [20, 25, 30, 35, 40, 43, 45, 48, 50, 53, 55, 60, 65, 70, 75, 80],
+        "rest_recovery": [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.08, 0.10],
     }
 
     configs = []
@@ -233,14 +241,6 @@ def pad(x, duration):
 
 
 def summarize_repeats(repeat_results, duration, tail_window=200):
-    """
-    Summarize repeated runs for one config.
-
-    Important change:
-    We use tail_mean_energy instead of whole-episode mean_energy for selection.
-    Whole-episode mean can be misleading because initial_energy = 0.75 can bias the average.
-    Tail mean better reflects whether the ecology stabilizes near the target energy.
-    """
     final_pops = np.array([r["final_pop"] for r in repeat_results], dtype=float)
     mean_es = np.array([r["mean_energy"] for r in repeat_results], dtype=float)
     final_es = np.array([r["final_energy"] for r in repeat_results], dtype=float)
@@ -248,6 +248,9 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
     tail_means = []
     for r in repeat_results:
         e = pad(r["energy_history"], duration)
+
+        # FIXED: after extinction, padded NaN is converted to 0.0.
+        # This prevents NaN in harsh/extinction cases and treats late-run energy as zero.
         e = np.nan_to_num(e, nan=0.0)
 
         tail_e = e[-tail_window:]
@@ -261,7 +264,7 @@ def summarize_repeats(repeat_results, duration, tail_window=200):
         "mean_energy": float(np.mean(mean_es)),
         "final_energy": float(np.mean(final_es)),
         "tail_mean_energy": float(np.mean(tail_means)),
-        "tail_energy_sd": float(np.std(tail_means)),    
+        "tail_energy_sd": float(np.std(tail_means)),
     }
 
 
@@ -273,8 +276,6 @@ def select_auto_conditions(sweep_records):
     - Easy: high survival with saturated late-run energy.
     """
 
-    # 1) Balanced: usable baseline
-    # Goal: most/all agents survive, and late-run energy stays near target.
     balanced_pool = [
         r for r in sweep_records
         if r["result"]["final_pop"] >= 14.0
@@ -301,8 +302,6 @@ def select_auto_conditions(sweep_records):
             )
         )
 
-    # 2) Easy: abundant condition
-    # Goal: all agents survive and energy is clearly saturated.
     easy_pool = [
         r for r in sweep_records
         if r["result"]["final_pop"] >= 14.5
@@ -326,8 +325,8 @@ def select_auto_conditions(sweep_records):
             )
         )
 
-    # 3) Harsh: severe but not total extinction
-    # Goal: strong pressure with some survivors, not pop=0 everywhere.
+    # FIXED: harsh no longer prefers total extinction.
+    # It targets severe pressure with some survivors.
     harsh_pool = [
         r for r in sweep_records
         if 1.0 <= r["result"]["final_pop"] <= 5.0
@@ -344,7 +343,6 @@ def select_auto_conditions(sweep_records):
             )
         )
     else:
-        # Fallback: avoid full extinction if possible.
         non_extinct_pool = [
             r for r in sweep_records
             if r["result"]["final_pop"] > 0.0
@@ -371,17 +369,25 @@ def select_auto_conditions(sweep_records):
     }
 
 
+def _config_title(params):
+    # FIXED: title now includes perception_radius.
+    return (
+        f"perception={params.get('perception_radius', 8)} | "
+        f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
+        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}"
+    )
+
+
 def plot_single_condition(name, result, params, seed, duration, out_dir):
     ticks = np.arange(duration)
-    e = pad(result["energy_history"], duration)
-    p = pad(result["population_history"], duration)
+    e = np.nan_to_num(pad(result["energy_history"], duration), nan=0.0)
+    p = np.nan_to_num(pad(result["population_history"], duration), nan=0.0)
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
 
     fig.suptitle(
         f"Phase 2 Baseline Sweep — {name.upper()}\n"
-        f"Seed {seed} | hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}",
+        f"Seed {seed} | {_config_title(params)}",
         fontsize=14,
         fontweight="bold",
     )
@@ -424,18 +430,17 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
         for r in results
     ])
 
-    mean_e = np.nanmean(energy_matrix, axis=0)
-    std_e = np.nanstd(energy_matrix, axis=0)    
+    mean_e = np.mean(energy_matrix, axis=0)
+    std_e = np.std(energy_matrix, axis=0)
 
-    mean_p = np.nanmean(pop_matrix, axis=0)
-    std_p = np.nanstd(pop_matrix, axis=0)
+    mean_p = np.mean(pop_matrix, axis=0)
+    std_p = np.std(pop_matrix, axis=0)
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
 
     fig.suptitle(
         f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Runs: {len(results)} total | hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}",
+        f"Runs: {len(results)} total | {_config_title(params)}",
         fontsize=14,
         fontweight="bold",
     )
@@ -495,7 +500,7 @@ def run_experiment(args):
         PROJECT_ROOT,
         "outputs",
         "phase2_survival_minimal",
-        f"{ts}_auto_baseline_calibration"
+        f"{ts}_auto_baseline_calibration",
     )
     os.makedirs(out_dir, exist_ok=True)
 
@@ -517,7 +522,6 @@ def run_experiment(args):
             repeat_results = []
 
             for rep in range(args.repeats):
-                # Repeat seeds are deterministic and reproducible.
                 sweep_run_seed = 42000 + rep
                 res = run_one(params, sweep_run_seed, args.duration, args.tau, args.perceptual_noise)
                 repeat_results.append(res)
@@ -608,7 +612,6 @@ def run_experiment(args):
             args.duration,
             out_dir,
         )
-        
 
         validation_summary = summarize_repeats(results, args.duration)
 
