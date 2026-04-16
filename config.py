@@ -62,6 +62,12 @@ class Config:
     #   Phase 5 sets this to 2; default 8 ~ random placement (current Phase 3/4 behaviour).
     birth_scatter_radius: int = 8
 
+    # Genome weights (used by Phase 2+ survival experiments)
+    # care_weight=0.0 disables CARE motivation; FORAGE/SELF are neutral at 1.0.
+    forage_weight: float = 1.0
+    self_weight: float = 1.0
+    care_weight: float = 0.0
+
     # Phase 6d — Baldwin Instinct Assimilation
     # plasticity_energy_cost: fixed energy deducted per plastic_update call (in addition
     #   to the variable learning_cost * |delta| already applied). Default 0.0 leaves all
