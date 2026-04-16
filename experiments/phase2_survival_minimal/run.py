@@ -3,39 +3,34 @@ experiments/phase2_survival_minimal/run.py
 
 Phase 2 Survival-Minimal Baseline Calibration.
 
-This script runs mother-only survival experiments to select baseline
-environment settings for:
-  - balanced
-  - easy
-  - harsh
+This version uses MotherAgent.choose_motivation() instead of defining
+motivation logic directly inside run.py.
+
+Decision logic:
+  MotherAgent environmental cue × genome weight → softmax motivation
+
+Phase 2:
+  - Mother only
+  - No child
+  - No care
+  - No reproduction
+  - No mutation
+  - No plasticity
+
+Motivation:
+  - FORAGE
+  - SELF
+
+Action:
+  - MOVE
+  - PICK
+  - EAT
+  - REST
 
 Usage:
-  # Full baseline sweep and validation
   python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3
-
-  # Same as above, because sweep is default mode
-  python experiments/phase2_survival_minimal/run.py
-
-  # Quick single-config validation
-  python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --repeats 3
-
-  # Custom stochasticity / perception noise
+  python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --repeats 10
   python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3 --tau 0.1 --perceptual_noise 0.1
-
-Outputs:
-  outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
-    ├── validation_<name>.png
-    ├── action_selection_<name>.png
-    ├── motivation_selection_<name>.png
-    ├── failed_selection_<name>.png
-    ├── stacked_action_failed_<name>.png
-    ├── correlation_failed_self_energy_<name>.png
-    ├── state_space_energy_action_<name>.png
-    ├── food_consumption_rate_<name>.png
-    ├── spatial_heatmap_population_<name>.png
-    ├── energy_expenditure_breakdown_<name>.png
-    ├── validation_<name>.csv
-    └── auto_baseline_summary.json
 """
 
 import sys
@@ -112,36 +107,39 @@ class SurvivalSimulation:
         self.fatigue_history = []
         self.population_history = []
 
-        # Episode-level totals.
         self.action_counts = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
         self.motivation_counts = {"FORAGE": 0, "SELF": 0}
         self.failed_counts = {"FAILED_FORAGE": 0, "FAILED_SELF": 0}
 
-        # Per-tick logs for over-time plots.
         self.action_history = []
         self.motivation_history = []
         self.failed_history = []
         self.food_history = []
         self.energy_flow_history = []
 
-        # Spatial visit map. Shape is [height, width].
-        # We accumulate visits at the end of each tick across all alive mothers.
         self.spatial_heatmap = np.zeros((config.height, config.width), dtype=float)
+
+    # ============================================================
+    # Initialization
+    # ============================================================
 
     def initialize(self):
         food_count = int(self.config.init_food * self.food_mult)
 
         for i in range(self.config.init_mothers):
             x, y = self._random_free_pos()
+
             genome = Genome(
                 care_weight=0.0,
-                forage_weight=0.85,
-                self_weight=0.15,
+                forage_weight=getattr(self.config, "forage_weight", 1.0),
+                self_weight=getattr(self.config, "self_weight", 1.0),
                 learning_rate=0.0,
                 learning_cost=0.0,
             )
+
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
             mother.energy = self.config.initial_energy
+
             self.mothers.append(mother)
             self.world.place_entity(mother)
 
@@ -151,17 +149,22 @@ class SurvivalSimulation:
         for _ in range(200):
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
+
             if self.world.is_free((x, y)):
                 return x, y
+
         return 0, 0
 
     def _spawn_food(self, count):
         spawned = 0
+
         for _ in range(count * 5):
             if spawned >= count:
                 break
+
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
+
             if (x, y) not in self.world.food_positions:
                 self.world.place_food(x, y)
                 spawned += 1
@@ -169,7 +172,42 @@ class SurvivalSimulation:
     def _nearest_food(self, pos):
         if not self.world.food_positions:
             return None
+
         return min(self.world.food_positions, key=lambda f: self.world.get_distance(pos, f))
+
+    def _perceived_nearest_food(self, mother):
+        perception_radius = getattr(self.config, "perception_radius", DEFAULT_PERCEPTION_RADIUS)
+
+        nearest = self._nearest_food(mother.pos)
+        dist_to_food = perception_radius
+
+        if nearest:
+            true_dist = self.world.get_distance(mother.pos, nearest)
+            noisy_dist = max(0.0, true_dist + random.gauss(0.0, self.perceptual_noise))
+
+            if noisy_dist <= perception_radius:
+                dist_to_food = noisy_dist
+            else:
+                nearest = None
+
+        return nearest, dist_to_food
+
+    def _choose_self_action(self, mother):
+        eat_score = 0.0
+        if mother.held_food > 0:
+            eat_score = 1.5 * (1.0 - mother.energy)
+
+        rest_score = 0.8 * mother.fatigue
+
+        if eat_score <= 0.0 and rest_score <= 0.0:
+            return "REST"
+
+        probs = softmax_probs({"EAT": eat_score, "REST": rest_score}, tau=self.tau)
+        return np.random.choice(list(probs.keys()), p=list(probs.values()))
+
+    # ============================================================
+    # Step
+    # ============================================================
 
     def step(self):
         alive_mothers = [m for m in self.mothers if m.alive]
@@ -199,74 +237,33 @@ class SurvivalSimulation:
 
             before_hunger = mother.energy
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
-            hunger_loss = before_hunger - mother.energy
-            tick_energy_flow["hunger_loss"] += hunger_loss
+            tick_energy_flow["hunger_loss"] += before_hunger - mother.energy
 
+            nearest, dist_to_food = self._perceived_nearest_food(mother)
             perception_radius = getattr(self.config, "perception_radius", DEFAULT_PERCEPTION_RADIUS)
 
-            nearest = self._nearest_food(mother.pos)
-            dist_to_food = perception_radius
+            motivation, _, _ = mother.choose_motivation(
+                world=self.world,
+                perception_radius=perception_radius,
+                tau=self.tau,
+                child=None,
+                nearest_food=nearest,
+                distance_to_food=dist_to_food,
+                care_enabled=False,
+            )
 
-            if nearest:
-                true_dist = self.world.get_distance(mother.pos, nearest)
-                noisy_dist = max(0.0, true_dist + random.gauss(0.0, self.perceptual_noise))
+            if motivation not in tick_motivations:
+                motivation = "SELF"
 
-                if noisy_dist <= perception_radius:
-                    dist_to_food = noisy_dist
-                else:
-                    nearest = None
-
-            u_forage = max(0.0, 1.0 - (dist_to_food / perception_radius))
-
-            if mother.pos in self.world.food_positions:
-                u_forage = 1.5
-
-            if mother.held_food > 0:
-                u_forage *= 0.1
-
-            u_eat = 0.0
-            if mother.held_food > 0:
-                u_eat = 1.5 * (1.0 - mother.energy)
-
-            u_rest = 0.8 * mother.fatigue
-
-            scores = {"FORAGE": u_forage, "REST": u_rest, "EAT": u_eat}
-            probs = softmax_probs(scores, tau=self.tau)
-            selection = np.random.choice(list(probs.keys()), p=list(probs.values()))
-
-            if selection == "FORAGE":
-                selected_motivation = "FORAGE"
-                tick_motivations["FORAGE"] += 1
-                self.motivation_counts["FORAGE"] += 1
-            else:
-                selected_motivation = "SELF"
-                tick_motivations["SELF"] += 1
-                self.motivation_counts["SELF"] += 1
+            tick_motivations[motivation] += 1
+            self.motivation_counts[motivation] += 1
 
             executed_action = None
 
-            if selection == "EAT" and mother.held_food > 0:
-                before_eat = mother.energy
-                variance = random.uniform(0.8, 1.2)
-                mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
-                mother.held_food -= 1
-
-                eat_gain = mother.energy - before_eat
-                tick_energy_flow["eat_gain"] += eat_gain
-
-                self.action_counts["EAT"] += 1
-                tick_actions["EAT"] += 1
-                tick_food["EAT"] += 1
-                executed_action = "EAT"
-
-            elif selection == "REST":
-                mother.fatigue = max(0.0, mother.fatigue - self.config.rest_recovery)
-
-                self.action_counts["REST"] += 1
-                tick_actions["REST"] += 1
-                executed_action = "REST"
-
-            elif selection == "FORAGE":
+            # -------------------------
+            # FORAGE motivation
+            # -------------------------
+            if motivation == "FORAGE":
                 if mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
                     mother.held_food += 1
@@ -274,29 +271,63 @@ class SurvivalSimulation:
                     self.action_counts["PICK"] += 1
                     tick_actions["PICK"] += 1
                     tick_food["PICK"] += 1
+
                     executed_action = "PICK"
 
                 elif nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
+
                     if self.world.update_position(mother, new_pos):
                         before_move = mother.energy
                         mother.energy = max(0.0, mother.energy - self.config.move_cost)
-                        move_loss = before_move - mother.energy
-                        tick_energy_flow["move_loss"] += move_loss
+
+                        tick_energy_flow["move_loss"] += before_move - mother.energy
 
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
 
                         self.action_counts["MOVE"] += 1
                         tick_actions["MOVE"] += 1
+
                         executed_action = "MOVE"
 
-            if executed_action is None:
-                if selected_motivation == "FORAGE":
-                    tick_failed["FAILED_FORAGE"] += 1
-                    self.failed_counts["FAILED_FORAGE"] += 1
+            # -------------------------
+            # SELF motivation
+            # -------------------------
+            elif motivation == "SELF":
+                action = self._choose_self_action(mother)
+
+                if action == "EAT" and mother.held_food > 0:
+                    before_eat = mother.energy
+
+                    variance = random.uniform(0.8, 1.2)
+                    mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
+                    mother.held_food -= 1
+
+                    tick_energy_flow["eat_gain"] += mother.energy - before_eat
+
+                    self.action_counts["EAT"] += 1
+                    tick_actions["EAT"] += 1
+                    tick_food["EAT"] += 1
+
+                    executed_action = "EAT"
+
                 else:
-                    tick_failed["FAILED_SELF"] += 1
-                    self.failed_counts["FAILED_SELF"] += 1
+                    mother.fatigue = max(0.0, mother.fatigue - self.config.rest_recovery)
+
+                    self.action_counts["REST"] += 1
+                    tick_actions["REST"] += 1
+
+                    executed_action = "REST"
+
+            # -------------------------
+            # Failed realization
+            # -------------------------
+            if executed_action is None:
+                failed_key = f"FAILED_{motivation}"
+
+                if failed_key in tick_failed:
+                    tick_failed[failed_key] += 1
+                    self.failed_counts[failed_key] += 1
 
             if mother.energy <= 0:
                 mother.die()
@@ -305,6 +336,7 @@ class SurvivalSimulation:
             tick_energy_flow["net_energy_change"] += mother.energy - energy_before_agent
 
         target = int(self.config.init_food * self.food_mult)
+
         if len(self.world.food_positions) < max(1, target // 3):
             self._spawn_food(3)
 
@@ -337,12 +369,17 @@ class SurvivalSimulation:
         self.food_history.append(tick_food)
         self.energy_flow_history.append(tick_energy_flow)
 
+    # ============================================================
+    # Run
+    # ============================================================
+
     def run(self):
         self.initialize()
 
         for t in range(self.config.max_ticks):
             self.tick = t
             self.step()
+
             if not any(m.alive for m in self.mothers):
                 break
 
@@ -369,8 +406,13 @@ class SurvivalSimulation:
         }
 
 
+# ============================================================
+# Experiment utilities
+# ============================================================
+
 def make_config(params, duration):
     cfg = Config()
+
     cfg.max_ticks = duration
     cfg.init_mothers = INIT_MOTHERS
     cfg.initial_energy = INITIAL_ENERGY
@@ -382,8 +424,16 @@ def make_config(params, duration):
     cfg.init_food = params["init_food"]
     cfg.rest_recovery = params["rest_recovery"]
 
-    # Used when FORAGE movement increases fatigue.
     cfg.fatigue_rate = params.get("fatigue_rate", getattr(cfg, "fatigue_rate", 0.01))
+
+    cfg.forage_weight = params.get("forage_weight", 1.0)
+    cfg.self_weight = params.get("self_weight", 1.0)
+    cfg.care_weight = 0.0
+
+    cfg.children_enabled = False
+    cfg.care_enabled = False
+    cfg.plasticity_enabled = False
+    cfg.reproduction_enabled = False
 
     return cfg
 
@@ -420,6 +470,10 @@ def validate_params(params, args):
 
     return results, labels, summarize_repeats(results, args.duration)
 
+
+# ============================================================
+# Selection rules
+# ============================================================
 
 def is_valid_condition(name, result):
     if name == "balanced":
@@ -629,6 +683,10 @@ def select_condition_by_validation(name, sweep_records, args):
     return best_fallback, checked
 
 
+# ============================================================
+# Output helpers
+# ============================================================
+
 def build_validation_summary(results):
     return [
         {
@@ -704,7 +762,7 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             out_dir=out_dir,
             window=PLOT_SMOOTH_WINDOW,
         )
-        
+
         plot_failed_forage_energy_correlation(
             name=name,
             results=results,
@@ -744,7 +802,7 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             results=results,
             out_dir=out_dir,
         )
-        
+
     if ENABLE_HOMEOSTATIC_BALANCE_PLOT:
         plot_homeostatic_balance(
             name=name,
@@ -754,6 +812,10 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             window=PLOT_SMOOTH_WINDOW,
         )
 
+
+# ============================================================
+# Main experiment
+# ============================================================
 
 def run_experiment(args):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -799,9 +861,6 @@ def run_experiment(args):
         save_summary_json(summary, out_dir)
 
         print(f"\nDone. Outputs saved to: {out_dir}")
-        print("Generated logs:")
-        print("  - validation_single.csv")
-        print("  - auto_baseline_summary.json")
         return
 
     configs = candidate_configs(mode="sweep")
@@ -903,11 +962,6 @@ def run_experiment(args):
     save_summary_json(summary, out_dir)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
-    print("Generated logs:")
-    print("  - validation_balanced.csv")
-    print("  - validation_easy.csv")
-    print("  - validation_harsh.csv")
-    print("  - auto_baseline_summary.json")
 
 
 if __name__ == "__main__":
