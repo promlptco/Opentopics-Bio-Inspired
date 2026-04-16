@@ -24,18 +24,17 @@ Usage:
 
 Outputs:
   outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
-    ├── validation_balanced.png
-    ├── validation_easy.png
-    ├── validation_harsh.png
-    ├── validation_balanced.csv
-    ├── validation_easy.csv
-    ├── validation_harsh.csv
-    └── auto_baseline_summary.json
-
-Single mode outputs:
-  outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
-    ├── validation_single.png
-    ├── validation_single.csv
+    ├── validation_<name>.png
+    ├── action_selection_<name>.png
+    ├── motivation_selection_<name>.png
+    ├── failed_selection_<name>.png
+    ├── stacked_action_failed_<name>.png
+    ├── correlation_failed_self_energy_<name>.png
+    ├── state_space_energy_action_<name>.png
+    ├── food_consumption_rate_<name>.png
+    ├── spatial_heatmap_population_<name>.png
+    ├── energy_expenditure_breakdown_<name>.png
+    ├── validation_<name>.csv
     └── auto_baseline_summary.json
 """
 
@@ -50,7 +49,6 @@ import numpy as np
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from agents import mother
 from config import Config
 from simulation.world import GridWorld
 from agents.mother import MotherAgent, softmax_probs
@@ -64,6 +62,16 @@ from experiments.phase2_survival_minimal.config import (
     DEFAULT_SWEEP_SEED_BASE,
     DEFAULT_PERCEPTION_RADIUS,
     SELECTION_TARGETS,
+    PLOT_SMOOTH_WINDOW,
+    ENABLE_ACTION_SELECTION_PLOT,
+    ENABLE_MOTIVATION_SELECTION_PLOT,
+    ENABLE_FAILED_SELECTION_PLOT,
+    ENABLE_STACKED_ACTION_FAILED_PLOT,
+    ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT,
+    ENABLE_STATE_SPACE_ENERGY_ACTION_PLOT,
+    ENABLE_FOOD_CONSUMPTION_PLOT,
+    ENABLE_SPATIAL_HEATMAP_PLOT,
+    ENABLE_ENERGY_EXPENDITURE_PLOT,
     candidate_configs,
 )
 
@@ -73,6 +81,14 @@ from experiments.phase2_survival_minimal.plot import (
     plot_multiseed_condition,
     plot_action_selection_over_time,
     plot_motivation_selection_over_time,
+    plot_failed_selection_over_time,
+    plot_stacked_action_failed_over_time,
+    plot_failed_self_energy_correlation,
+    plot_failed_forage_energy_correlation,
+    plot_state_space_energy_action,
+    plot_food_consumption_over_time,
+    plot_spatial_heatmap_population,
+    plot_energy_expenditure_breakdown,
     print_validation_runs,
     save_summary_json,
     save_validation_csv,
@@ -85,17 +101,29 @@ class SurvivalSimulation:
         self.tau = tau
         self.food_mult = food_mult
         self.perceptual_noise = perceptual_noise
+
         self.world = GridWorld(config.width, config.height)
         self.mothers = []
         self.tick = 0
+
         self.energy_history = []
         self.population_history = []
+
+        # Episode-level totals.
         self.action_counts = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
         self.motivation_counts = {"FORAGE": 0, "SELF": 0}
+        self.failed_counts = {"FAILED_FORAGE": 0, "FAILED_SELF": 0}
 
         # Per-tick logs for over-time plots.
         self.action_history = []
         self.motivation_history = []
+        self.failed_history = []
+        self.food_history = []
+        self.energy_flow_history = []
+
+        # Spatial visit map. Shape is [height, width].
+        # We accumulate visits at the end of each tick across all alive mothers.
+        self.spatial_heatmap = np.zeros((config.height, config.width), dtype=float)
 
     def initialize(self):
         food_count = int(self.config.init_food * self.food_mult)
@@ -146,10 +174,30 @@ class SurvivalSimulation:
 
         tick_actions = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
         tick_motivations = {"FORAGE": 0, "SELF": 0}
+        tick_failed = {"FAILED_FORAGE": 0, "FAILED_SELF": 0}
+
+        tick_food = {
+            "PICK": 0,
+            "EAT": 0,
+            "food_available": len(self.world.food_positions),
+        }
+
+        tick_energy_flow = {
+            "hunger_loss": 0.0,
+            "move_loss": 0.0,
+            "eat_gain": 0.0,
+            "net_energy_change": 0.0,
+        }
 
         for mother in alive_mothers:
+            energy_before_agent = mother.energy
+
             mother.tick_age()
+
+            before_hunger = mother.energy
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
+            hunger_loss = before_hunger - mother.energy
+            tick_energy_flow["hunger_loss"] += hunger_loss
 
             perception_radius = getattr(self.config, "perception_radius", DEFAULT_PERCEPTION_RADIUS)
 
@@ -182,42 +230,76 @@ class SurvivalSimulation:
             scores = {"FORAGE": u_forage, "REST": u_rest, "EAT": u_eat}
             probs = softmax_probs(scores, tau=self.tau)
             selection = np.random.choice(list(probs.keys()), p=list(probs.values()))
+
             if selection == "FORAGE":
+                selected_motivation = "FORAGE"
                 tick_motivations["FORAGE"] += 1
                 self.motivation_counts["FORAGE"] += 1
             else:
+                selected_motivation = "SELF"
                 tick_motivations["SELF"] += 1
                 self.motivation_counts["SELF"] += 1
 
+            executed_action = None
+
             if selection == "EAT" and mother.held_food > 0:
+                before_eat = mother.energy
                 variance = random.uniform(0.8, 1.2)
                 mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
                 mother.held_food -= 1
+
+                eat_gain = mother.energy - before_eat
+                tick_energy_flow["eat_gain"] += eat_gain
+
                 self.action_counts["EAT"] += 1
                 tick_actions["EAT"] += 1
+                tick_food["EAT"] += 1
+                executed_action = "EAT"
 
             elif selection == "REST":
                 mother.fatigue = max(0.0, mother.fatigue - self.config.rest_recovery)
+
                 self.action_counts["REST"] += 1
                 tick_actions["REST"] += 1
+                executed_action = "REST"
 
             elif selection == "FORAGE":
                 if mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
                     mother.held_food += 1
+
                     self.action_counts["PICK"] += 1
                     tick_actions["PICK"] += 1
+                    tick_food["PICK"] += 1
+                    executed_action = "PICK"
+
                 elif nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
+                        before_move = mother.energy
                         mother.energy = max(0.0, mother.energy - self.config.move_cost)
+                        move_loss = before_move - mother.energy
+                        tick_energy_flow["move_loss"] += move_loss
+
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+
                         self.action_counts["MOVE"] += 1
                         tick_actions["MOVE"] += 1
+                        executed_action = "MOVE"
+
+            if executed_action is None:
+                if selected_motivation == "FORAGE":
+                    tick_failed["FAILED_FORAGE"] += 1
+                    self.failed_counts["FAILED_FORAGE"] += 1
+                else:
+                    tick_failed["FAILED_SELF"] += 1
+                    self.failed_counts["FAILED_SELF"] += 1
 
             if mother.energy <= 0:
                 mother.die()
                 self.world.remove_entity(mother.id)
+
+            tick_energy_flow["net_energy_change"] += mother.energy - energy_before_agent
 
         target = int(self.config.init_food * self.food_mult)
         if len(self.world.food_positions) < max(1, target // 3):
@@ -229,11 +311,25 @@ class SurvivalSimulation:
         avg_energy = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
         self.energy_history.append(avg_energy)
 
-        tick_actions["alive"] = len(alive_now)
-        tick_motivations["alive"] = len(alive_now)
+        for mother in alive_now:
+            x, y = mother.pos
+            if 0 <= x < self.config.width and 0 <= y < self.config.height:
+                self.spatial_heatmap[y, x] += 1.0
+
+        alive_count = len(alive_now)
+
+        tick_actions["alive"] = alive_count
+        tick_motivations["alive"] = alive_count
+        tick_failed["alive"] = alive_count
+        tick_food["alive"] = alive_count
+        tick_food["food_available"] = len(self.world.food_positions)
+        tick_energy_flow["alive"] = alive_count
 
         self.action_history.append(tick_actions)
         self.motivation_history.append(tick_motivations)
+        self.failed_history.append(tick_failed)
+        self.food_history.append(tick_food)
+        self.energy_flow_history.append(tick_energy_flow)
 
     def run(self):
         self.initialize()
@@ -256,8 +352,13 @@ class SurvivalSimulation:
             "population_history": self.population_history,
             "actions": self.action_counts,
             "motivations": self.motivation_counts,
+            "failed": self.failed_counts,
             "action_history": self.action_history,
             "motivation_history": self.motivation_history,
+            "failed_history": self.failed_history,
+            "food_history": self.food_history,
+            "energy_flow_history": self.energy_flow_history,
+            "spatial_heatmap": self.spatial_heatmap,
         }
 
 
@@ -320,8 +421,8 @@ def is_valid_condition(name, result):
             result["final_pop"] >= t["min_final_pop"]
             and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
             and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
-            and abs(safe(result["tail_energy_slope"])) <= t["max_abs_energy_slope"]
-            and abs(safe(result["tail_pop_slope"])) <= t["max_abs_pop_slope"]
+            and abs(safe(result.get("tail_energy_slope", 0.0))) <= t.get("max_abs_energy_slope", float("inf"))
+            and abs(safe(result.get("tail_pop_slope", 0.0))) <= t.get("max_abs_pop_slope", float("inf"))
         )
 
     if name == "easy":
@@ -532,9 +633,110 @@ def build_validation_summary(results):
             "final_energy": r["final_energy"],
             "actions": r.get("actions", {}),
             "motivations": r.get("motivations", {}),
+            "failed": r.get("failed", {}),
         }
         for r in results
     ]
+
+
+def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
+    plot_multiseed_condition(
+        name=name,
+        results=results,
+        params=params,
+        run_labels=labels,
+        duration=args.duration,
+        out_dir=out_dir,
+    )
+
+    if ENABLE_ACTION_SELECTION_PLOT:
+        plot_action_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+            as_rate=True,
+        )
+
+    if ENABLE_MOTIVATION_SELECTION_PLOT:
+        plot_motivation_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+            as_rate=True,
+        )
+
+    if ENABLE_FAILED_SELECTION_PLOT:
+        plot_failed_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+            as_rate=True,
+        )
+
+    if ENABLE_STACKED_ACTION_FAILED_PLOT:
+        plot_stacked_action_failed_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+            as_rate=True,
+        )
+
+    if ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT:
+        plot_failed_self_energy_correlation(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+        )
+        
+        plot_failed_forage_energy_correlation(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+        )
+
+    if ENABLE_STATE_SPACE_ENERGY_ACTION_PLOT:
+        plot_state_space_energy_action(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+        )
+
+    if ENABLE_FOOD_CONSUMPTION_PLOT:
+        plot_food_consumption_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
+        )
+
+    if ENABLE_SPATIAL_HEATMAP_PLOT:
+        plot_spatial_heatmap_population(
+            name=name,
+            results=results,
+            out_dir=out_dir,
+        )
+
+    if ENABLE_ENERGY_EXPENDITURE_PLOT:
+        plot_energy_expenditure_breakdown(
+            name=name,
+            results=results,
+            out_dir=out_dir,
+        )
 
 
 def run_experiment(args):
@@ -558,31 +760,13 @@ def run_experiment(args):
         params = candidate_configs(mode="single")[0]
         results, labels, val_summary = validate_params(params, args)
 
-        plot_multiseed_condition(
+        generate_diagnostic_plots(
             name=name,
             results=results,
             params=params,
-            run_labels=labels,
-            duration=args.duration,
+            labels=labels,
+            args=args,
             out_dir=out_dir,
-        )
-
-        plot_action_selection_over_time(
-            name=name,
-            results=results,
-            duration=args.duration,
-            out_dir=out_dir,
-            window=25,
-            as_rate=True,
-        )
-
-        plot_motivation_selection_over_time(
-            name=name,
-            results=results,
-            duration=args.duration,
-            out_dir=out_dir,
-            window=25,
-            as_rate=True,
         )
 
         save_validation_csv(name, results, out_dir)
@@ -599,8 +783,6 @@ def run_experiment(args):
         save_summary_json(summary, out_dir)
 
         print(f"\nDone. Outputs saved to: {out_dir}")
-        print("Generated plots:")
-        print("  - validation_single.png")
         print("Generated logs:")
         print("  - validation_single.csv")
         print("  - auto_baseline_summary.json")
@@ -670,31 +852,13 @@ def run_experiment(args):
 
         print_validation_runs(name, results)
 
-        plot_multiseed_condition(
+        generate_diagnostic_plots(
             name=name,
             results=results,
             params=params,
-            run_labels=labels,
-            duration=args.duration,
+            labels=labels,
+            args=args,
             out_dir=out_dir,
-        )
-
-        plot_action_selection_over_time(
-            name=name,
-            results=results,
-            duration=args.duration,
-            out_dir=out_dir,
-            window=25,
-            as_rate=True,
-        )
-
-        plot_motivation_selection_over_time(
-            name=name,
-            results=results,
-            duration=args.duration,
-            out_dir=out_dir,
-            window=25,
-            as_rate=True,
         )
 
         save_validation_csv(name, results, out_dir)
@@ -723,10 +887,6 @@ def run_experiment(args):
     save_summary_json(summary, out_dir)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
-    print("Generated plots:")
-    print("  - validation_balanced.png")
-    print("  - validation_easy.png")
-    print("  - validation_harsh.png")
     print("Generated logs:")
     print("  - validation_balanced.csv")
     print("  - validation_easy.csv")
