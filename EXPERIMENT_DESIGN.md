@@ -164,7 +164,7 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 ### Phase 3 · Survival Full
 
 **Purpose:** Two goals:
-1. Find a reliable set of motivation weights (care / forage / self) under which mother + infant both survive, with child energy not collapsing.
+1. Find a reliable set of motivation weights (care / forage / self) under which mother + child both survive, with child energy not collapsing.
 2. Characterize what care looks like behaviorally — what action sequences does a caring mother execute?
 
 This phase defines the "functioning care" reference state used to interpret all subsequent phases.
@@ -184,8 +184,10 @@ This phase defines the "functioning care" reference state used to interpret all 
 - Per combination, run 1,000 ticks and record:
   - Mother survival rate
   - Child survival rate
-  - Child energy trajectory (must not trend toward 0)
-  - Care event count
+  - Mother energy trajectory
+  - Child energy trajectory
+  - Motivation selected event count
+  - 
 
 **Selection criteria for canonical genome:**
 - Both mother AND infant survive to tick 1,000.

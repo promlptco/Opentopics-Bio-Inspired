@@ -50,6 +50,7 @@ import numpy as np
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
+from agents import mother
 from config import Config
 from simulation.world import GridWorld
 from agents.mother import MotherAgent, softmax_probs
@@ -70,6 +71,8 @@ from experiments.phase2_survival_minimal.plot import (
     safe,
     summarize_repeats,
     plot_multiseed_condition,
+    plot_action_selection_over_time,
+    plot_motivation_selection_over_time,
     print_validation_runs,
     save_summary_json,
     save_validation_csv,
@@ -87,7 +90,12 @@ class SurvivalSimulation:
         self.tick = 0
         self.energy_history = []
         self.population_history = []
-        self.action_counts = {"MOVE": 0, "EAT": 0, "REST": 0, "PICK": 0}
+        self.action_counts = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
+        self.motivation_counts = {"FORAGE": 0, "SELF": 0}
+
+        # Per-tick logs for over-time plots.
+        self.action_history = []
+        self.motivation_history = []
 
     def initialize(self):
         food_count = int(self.config.init_food * self.food_mult)
@@ -136,6 +144,9 @@ class SurvivalSimulation:
         alive_mothers = [m for m in self.mothers if m.alive]
         random.shuffle(alive_mothers)
 
+        tick_actions = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
+        tick_motivations = {"FORAGE": 0, "SELF": 0}
+
         for mother in alive_mothers:
             mother.tick_age()
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
@@ -171,28 +182,38 @@ class SurvivalSimulation:
             scores = {"FORAGE": u_forage, "REST": u_rest, "EAT": u_eat}
             probs = softmax_probs(scores, tau=self.tau)
             selection = np.random.choice(list(probs.keys()), p=list(probs.values()))
+            if selection == "FORAGE":
+                tick_motivations["FORAGE"] += 1
+                self.motivation_counts["FORAGE"] += 1
+            else:
+                tick_motivations["SELF"] += 1
+                self.motivation_counts["SELF"] += 1
 
             if selection == "EAT" and mother.held_food > 0:
                 variance = random.uniform(0.8, 1.2)
                 mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
                 mother.held_food -= 1
                 self.action_counts["EAT"] += 1
+                tick_actions["EAT"] += 1
 
             elif selection == "REST":
                 mother.fatigue = max(0.0, mother.fatigue - self.config.rest_recovery)
                 self.action_counts["REST"] += 1
+                tick_actions["REST"] += 1
 
             elif selection == "FORAGE":
                 if mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
                     mother.held_food += 1
                     self.action_counts["PICK"] += 1
+                    tick_actions["PICK"] += 1
                 elif nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
                         mother.energy = max(0.0, mother.energy - self.config.move_cost)
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
                         self.action_counts["MOVE"] += 1
+                        tick_actions["MOVE"] += 1
 
             if mother.energy <= 0:
                 mother.die()
@@ -207,6 +228,12 @@ class SurvivalSimulation:
 
         avg_energy = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
         self.energy_history.append(avg_energy)
+
+        tick_actions["alive"] = len(alive_now)
+        tick_motivations["alive"] = len(alive_now)
+
+        self.action_history.append(tick_actions)
+        self.motivation_history.append(tick_motivations)
 
     def run(self):
         self.initialize()
@@ -228,6 +255,9 @@ class SurvivalSimulation:
             "energy_history": self.energy_history,
             "population_history": self.population_history,
             "actions": self.action_counts,
+            "motivations": self.motivation_counts,
+            "action_history": self.action_history,
+            "motivation_history": self.motivation_history,
         }
 
 
@@ -500,6 +530,8 @@ def build_validation_summary(results):
             "final_pop": r["final_pop"],
             "mean_energy": r["mean_energy"],
             "final_energy": r["final_energy"],
+            "actions": r.get("actions", {}),
+            "motivations": r.get("motivations", {}),
         }
         for r in results
     ]
@@ -534,6 +566,25 @@ def run_experiment(args):
             duration=args.duration,
             out_dir=out_dir,
         )
+
+        plot_action_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=25,
+            as_rate=True,
+        )
+
+        plot_motivation_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=25,
+            as_rate=True,
+        )
+
         save_validation_csv(name, results, out_dir)
 
         summary = {
@@ -627,6 +678,25 @@ def run_experiment(args):
             duration=args.duration,
             out_dir=out_dir,
         )
+
+        plot_action_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=25,
+            as_rate=True,
+        )
+
+        plot_motivation_selection_over_time(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=25,
+            as_rate=True,
+        )
+
         save_validation_csv(name, results, out_dir)
 
         summary[name] = {

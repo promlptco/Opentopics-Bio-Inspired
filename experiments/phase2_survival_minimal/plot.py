@@ -179,11 +179,20 @@ def save_validation_csv(name, results, out_dir):
                 "final_pop",
                 "mean_energy",
                 "final_energy",
+                "MOVE",
+                "PICK",
+                "EAT",
+                "REST",
+                "FORAGE",
+                "SELF",
             ],
         )
         writer.writeheader()
 
         for r in results:
+            actions = r.get("actions", {})
+            motivations = r.get("motivations", {})
+
             writer.writerow(
                 {
                     "seed": r["base_seed"],
@@ -192,5 +201,166 @@ def save_validation_csv(name, results, out_dir):
                     "final_pop": r["final_pop"],
                     "mean_energy": r["mean_energy"],
                     "final_energy": r["final_energy"],
+                    "MOVE": actions.get("MOVE", 0),
+                    "PICK": actions.get("PICK", 0),
+                    "EAT": actions.get("EAT", 0),
+                    "REST": actions.get("REST", 0),
+                    "FORAGE": motivations.get("FORAGE", 0),
+                    "SELF": motivations.get("SELF", 0),
                 }
             )
+            
+def pad_event_history(history, duration, keys):
+    """
+    Convert per-tick event history into fixed-length arrays.
+
+    Example row:
+      {
+        "MOVE": 3,
+        "PICK": 1,
+        "EAT": 5,
+        "REST": 2,
+        "alive": 15,
+      }
+    """
+    arrays = {key: np.zeros(duration, dtype=float) for key in keys}
+    alive = np.zeros(duration, dtype=float)
+
+    for t, row in enumerate(history[:duration]):
+        for key in keys:
+            arrays[key][t] = row.get(key, 0)
+        alive[t] = row.get("alive", 0)
+
+    return arrays, alive
+
+
+def smooth_series(y, window=25):
+    if window <= 1:
+        return y
+
+    kernel = np.ones(window, dtype=float) / window
+    return np.convolve(y, kernel, mode="same")
+
+
+def plot_event_selection_over_time(
+    name,
+    results,
+    duration,
+    out_dir,
+    history_key,
+    event_keys,
+    filename_prefix,
+    title_prefix,
+    window=25,
+    as_rate=True,
+):
+    """
+    Generic over-time plot for action or motivation selection.
+
+    as_rate=True:
+        y = count / alive mothers
+        recommended because population may decrease over time.
+    """
+    per_event_runs = {key: [] for key in event_keys}
+
+    for r in results:
+        history = r.get(history_key, [])
+        arrays, alive = pad_event_history(history, duration, event_keys)
+
+        for key in event_keys:
+            y = arrays[key]
+
+            if as_rate:
+                y = np.divide(
+                    y,
+                    alive,
+                    out=np.zeros_like(y, dtype=float),
+                    where=alive > 0,
+                )
+
+            y = smooth_series(y, window=window)
+            per_event_runs[key].append(y)
+
+    ticks = np.arange(duration)
+
+    fig, ax = plt.subplots(figsize=(13, 5))
+
+    for key in event_keys:
+        matrix = np.asarray(per_event_runs[key], dtype=float)
+
+        if matrix.size == 0:
+            continue
+
+        mean_y = np.mean(matrix, axis=0)
+        std_y = np.std(matrix, axis=0)
+
+        ax.plot(ticks, mean_y, linewidth=2.0, label=key)
+        ax.fill_between(ticks, mean_y - std_y, mean_y + std_y, alpha=0.10)
+
+    ylabel = "Selection rate per alive mother" if as_rate else "Selection count per tick"
+
+    ax.set_title(
+        f"{title_prefix} Over Time — {name.upper()}\n"
+        f"Mean ± SD across runs | smoothing window = {window} ticks",
+        fontsize=13,
+        fontweight="bold",
+    )
+    ax.set_xlabel("Tick")
+    ax.set_ylabel(ylabel)
+    ax.grid(True, linestyle="--", alpha=0.25)
+    ax.legend(loc="upper right", fontsize=8)
+
+    if as_rate:
+        ax.set_ylim(-0.05, 1.05)
+
+    plt.tight_layout()
+
+    out_path = os.path.join(out_dir, f"{filename_prefix}_{name}.png")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved {title_prefix.lower()} plot → {out_path}")
+
+
+def plot_action_selection_over_time(
+    name,
+    results,
+    duration,
+    out_dir,
+    window=25,
+    as_rate=True,
+):
+    plot_event_selection_over_time(
+        name=name,
+        results=results,
+        duration=duration,
+        out_dir=out_dir,
+        history_key="action_history",
+        event_keys=["MOVE", "PICK", "EAT", "REST"],
+        filename_prefix="action_selection",
+        title_prefix="Action Selection",
+        window=window,
+        as_rate=as_rate,
+    )
+
+
+def plot_motivation_selection_over_time(
+    name,
+    results,
+    duration,
+    out_dir,
+    window=25,
+    as_rate=True,
+):
+    plot_event_selection_over_time(
+        name=name,
+        results=results,
+        duration=duration,
+        out_dir=out_dir,
+        history_key="motivation_history",
+        event_keys=["FORAGE", "SELF"],
+        filename_prefix="motivation_selection",
+        title_prefix="Motivation Selection",
+        window=window,
+        as_rate=as_rate,
+    )
