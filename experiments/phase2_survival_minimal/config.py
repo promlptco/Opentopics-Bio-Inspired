@@ -246,7 +246,7 @@ def candidate_configs(mode="sweep"):
                 "hunger_rate": 0.0045,
                 "move_cost": 0.0005,
                 "eat_gain": 0.08,
-                "init_food": 35,
+                "init_food": 38,
                 "rest_recovery": 0.005,
                 **BASELINE_GENOME_WEIGHTS,
                 "name": "single_test",
@@ -257,19 +257,16 @@ def candidate_configs(mode="sweep"):
         "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
 
         # Fixed from rough sensitivity sweep.
-        "hunger_rate": [0.005],
-        "move_cost": [0.001],
-        "eat_gain": [0.07],
+        "hunger_rate": [0.0045],
+        "move_cost": [0.0005],
+        "eat_gain": [0.08],
 
         # Main ecological pressure parameters for baseline selection.
         "init_food": [
-            20, 25, 30, 35, 40, 43, 45, 48,
-            50, 53, 55, 60, 65, 70, 75, 80,
+            35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60,
         ],
         "rest_recovery": [
-            0.005, 0.01, 0.015, 0.02, 0.025,
-            0.03, 0.035, 0.04, 0.045, 0.05,
-            0.06, 0.08, 0.10, 0.15,
+            0.005,
         ],
 
         # Fixed neutral genome weights for Phase 2.

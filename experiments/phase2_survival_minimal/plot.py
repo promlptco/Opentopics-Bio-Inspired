@@ -546,6 +546,7 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
         energy = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
         energy_delta = np.diff(energy, prepend=energy[0])
 
+        # Positive value means stronger energy drop.
         energy_drop = np.maximum(0.0, -energy_delta)
         energy_drop = smooth_series(energy_drop, window=window)
 
@@ -555,20 +556,63 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
     xs = np.asarray(xs, dtype=float)
     ys = np.asarray(ys, dtype=float)
 
-    if len(xs) > 1 and np.std(xs) > 0 and np.std(ys) > 0:
+    # Remove invalid samples before correlation and linear fit.
+    valid_mask = np.isfinite(xs) & np.isfinite(ys)
+    xs = xs[valid_mask]
+    ys = ys[valid_mask]
+
+    # Default values if the data is degenerate.
+    corr = 0.0
+    can_fit = (
+        len(xs) >= 3
+        and np.std(xs) > 1e-12
+        and np.std(ys) > 1e-12
+        and np.all(np.isfinite(xs))
+        and np.all(np.isfinite(ys))
+    )
+
+    if can_fit:
         corr = float(np.corrcoef(xs, ys)[0, 1])
-    else:
-        corr = 0.0
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.scatter(xs, ys, alpha=0.08, s=10, color="steelblue", label="Tick samples")
+    if len(xs) > 0:
+        ax.scatter(xs, ys, alpha=0.08, s=10, color="steelblue", label="Tick samples")
 
-    if len(xs) > 1:
-        coef = np.polyfit(xs, ys, 1)
-        xfit = np.linspace(float(np.min(xs)), float(np.max(xs)), 100)
-        yfit = coef[0] * xfit + coef[1]
-        ax.plot(xfit, yfit, color="tab:red", linewidth=2.0, label="Linear fit")
+    # Linear fit only when data is numerically valid.
+    if can_fit:
+        try:
+            coef = np.polyfit(xs, ys, 1)
+            xfit = np.linspace(float(np.min(xs)), float(np.max(xs)), 100)
+            yfit = coef[0] * xfit + coef[1]
+
+            ax.plot(
+                xfit,
+                yfit,
+                color="tab:red",
+                linewidth=2.0,
+                label="Linear fit",
+            )
+        except np.linalg.LinAlgError:
+            ax.text(
+                0.02,
+                0.95,
+                "Linear fit skipped: SVD did not converge",
+                transform=ax.transAxes,
+                fontsize=9,
+                va="top",
+                bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+            )
+    else:
+        ax.text(
+            0.02,
+            0.95,
+            "Linear fit skipped: insufficient variance or invalid samples",
+            transform=ax.transAxes,
+            fontsize=9,
+            va="top",
+            bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+        )
 
     fig.suptitle(
         f"{failed_key} vs Energy Decay — {name.upper()}\n"
@@ -580,6 +624,7 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
     ax.set_title("Correlation Diagnostic")
     ax.set_xlabel(f"{failed_key} rate per alive mother")
     ax.set_ylabel("Energy drop per tick")
+
     style_axes(ax)
     ax.legend(loc="upper right", fontsize=8, framealpha=0.88)
 
@@ -588,9 +633,28 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
 
     csv_path = os.path.join(out_dir, f"{metric_name}_{name}.csv")
     with open(csv_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["metric", "value"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "metric",
+                "value",
+                "num_valid_samples",
+                "x_std",
+                "y_std",
+                "linear_fit_used",
+            ],
+        )
         writer.writeheader()
-        writer.writerow({"metric": metric_name, "value": corr})
+        writer.writerow(
+            {
+                "metric": metric_name,
+                "value": corr,
+                "num_valid_samples": len(xs),
+                "x_std": float(np.std(xs)) if len(xs) > 0 else 0.0,
+                "y_std": float(np.std(ys)) if len(ys) > 0 else 0.0,
+                "linear_fit_used": bool(can_fit),
+            }
+        )
 
 
 def plot_failed_self_energy_correlation(name, results, duration, out_dir, window=25):

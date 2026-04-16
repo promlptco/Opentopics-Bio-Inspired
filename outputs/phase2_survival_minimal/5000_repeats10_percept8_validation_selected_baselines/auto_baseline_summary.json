@@ -1,0 +1,1129 @@
+{
+  "single": {
+    "selected_config": {
+      "perception_radius": 8.0,
+      "hunger_rate": 0.0045,
+      "move_cost": 0.0005,
+      "eat_gain": 0.08,
+      "init_food": 35,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "single_test"
+    },
+    "selection_status": "single_mode",
+    "validation_summary": {
+      "final_pop": 2.68,
+      "final_pop_sd": 3.7865023438524372,
+      "mean_energy": 0.7559655541566715,
+      "final_energy": 0.2628697851752645,
+      "tail_mean_energy": 0.2857970199330056,
+      "tail_energy_sd": 0.3700427122969781,
+      "tail_energy_slope": -0.00017898417915480875,
+      "tail_pop_slope": -0.0019423235580889628
+    },
+    "validation_runs": [
+      {
+        "seed": 42,
+        "repeat": 1,
+        "run_seed": 42000,
+        "final_pop": 0,
+        "mean_energy": 0.762071389588901,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 13944,
+          "PICK": 2829,
+          "EAT": 2828,
+          "REST": 28738
+        },
+        "motivations": {
+          "FORAGE": 18178,
+          "SELF": 31566
+        },
+        "failed": {
+          "FAILED_FORAGE": 1405,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 2,
+        "run_seed": 42001,
+        "final_pop": 0,
+        "mean_energy": 0.7302939773390316,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 8128,
+          "PICK": 1689,
+          "EAT": 1689,
+          "REST": 17525
+        },
+        "motivations": {
+          "FORAGE": 11043,
+          "SELF": 19214
+        },
+        "failed": {
+          "FAILED_FORAGE": 1226,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 3,
+        "run_seed": 42002,
+        "final_pop": 0,
+        "mean_energy": 0.7122973218455408,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 7978,
+          "PICK": 1563,
+          "EAT": 1563,
+          "REST": 16708
+        },
+        "motivations": {
+          "FORAGE": 10366,
+          "SELF": 18271
+        },
+        "failed": {
+          "FAILED_FORAGE": 825,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 4,
+        "run_seed": 42003,
+        "final_pop": 8,
+        "mean_energy": 0.7796466980957455,
+        "final_energy": 0.7671825721723469,
+        "actions": {
+          "MOVE": 18320,
+          "PICK": 3759,
+          "EAT": 3758,
+          "REST": 36588
+        },
+        "motivations": {
+          "FORAGE": 23628,
+          "SELF": 40346
+        },
+        "failed": {
+          "FAILED_FORAGE": 1549,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 5,
+        "run_seed": 42004,
+        "final_pop": 3,
+        "mean_energy": 0.7887930451990341,
+        "final_energy": 0.09057465685203432,
+        "actions": {
+          "MOVE": 12791,
+          "PICK": 2620,
+          "EAT": 2619,
+          "REST": 26424
+        },
+        "motivations": {
+          "FORAGE": 16617,
+          "SELF": 29043
+        },
+        "failed": {
+          "FAILED_FORAGE": 1206,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 6,
+        "run_seed": 42005,
+        "final_pop": 6,
+        "mean_energy": 0.7887009781992715,
+        "final_energy": 0.6671140309992559,
+        "actions": {
+          "MOVE": 14635,
+          "PICK": 3025,
+          "EAT": 3021,
+          "REST": 29467
+        },
+        "motivations": {
+          "FORAGE": 19197,
+          "SELF": 32488
+        },
+        "failed": {
+          "FAILED_FORAGE": 1537,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 7,
+        "run_seed": 42006,
+        "final_pop": 0,
+        "mean_energy": 0.7716182212692351,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 14346,
+          "PICK": 2958,
+          "EAT": 2958,
+          "REST": 29533
+        },
+        "motivations": {
+          "FORAGE": 18702,
+          "SELF": 32491
+        },
+        "failed": {
+          "FAILED_FORAGE": 1398,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 8,
+        "run_seed": 42007,
+        "final_pop": 11,
+        "mean_energy": 0.7982717287709253,
+        "final_energy": 0.8604246484287824,
+        "actions": {
+          "MOVE": 18893,
+          "PICK": 3858,
+          "EAT": 3850,
+          "REST": 36616
+        },
+        "motivations": {
+          "FORAGE": 24412,
+          "SELF": 40466
+        },
+        "failed": {
+          "FAILED_FORAGE": 1661,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 9,
+        "run_seed": 42008,
+        "final_pop": 10,
+        "mean_energy": 0.8026041165843598,
+        "final_energy": 0.844047568300371,
+        "actions": {
+          "MOVE": 16483,
+          "PICK": 3427,
+          "EAT": 3418,
+          "REST": 32155
+        },
+        "motivations": {
+          "FORAGE": 21501,
+          "SELF": 35573
+        },
+        "failed": {
+          "FAILED_FORAGE": 1591,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 42,
+        "repeat": 10,
+        "run_seed": 42009,
+        "final_pop": 0,
+        "mean_energy": 0.7760378865322287,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 8918,
+          "PICK": 1857,
+          "EAT": 1857,
+          "REST": 19104
+        },
+        "motivations": {
+          "FORAGE": 11974,
+          "SELF": 20961
+        },
+        "failed": {
+          "FAILED_FORAGE": 1199,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 1,
+        "run_seed": 43000,
+        "final_pop": 0,
+        "mean_energy": 0.6481764387041785,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 4916,
+          "PICK": 976,
+          "EAT": 976,
+          "REST": 11079
+        },
+        "motivations": {
+          "FORAGE": 6551,
+          "SELF": 12055
+        },
+        "failed": {
+          "FAILED_FORAGE": 659,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 2,
+        "run_seed": 43001,
+        "final_pop": 7,
+        "mean_energy": 0.8060440056275368,
+        "final_energy": 0.8816638103979964,
+        "actions": {
+          "MOVE": 14670,
+          "PICK": 3048,
+          "EAT": 3043,
+          "REST": 28896
+        },
+        "motivations": {
+          "FORAGE": 19292,
+          "SELF": 31939
+        },
+        "failed": {
+          "FAILED_FORAGE": 1574,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 3,
+        "run_seed": 43002,
+        "final_pop": 0,
+        "mean_energy": 0.7542275237926682,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 11727,
+          "PICK": 2418,
+          "EAT": 2417,
+          "REST": 24298
+        },
+        "motivations": {
+          "FORAGE": 15396,
+          "SELF": 26715
+        },
+        "failed": {
+          "FAILED_FORAGE": 1251,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 4,
+        "run_seed": 43003,
+        "final_pop": 5,
+        "mean_energy": 0.7579047335666484,
+        "final_energy": 0.7848577221756117,
+        "actions": {
+          "MOVE": 15315,
+          "PICK": 3142,
+          "EAT": 3139,
+          "REST": 30742
+        },
+        "motivations": {
+          "FORAGE": 19925,
+          "SELF": 33881
+        },
+        "failed": {
+          "FAILED_FORAGE": 1468,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 5,
+        "run_seed": 43004,
+        "final_pop": 0,
+        "mean_energy": 0.7698006275587906,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 10488,
+          "PICK": 2141,
+          "EAT": 2141,
+          "REST": 21791
+        },
+        "motivations": {
+          "FORAGE": 13852,
+          "SELF": 23932
+        },
+        "failed": {
+          "FAILED_FORAGE": 1223,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 6,
+        "run_seed": 43005,
+        "final_pop": 0,
+        "mean_energy": 0.6775130444435613,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 6063,
+          "PICK": 1167,
+          "EAT": 1167,
+          "REST": 12691
+        },
+        "motivations": {
+          "FORAGE": 7868,
+          "SELF": 13858
+        },
+        "failed": {
+          "FAILED_FORAGE": 638,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 7,
+        "run_seed": 43006,
+        "final_pop": 0,
+        "mean_energy": 0.7389458619902468,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 14893,
+          "PICK": 3005,
+          "EAT": 3004,
+          "REST": 30474
+        },
+        "motivations": {
+          "FORAGE": 19293,
+          "SELF": 33478
+        },
+        "failed": {
+          "FAILED_FORAGE": 1395,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 8,
+        "run_seed": 43007,
+        "final_pop": 7,
+        "mean_energy": 0.7912498551735329,
+        "final_energy": 0.6179514187993421,
+        "actions": {
+          "MOVE": 16835,
+          "PICK": 3486,
+          "EAT": 3475,
+          "REST": 33716
+        },
+        "motivations": {
+          "FORAGE": 21829,
+          "SELF": 37191
+        },
+        "failed": {
+          "FAILED_FORAGE": 1508,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 9,
+        "run_seed": 43008,
+        "final_pop": 4,
+        "mean_energy": 0.7964244444298249,
+        "final_energy": 0.5802662302693051,
+        "actions": {
+          "MOVE": 13321,
+          "PICK": 2803,
+          "EAT": 2800,
+          "REST": 27244
+        },
+        "motivations": {
+          "FORAGE": 17657,
+          "SELF": 30044
+        },
+        "failed": {
+          "FAILED_FORAGE": 1533,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 43,
+        "repeat": 10,
+        "run_seed": 43009,
+        "final_pop": 0,
+        "mean_energy": 0.753715136404185,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 12342,
+          "PICK": 2553,
+          "EAT": 2553,
+          "REST": 25636
+        },
+        "motivations": {
+          "FORAGE": 16327,
+          "SELF": 28189
+        },
+        "failed": {
+          "FAILED_FORAGE": 1432,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 1,
+        "run_seed": 44000,
+        "final_pop": 0,
+        "mean_energy": 0.7427377629813028,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 10310,
+          "PICK": 2064,
+          "EAT": 2064,
+          "REST": 21558
+        },
+        "motivations": {
+          "FORAGE": 13363,
+          "SELF": 23622
+        },
+        "failed": {
+          "FAILED_FORAGE": 989,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 2,
+        "run_seed": 44001,
+        "final_pop": 0,
+        "mean_energy": 0.7522488881560871,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 10502,
+          "PICK": 2112,
+          "EAT": 2112,
+          "REST": 21847
+        },
+        "motivations": {
+          "FORAGE": 13742,
+          "SELF": 23959
+        },
+        "failed": {
+          "FAILED_FORAGE": 1128,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 3,
+        "run_seed": 44002,
+        "final_pop": 0,
+        "mean_energy": 0.7743737166255664,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 8554,
+          "PICK": 1764,
+          "EAT": 1764,
+          "REST": 18140
+        },
+        "motivations": {
+          "FORAGE": 11479,
+          "SELF": 19904
+        },
+        "failed": {
+          "FAILED_FORAGE": 1161,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 4,
+        "run_seed": 44003,
+        "final_pop": 10,
+        "mean_energy": 0.8060517757440593,
+        "final_energy": 0.8288241420227214,
+        "actions": {
+          "MOVE": 20162,
+          "PICK": 4115,
+          "EAT": 4109,
+          "REST": 39156
+        },
+        "motivations": {
+          "FORAGE": 25922,
+          "SELF": 43265
+        },
+        "failed": {
+          "FAILED_FORAGE": 1645,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 5,
+        "run_seed": 44004,
+        "final_pop": 10,
+        "mean_energy": 0.793281554863702,
+        "final_energy": 0.8371077318035139,
+        "actions": {
+          "MOVE": 18738,
+          "PICK": 3859,
+          "EAT": 3847,
+          "REST": 36655
+        },
+        "motivations": {
+          "FORAGE": 24240,
+          "SELF": 40502
+        },
+        "failed": {
+          "FAILED_FORAGE": 1643,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 6,
+        "run_seed": 44005,
+        "final_pop": 9,
+        "mean_energy": 0.7799887362099999,
+        "final_energy": 0.8341779565974634,
+        "actions": {
+          "MOVE": 19630,
+          "PICK": 4029,
+          "EAT": 4026,
+          "REST": 38473
+        },
+        "motivations": {
+          "FORAGE": 25418,
+          "SELF": 42499
+        },
+        "failed": {
+          "FAILED_FORAGE": 1759,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 7,
+        "run_seed": 44006,
+        "final_pop": 0,
+        "mean_energy": 0.7745409124490821,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 11243,
+          "PICK": 2317,
+          "EAT": 2317,
+          "REST": 23268
+        },
+        "motivations": {
+          "FORAGE": 14871,
+          "SELF": 25585
+        },
+        "failed": {
+          "FAILED_FORAGE": 1311,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 8,
+        "run_seed": 44007,
+        "final_pop": 0,
+        "mean_energy": 0.7702865248832274,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 12066,
+          "PICK": 2460,
+          "EAT": 2459,
+          "REST": 24948
+        },
+        "motivations": {
+          "FORAGE": 15913,
+          "SELF": 27407
+        },
+        "failed": {
+          "FAILED_FORAGE": 1387,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 9,
+        "run_seed": 44008,
+        "final_pop": 0,
+        "mean_energy": 0.6843598977431102,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 5795,
+          "PICK": 1176,
+          "EAT": 1176,
+          "REST": 12956
+        },
+        "motivations": {
+          "FORAGE": 7788,
+          "SELF": 14132
+        },
+        "failed": {
+          "FAILED_FORAGE": 817,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 44,
+        "repeat": 10,
+        "run_seed": 44009,
+        "final_pop": 6,
+        "mean_energy": 0.797843983833949,
+        "final_energy": 0.8739180038408358,
+        "actions": {
+          "MOVE": 15386,
+          "PICK": 3195,
+          "EAT": 3193,
+          "REST": 30675
+        },
+        "motivations": {
+          "FORAGE": 20006,
+          "SELF": 33868
+        },
+        "failed": {
+          "FAILED_FORAGE": 1425,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 1,
+        "run_seed": 45000,
+        "final_pop": 0,
+        "mean_energy": 0.7079878231857445,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 6125,
+          "PICK": 1234,
+          "EAT": 1234,
+          "REST": 13441
+        },
+        "motivations": {
+          "FORAGE": 8092,
+          "SELF": 14675
+        },
+        "failed": {
+          "FAILED_FORAGE": 733,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 2,
+        "run_seed": 45001,
+        "final_pop": 0,
+        "mean_energy": 0.7247695865861677,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 10722,
+          "PICK": 2154,
+          "EAT": 2154,
+          "REST": 22382
+        },
+        "motivations": {
+          "FORAGE": 14133,
+          "SELF": 24536
+        },
+        "failed": {
+          "FAILED_FORAGE": 1257,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 3,
+        "run_seed": 45002,
+        "final_pop": 8,
+        "mean_energy": 0.7656245535087242,
+        "final_energy": 0.8435692938474797,
+        "actions": {
+          "MOVE": 17271,
+          "PICK": 3486,
+          "EAT": 3482,
+          "REST": 34019
+        },
+        "motivations": {
+          "FORAGE": 22323,
+          "SELF": 37501
+        },
+        "failed": {
+          "FAILED_FORAGE": 1566,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 4,
+        "run_seed": 45003,
+        "final_pop": 0,
+        "mean_energy": 0.7472431885135997,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 13968,
+          "PICK": 2826,
+          "EAT": 2826,
+          "REST": 28723
+        },
+        "motivations": {
+          "FORAGE": 18105,
+          "SELF": 31549
+        },
+        "failed": {
+          "FAILED_FORAGE": 1311,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 5,
+        "run_seed": 45004,
+        "final_pop": 0,
+        "mean_energy": 0.7536826171764847,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 11892,
+          "PICK": 2392,
+          "EAT": 2392,
+          "REST": 24534
+        },
+        "motivations": {
+          "FORAGE": 15563,
+          "SELF": 26926
+        },
+        "failed": {
+          "FAILED_FORAGE": 1279,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 6,
+        "run_seed": 45005,
+        "final_pop": 1,
+        "mean_energy": 0.7615231499962052,
+        "final_energy": 0.1450000000000054,
+        "actions": {
+          "MOVE": 12886,
+          "PICK": 2667,
+          "EAT": 2667,
+          "REST": 26543
+        },
+        "motivations": {
+          "FORAGE": 17063,
+          "SELF": 29210
+        },
+        "failed": {
+          "FAILED_FORAGE": 1510,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 7,
+        "run_seed": 45006,
+        "final_pop": 0,
+        "mean_energy": 0.7515760819043562,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 12133,
+          "PICK": 2487,
+          "EAT": 2487,
+          "REST": 25118
+        },
+        "motivations": {
+          "FORAGE": 15837,
+          "SELF": 27605
+        },
+        "failed": {
+          "FAILED_FORAGE": 1217,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 8,
+        "run_seed": 45007,
+        "final_pop": 10,
+        "mean_energy": 0.7861164167118821,
+        "final_energy": 0.7983297018069695,
+        "actions": {
+          "MOVE": 17480,
+          "PICK": 3605,
+          "EAT": 3599,
+          "REST": 34313
+        },
+        "motivations": {
+          "FORAGE": 22921,
+          "SELF": 37912
+        },
+        "failed": {
+          "FAILED_FORAGE": 1836,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 9,
+        "run_seed": 45008,
+        "final_pop": 0,
+        "mean_energy": 0.7057225086838042,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 9850,
+          "PICK": 1960,
+          "EAT": 1960,
+          "REST": 20365
+        },
+        "motivations": {
+          "FORAGE": 12785,
+          "SELF": 22325
+        },
+        "failed": {
+          "FAILED_FORAGE": 975,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 45,
+        "repeat": 10,
+        "run_seed": 45009,
+        "final_pop": 0,
+        "mean_energy": 0.7769647052320094,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 12803,
+          "PICK": 2655,
+          "EAT": 2655,
+          "REST": 26690
+        },
+        "motivations": {
+          "FORAGE": 16697,
+          "SELF": 29345
+        },
+        "failed": {
+          "FAILED_FORAGE": 1239,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "run_seed": 46000,
+        "final_pop": 0,
+        "mean_energy": 0.7551163663168132,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 13974,
+          "PICK": 2843,
+          "EAT": 2842,
+          "REST": 28649
+        },
+        "motivations": {
+          "FORAGE": 18151,
+          "SELF": 31491
+        },
+        "failed": {
+          "FAILED_FORAGE": 1334,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 2,
+        "run_seed": 46001,
+        "final_pop": 0,
+        "mean_energy": 0.6914029966601474,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 4041,
+          "PICK": 756,
+          "EAT": 756,
+          "REST": 8957
+        },
+        "motivations": {
+          "FORAGE": 5248,
+          "SELF": 9713
+        },
+        "failed": {
+          "FAILED_FORAGE": 451,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 3,
+        "run_seed": 46002,
+        "final_pop": 0,
+        "mean_energy": 0.6745139753446128,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 3027,
+          "PICK": 534,
+          "EAT": 534,
+          "REST": 6674
+        },
+        "motivations": {
+          "FORAGE": 3994,
+          "SELF": 7208
+        },
+        "failed": {
+          "FAILED_FORAGE": 433,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 4,
+        "run_seed": 46003,
+        "final_pop": 6,
+        "mean_energy": 0.7979484555847431,
+        "final_energy": 0.6057303300378746,
+        "actions": {
+          "MOVE": 12582,
+          "PICK": 2598,
+          "EAT": 2598,
+          "REST": 25329
+        },
+        "motivations": {
+          "FORAGE": 16598,
+          "SELF": 27927
+        },
+        "failed": {
+          "FAILED_FORAGE": 1418,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 5,
+        "run_seed": 46004,
+        "final_pop": 8,
+        "mean_energy": 0.7965002763425444,
+        "final_energy": 0.6376221945311327,
+        "actions": {
+          "MOVE": 16263,
+          "PICK": 3335,
+          "EAT": 3333,
+          "REST": 32072
+        },
+        "motivations": {
+          "FORAGE": 21302,
+          "SELF": 35405
+        },
+        "failed": {
+          "FAILED_FORAGE": 1704,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 6,
+        "run_seed": 46005,
+        "final_pop": 0,
+        "mean_energy": 0.7425546180158134,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 13542,
+          "PICK": 2738,
+          "EAT": 2738,
+          "REST": 27868
+        },
+        "motivations": {
+          "FORAGE": 17547,
+          "SELF": 30606
+        },
+        "failed": {
+          "FAILED_FORAGE": 1267,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 7,
+        "run_seed": 46006,
+        "final_pop": 0,
+        "mean_energy": 0.7549509689246735,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 13758,
+          "PICK": 2795,
+          "EAT": 2793,
+          "REST": 28411
+        },
+        "motivations": {
+          "FORAGE": 17976,
+          "SELF": 31204
+        },
+        "failed": {
+          "FAILED_FORAGE": 1423,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 8,
+        "run_seed": 46007,
+        "final_pop": 0,
+        "mean_energy": 0.7178415580841642,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 9785,
+          "PICK": 1973,
+          "EAT": 1973,
+          "REST": 20487
+        },
+        "motivations": {
+          "FORAGE": 12838,
+          "SELF": 22460
+        },
+        "failed": {
+          "FAILED_FORAGE": 1080,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 9,
+        "run_seed": 46008,
+        "final_pop": 0,
+        "mean_energy": 0.7261272814283259,
+        "final_energy": 0.0,
+        "actions": {
+          "MOVE": 9020,
+          "PICK": 1851,
+          "EAT": 1851,
+          "REST": 19044
+        },
+        "motivations": {
+          "FORAGE": 11741,
+          "SELF": 20895
+        },
+        "failed": {
+          "FAILED_FORAGE": 870,
+          "FAILED_SELF": 0
+        }
+      },
+      {
+        "seed": 46,
+        "repeat": 10,
+        "run_seed": 46009,
+        "final_pop": 5,
+        "mean_energy": 0.7800597910272199,
+        "final_energy": 0.6451272458801826,
+        "actions": {
+          "MOVE": 16908,
+          "PICK": 3435,
+          "EAT": 3433,
+          "REST": 33766
+        },
+        "motivations": {
+          "FORAGE": 22002,
+          "SELF": 37199
+        },
+        "failed": {
+          "FAILED_FORAGE": 1659,
+          "FAILED_SELF": 0
+        }
+      }
+    ]
+  }
+}

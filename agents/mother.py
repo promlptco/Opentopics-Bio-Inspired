@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 # Global Softmax temperature.
 SOFTMAX_TAU: float = 0.1
 
+BASE_FORAGE_CUE: float = 0.10
+BASE_SELF_CUE: float = 0.05
+BASE_CARE_CUE: float = 0.00
+
 
 def softmax_probs(scores: dict[str, float], tau: float = SOFTMAX_TAU) -> dict[str, float]:
     """
@@ -164,10 +168,12 @@ class MotherAgent(Agent):
             forage_cue = 1.5
 
         elif nearest_food is not None and distance_to_food is not None:
-            forage_cue = max(0.0, 1.0 - (distance_to_food / perception_radius))
+            forage_cue = BASE_FORAGE_CUE + max(0.0, 1.0 - (distance_to_food / perception_radius))
 
         else:
-            forage_cue = 0.0
+            # Exploration bias: even when no food is visible,
+            # the mother still has a small drive to forage.
+            forage_cue = BASE_FORAGE_CUE
 
         # If mother already holds food, reduce urge to gather more.
         if self.held_food > 0:
@@ -189,7 +195,7 @@ class MotherAgent(Agent):
         energy_deficit = max(0.0, 1.0 - self.energy)
         fatigue_pressure = max(0.0, self.fatigue)
 
-        self_cue = 0.65 * energy_deficit + 0.35 * fatigue_pressure
+        self_cue = BASE_SELF_CUE + 0.65 * energy_deficit + 0.35 * fatigue_pressure
 
         # If holding food and energy is low, self-maintenance is more actionable.
         if self.held_food > 0:
@@ -227,7 +233,8 @@ class MotherAgent(Agent):
         hunger_pressure = max(0.0, child.hunger)
 
         care_cue = (
-            0.55 * distress_pressure
+            BASE_CARE_CUE
+            + 0.55 * distress_pressure
             + 0.25 * hunger_pressure
             + 0.20 * distance_pressure
         )
