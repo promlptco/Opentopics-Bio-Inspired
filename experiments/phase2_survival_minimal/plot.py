@@ -276,6 +276,8 @@ def save_validation_csv(name, results, out_dir):
                 "final_pop",
                 "mean_energy",
                 "final_energy",
+                "final_fatigue",
+                "mean_fatigue",
                 "MOVE",
                 "PICK",
                 "EAT",
@@ -293,6 +295,10 @@ def save_validation_csv(name, results, out_dir):
             motivations = r.get("motivations", {})
             failed = r.get("failed", {})
 
+            fatigue_history = r.get("fatigue_history", [])
+            mean_fatigue = float(np.mean(fatigue_history)) if fatigue_history else 0.0
+            final_fatigue = float(fatigue_history[-1]) if fatigue_history else 0.0
+
             writer.writerow(
                 {
                     "seed": r["base_seed"],
@@ -301,6 +307,8 @@ def save_validation_csv(name, results, out_dir):
                     "final_pop": r["final_pop"],
                     "mean_energy": r["mean_energy"],
                     "final_energy": r["final_energy"],
+                    "mean_fatigue": mean_fatigue,
+                    "final_fatigue": final_fatigue,
                     "MOVE": actions.get("MOVE", 0),
                     "PICK": actions.get("PICK", 0),
                     "EAT": actions.get("EAT", 0),
@@ -997,3 +1005,168 @@ def plot_energy_expenditure_breakdown(
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"energy_expenditure_breakdown_{name}.png")
+    
+def plot_homeostatic_balance(
+    name,
+    results,
+    duration,
+    out_dir,
+    window=25,
+):
+    """
+    Plot homeostatic balance between energy and fatigue.
+
+    Left Y-axis:
+        Mean Energy
+
+    Right Y-axis:
+        Mean Fatigue
+    """
+    ticks = np.arange(duration)
+
+    energy_matrix = np.asarray(
+        [
+            smooth_series(
+                np.nan_to_num(pad(r["energy_history"], duration), nan=0.0),
+                window=window,
+            )
+            for r in results
+        ],
+        dtype=float,
+    )
+
+    fatigue_matrix = np.asarray(
+        [
+            smooth_series(
+                np.nan_to_num(pad(r.get("fatigue_history", []), duration), nan=0.0),
+                window=window,
+            )
+            for r in results
+        ],
+        dtype=float,
+    )
+
+    mean_energy = np.mean(energy_matrix, axis=0)
+    std_energy = np.std(energy_matrix, axis=0)
+
+    mean_fatigue = np.mean(fatigue_matrix, axis=0)
+    std_fatigue = np.std(fatigue_matrix, axis=0)
+
+    fig, ax_energy = plt.subplots(figsize=(13, 6))
+    ax_fatigue = ax_energy.twinx()
+
+    # Individual runs: gray, like validation plots.
+    for i in range(len(results)):
+        label = "Individual Runs" if i == 0 else "_nolegend_"
+
+        ax_energy.plot(
+            ticks,
+            energy_matrix[i],
+            color="gray",
+            alpha=0.08,
+            linewidth=0.7,
+            label=label,
+        )
+
+        ax_fatigue.plot(
+            ticks,
+            fatigue_matrix[i],
+            color="gray",
+            alpha=0.05,
+            linewidth=0.7,
+        )
+
+    # Energy: blue solid.
+    ax_energy.fill_between(
+        ticks,
+        mean_energy - std_energy,
+        mean_energy + std_energy,
+        color="tab:blue",
+        alpha=0.14,
+        label="Energy Mean ± SD",
+    )
+
+    ax_energy.plot(
+        ticks,
+        mean_energy,
+        color="tab:blue",
+        linewidth=2.3,
+        label="Mean Energy",
+    )
+
+    # Fatigue: red dashed.
+    ax_fatigue.fill_between(
+        ticks,
+        mean_fatigue - std_fatigue,
+        mean_fatigue + std_fatigue,
+        color="tab:red",
+        alpha=0.10,
+        label="Fatigue Mean ± SD",
+    )
+
+    ax_fatigue.plot(
+        ticks,
+        mean_fatigue,
+        color="tab:red",
+        linestyle="--",
+        linewidth=2.3,
+        label="Mean Fatigue",
+    )
+
+    fig.suptitle(
+        f"Homeostatic Balance: Energy vs Fatigue — {name.upper()}\n"
+        f"Runs: {len(results)} total | smoothing window = {window} ticks",
+        fontsize=14,
+        fontweight="bold",
+    )
+
+    ax_energy.set_title("Energy–Fatigue Homeostatic Dynamics")
+    ax_energy.set_xlabel("Tick")
+    ax_energy.set_ylabel("Mean Energy", color="tab:blue")
+    ax_fatigue.set_ylabel("Mean Fatigue", color="tab:red")
+
+    ax_energy.tick_params(axis="y", labelcolor="tab:blue")
+    ax_fatigue.tick_params(axis="y", labelcolor="tab:red")
+
+    ax_energy.set_ylim(-0.05, 1.05)
+    ax_fatigue.set_ylim(-0.05, 1.05)
+
+    ax_energy.axhline(
+        0.70,
+        color="tab:blue",
+        linestyle=":",
+        alpha=0.55,
+        linewidth=1.1,
+        label="Energy target 0.70",
+    )
+
+    ax_fatigue.axhline(
+        0.0,
+        color="tab:red",
+        linestyle=":",
+        alpha=0.35,
+        linewidth=1.0,
+        label="Fatigue baseline",
+    )
+
+    style_axes(ax_energy)
+    style_axes(ax_fatigue)
+
+    lines_energy, labels_energy = ax_energy.get_legend_handles_labels()
+    lines_fatigue, labels_fatigue = ax_fatigue.get_legend_handles_labels()
+
+    ax_energy.legend(
+        lines_energy + lines_fatigue,
+        labels_energy + labels_fatigue,
+        loc="upper right",
+        fontsize=8,
+        framealpha=0.88,
+    )
+
+    plt.tight_layout()
+
+    out_path = os.path.join(out_dir, f"homeostatic_balance_{name}.png")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved homeostatic balance plot → {out_path}")

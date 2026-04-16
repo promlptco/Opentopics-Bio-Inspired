@@ -72,6 +72,7 @@ from experiments.phase2_survival_minimal.config import (
     ENABLE_FOOD_CONSUMPTION_PLOT,
     ENABLE_SPATIAL_HEATMAP_PLOT,
     ENABLE_ENERGY_EXPENDITURE_PLOT,
+    ENABLE_HOMEOSTATIC_BALANCE_PLOT,
     candidate_configs,
 )
 
@@ -89,6 +90,7 @@ from experiments.phase2_survival_minimal.plot import (
     plot_food_consumption_over_time,
     plot_spatial_heatmap_population,
     plot_energy_expenditure_breakdown,
+    plot_homeostatic_balance,
     print_validation_runs,
     save_summary_json,
     save_validation_csv,
@@ -107,6 +109,7 @@ class SurvivalSimulation:
         self.tick = 0
 
         self.energy_history = []
+        self.fatigue_history = []
         self.population_history = []
 
         # Episode-level totals.
@@ -309,7 +312,10 @@ class SurvivalSimulation:
         self.population_history.append(len(alive_now))
 
         avg_energy = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
+        avg_fatigue = sum(m.fatigue for m in alive_now) / len(alive_now) if alive_now else 0.0
+
         self.energy_history.append(avg_energy)
+        self.fatigue_history.append(avg_fatigue)
 
         for mother in alive_now:
             x, y = mother.pos
@@ -349,6 +355,7 @@ class SurvivalSimulation:
             "mean_energy": mean_energy,
             "final_energy": final_energy,
             "energy_history": self.energy_history,
+            "fatigue_history": self.fatigue_history,
             "population_history": self.population_history,
             "actions": self.action_counts,
             "motivations": self.motivation_counts,
@@ -736,6 +743,15 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             name=name,
             results=results,
             out_dir=out_dir,
+        )
+        
+    if ENABLE_HOMEOSTATIC_BALANCE_PLOT:
+        plot_homeostatic_balance(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+            window=PLOT_SMOOTH_WINDOW,
         )
 
 

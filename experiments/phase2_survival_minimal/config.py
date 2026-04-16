@@ -12,7 +12,7 @@ INITIAL_ENERGY = 0.75
 
 VALIDATION_SEEDS = list(range(42, 47))
 DEFAULT_SWEEP_SEED_BASE = 42000
-DEFAULT_PERCEPTION_RADIUS = 30.0
+DEFAULT_PERCEPTION_RADIUS = 8.0
 TAIL_WINDOW = 200
 
 
@@ -46,6 +46,9 @@ ENABLE_SPATIAL_HEATMAP_PLOT = True
 
 # 6) Energy loss/gain breakdown.
 ENABLE_ENERGY_EXPENDITURE_PLOT = True
+
+# 7) Homeostatic balance plot: Energy vs Fatigue.
+ENABLE_HOMEOSTATIC_BALANCE_PLOT = True
 
 
 # ============================================================
@@ -214,11 +217,11 @@ def candidate_configs(mode="sweep"):
         return [
             {
                 "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-                "hunger_rate": 0.005,
-                "move_cost": 0.001,
-                "eat_gain": 0.07,
-                "init_food": 45,
-                "rest_recovery": 0.015,
+                "hunger_rate": 0.0045,
+                "move_cost": 0.0005,
+                "eat_gain": 0.08,
+                "init_food": 35,
+                "rest_recovery": 0.005,
                 "name": "single_test",
             }
         ]

@@ -30,7 +30,6 @@ ENABLE_MOTHER_CHILD_DIAGNOSTIC_PLOT = True
 ENABLE_FEED_RATE_PLOT = True
 ENABLE_SPATIAL_HEATMAP_PLOT = True
 
-
 # ============================================================
 # Phase 3 baseline
 # ============================================================
@@ -46,10 +45,10 @@ PHASE3_BASELINE = {
     "width": 30,
     "height": 30,
     "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-    "hunger_rate": 0.005,
-    "move_cost": 0.001,
-    "eat_gain": 0.07,
-    "init_food": 60,
+    "hunger_rate": 0.0045,
+    "move_cost": 0.0005,
+    "eat_gain": 0.08,
+    "init_food": 35,
     "rest_recovery": 0.005,
     "fatigue_rate": 0.01,
 
@@ -87,9 +86,9 @@ SELECTION_TARGETS = {
         # but mother energy is not saturated.
         "min_final_mothers": 14.0,
         "min_final_children": 14.0,
-        "mother_energy_low": 0.65,
-        "mother_energy_high": 0.80,
-        "target_mother_energy": 0.72,
+        "mother_energy_low": 0.70,
+        "mother_energy_high": 0.75,
+        "target_mother_energy": 0.725,
         "max_child_hunger": 0.35,
         "max_child_distress": 0.40,
     },
@@ -97,7 +96,7 @@ SELECTION_TARGETS = {
         # Comfortable mother-child condition.
         "min_final_mothers": 14.5,
         "min_final_children": 14.5,
-        "min_mother_energy": 0.85,
+        "min_mother_energy": 0.75,
         "max_child_hunger": 0.20,
         "max_child_distress": 0.25,
     },
