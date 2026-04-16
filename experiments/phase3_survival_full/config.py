@@ -50,7 +50,7 @@ PHASE3_BASELINE = {
     "eat_gain": 0.08,
     "init_food": 35,
     "rest_recovery": 0.005,
-    "fatigue_rate": 0.01,
+    "fatigue_rate": 0.01, # 0.01 was proven by homeostatic balance plot that fatigue is not a major driver of phase2.
 
     # Child physiology.
     # ChildAgent.update_hunger() increases child hunger by this amount per tick.
