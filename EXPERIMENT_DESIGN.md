@@ -171,6 +171,9 @@ This phase defines the "functioning care" reference state used to interpret all 
 
 ---
 
+ฺBefore doing the phase3 we must use the phase 2 to find the baseline and looking through the dynamic of the first generation of mother + child (no reproduce)
+and which we must the the care relate code in these 4 files run.py, plot.py, sensitvity_sweep.py, config.py
+
 #### Phase 3a · Motivation Sweep
 
 **Purpose:** Empirically validate the canonical genome via structured sweep. Values cannot be chosen arbitrarily — the selection must be reproducible and justified.
