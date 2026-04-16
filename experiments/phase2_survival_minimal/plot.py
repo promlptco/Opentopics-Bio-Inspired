@@ -74,7 +74,9 @@ def config_title(params):
     return (
         f"perception={params.get('perception_radius', DEFAULT_PERCEPTION_RADIUS)} | "
         f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
-        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']}"
+        f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']} | "
+        f"Fw={params.get('forage_weight', 1.0)} | Sw={params.get('self_weight', 1.0)} | "
+        f"Cw={params.get('care_weight', 0.0)}"
     )
 
 
@@ -87,18 +89,6 @@ def smooth_series(y, window=25):
 
 
 def pad_event_history(history, duration, keys):
-    """
-    Convert per-tick event history into fixed-length arrays.
-
-    Example row:
-      {
-        "MOVE": 3,
-        "PICK": 1,
-        "EAT": 5,
-        "REST": 2,
-        "alive": 15,
-      }
-    """
     arrays = {key: np.zeros(duration, dtype=float) for key in keys}
     alive = np.zeros(duration, dtype=float)
 
@@ -111,10 +101,6 @@ def pad_event_history(history, duration, keys):
 
 
 def event_rate_matrix(results, history_key, event_key, duration, window=25):
-    """
-    Build a run x tick matrix for an event rate.
-    Rate = event count / alive mothers.
-    """
     runs = []
 
     for r in results:
@@ -134,9 +120,6 @@ def event_rate_matrix(results, history_key, event_key, duration, window=25):
 
 
 def history_value_matrix(results, history_key, value_key, duration, window=25):
-    """
-    Build run x tick matrix from a scalar value in per-tick history.
-    """
     runs = []
 
     for r in results:
@@ -187,7 +170,7 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
     fig.suptitle(
         f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"Runs: {len(results)} total | {config_title(params)}",
+        f"MotherAgent | Runs: {len(results)} total | {config_title(params)}",
         fontsize=14,
         fontweight="bold",
     )
@@ -276,8 +259,8 @@ def save_validation_csv(name, results, out_dir):
                 "final_pop",
                 "mean_energy",
                 "final_energy",
-                "final_fatigue",
                 "mean_fatigue",
+                "final_fatigue",
                 "MOVE",
                 "PICK",
                 "EAT",
@@ -337,12 +320,6 @@ def plot_event_selection_over_time(
     window=25,
     as_rate=True,
 ):
-    """
-    Validation-style over-time plot:
-      - faint gray individual runs
-      - bold colored group mean per event
-      - shaded mean ± SD per event
-    """
     event_colors = {
         "SELF": "tab:blue",
         "FORAGE": "tab:orange",
@@ -428,7 +405,7 @@ def plot_event_selection_over_time(
 
     fig.suptitle(
         f"{title_prefix} Over Time — {name.upper()}\n"
-        f"Runs: {len(results)} total | smoothing window = {window} ticks",
+        f"MotherAgent | Runs: {len(results)} total | smoothing window = {window} ticks",
         fontsize=14,
         fontweight="bold",
     )
@@ -447,14 +424,7 @@ def plot_event_selection_over_time(
     save_figure(fig, out_dir, f"{filename_prefix}_{name}.png")
 
 
-def plot_action_selection_over_time(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-    as_rate=True,
-):
+def plot_action_selection_over_time(name, results, duration, out_dir, window=25, as_rate=True):
     plot_event_selection_over_time(
         name=name,
         results=results,
@@ -469,14 +439,7 @@ def plot_action_selection_over_time(
     )
 
 
-def plot_motivation_selection_over_time(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-    as_rate=True,
-):
+def plot_motivation_selection_over_time(name, results, duration, out_dir, window=25, as_rate=True):
     plot_event_selection_over_time(
         name=name,
         results=results,
@@ -491,14 +454,7 @@ def plot_motivation_selection_over_time(
     )
 
 
-def plot_failed_selection_over_time(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-    as_rate=True,
-):
+def plot_failed_selection_over_time(name, results, duration, out_dir, window=25, as_rate=True):
     plot_event_selection_over_time(
         name=name,
         results=results,
@@ -517,14 +473,7 @@ def plot_failed_selection_over_time(
 # 1) Stacked action + failed plot
 # ============================================================
 
-def plot_stacked_action_failed_over_time(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-    as_rate=True,
-):
+def plot_stacked_action_failed_over_time(name, results, duration, out_dir, window=25, as_rate=True):
     keys = ["MOVE", "PICK", "EAT", "REST", "FAILED_FORAGE", "FAILED_SELF"]
 
     color_map = {
@@ -560,7 +509,7 @@ def plot_stacked_action_failed_over_time(
 
     fig.suptitle(
         f"Stacked Action and Failed Selection — {name.upper()}\n"
-        f"Mean rate across {len(results)} runs | smoothing window = {window} ticks",
+        f"MotherAgent | Mean rate across {len(results)} runs | window = {window}",
         fontsize=14,
         fontweight="bold",
     )
@@ -578,24 +527,18 @@ def plot_stacked_action_failed_over_time(
 
 
 # ============================================================
-# 2) Correlation: FAILED_SELF vs energy decay
+# 2) Correlation plots
 # ============================================================
 
-def plot_failed_self_energy_correlation(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-):
+def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key, filename, metric_name, window=25):
     xs = []
     ys = []
 
     for r in results:
-        failed_self = event_rate_matrix(
+        failed_rate = event_rate_matrix(
             [r],
             "failed_history",
-            "FAILED_SELF",
+            failed_key,
             duration,
             window=window,
         )[0]
@@ -603,11 +546,10 @@ def plot_failed_self_energy_correlation(
         energy = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
         energy_delta = np.diff(energy, prepend=energy[0])
 
-        # Positive value means stronger energy drop.
         energy_drop = np.maximum(0.0, -energy_delta)
         energy_drop = smooth_series(energy_drop, window=window)
 
-        xs.extend(failed_self.tolist())
+        xs.extend(failed_rate.tolist())
         ys.extend(energy_drop.tolist())
 
     xs = np.asarray(xs, dtype=float)
@@ -629,108 +571,59 @@ def plot_failed_self_energy_correlation(
         ax.plot(xfit, yfit, color="tab:red", linewidth=2.0, label="Linear fit")
 
     fig.suptitle(
-        f"FAILED_SELF vs Energy Decay — {name.upper()}\n"
+        f"{failed_key} vs Energy Decay — {name.upper()}\n"
         f"Pearson r = {corr:.3f} | Runs: {len(results)}",
         fontsize=14,
         fontweight="bold",
     )
 
     ax.set_title("Correlation Diagnostic")
-    ax.set_xlabel("FAILED_SELF rate per alive mother")
+    ax.set_xlabel(f"{failed_key} rate per alive mother")
     ax.set_ylabel("Energy drop per tick")
     style_axes(ax)
     ax.legend(loc="upper right", fontsize=8, framealpha=0.88)
 
     plt.tight_layout()
-    save_figure(fig, out_dir, f"correlation_failed_self_energy_{name}.png")
+    save_figure(fig, out_dir, filename)
 
-    csv_path = os.path.join(out_dir, f"correlation_summary_{name}.csv")
+    csv_path = os.path.join(out_dir, f"{metric_name}_{name}.csv")
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["metric", "value"])
         writer.writeheader()
-        writer.writerow({"metric": "pearson_failed_self_energy_drop", "value": corr})
-        
-def plot_failed_forage_energy_correlation(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-):
-    xs = []
-    ys = []
+        writer.writerow({"metric": metric_name, "value": corr})
 
-    for r in results:
-        failed_forage = event_rate_matrix(
-            [r],
-            "failed_history",
-            "FAILED_FORAGE",
-            duration,
-            window=window,
-        )[0]
 
-        energy = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
-        energy_delta = np.diff(energy, prepend=energy[0])
-
-        # Positive value means stronger energy drop.
-        energy_drop = np.maximum(0.0, -energy_delta)
-        energy_drop = smooth_series(energy_drop, window=window)
-
-        xs.extend(failed_forage.tolist())
-        ys.extend(energy_drop.tolist())
-
-    xs = np.asarray(xs, dtype=float)
-    ys = np.asarray(ys, dtype=float)
-
-    if len(xs) > 1 and np.std(xs) > 0 and np.std(ys) > 0:
-        corr = float(np.corrcoef(xs, ys)[0, 1])
-    else:
-        corr = 0.0
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-
-    ax.scatter(xs, ys, alpha=0.08, s=10, color="steelblue", label="Tick samples")
-
-    if len(xs) > 1:
-        coef = np.polyfit(xs, ys, 1)
-        xfit = np.linspace(float(np.min(xs)), float(np.max(xs)), 100)
-        yfit = coef[0] * xfit + coef[1]
-        ax.plot(xfit, yfit, color="tab:red", linewidth=2.0, label="Linear fit")
-
-    fig.suptitle(
-        f"FAILED_FORAGE vs Energy Decay — {name.upper()}\n"
-        f"Pearson r = {corr:.3f} | Runs: {len(results)}",
-        fontsize=14,
-        fontweight="bold",
+def plot_failed_self_energy_correlation(name, results, duration, out_dir, window=25):
+    _plot_failed_energy_correlation(
+        name=name,
+        results=results,
+        duration=duration,
+        out_dir=out_dir,
+        failed_key="FAILED_SELF",
+        filename=f"correlation_failed_self_energy_{name}.png",
+        metric_name="pearson_failed_self_energy_drop",
+        window=window,
     )
 
-    ax.set_title("Correlation Diagnostic")
-    ax.set_xlabel("FAILED_FORAGE rate per alive mother")
-    ax.set_ylabel("Energy drop per tick")
-    style_axes(ax)
-    ax.legend(loc="upper right", fontsize=8, framealpha=0.88)
 
-    plt.tight_layout()
-    save_figure(fig, out_dir, f"correlation_failed_forage_energy_{name}.png")
-
-    csv_path = os.path.join(out_dir, f"correlation_failed_forage_summary_{name}.csv")
-    with open(csv_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["metric", "value"])
-        writer.writeheader()
-        writer.writerow({"metric": "pearson_failed_forage_energy_drop", "value": corr})
+def plot_failed_forage_energy_correlation(name, results, duration, out_dir, window=25):
+    _plot_failed_energy_correlation(
+        name=name,
+        results=results,
+        duration=duration,
+        out_dir=out_dir,
+        failed_key="FAILED_FORAGE",
+        filename=f"correlation_failed_forage_energy_{name}.png",
+        metric_name="pearson_failed_forage_energy_drop",
+        window=window,
+    )
 
 
 # ============================================================
-# 3) State-space scatter: energy vs action/motivation rate
+# 3) State-space scatter
 # ============================================================
 
-def plot_state_space_energy_action(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-):
+def plot_state_space_energy_action(name, results, duration, out_dir, window=25):
     plot_items = [
         ("REST", "action_history", "REST", "tab:red"),
         ("EAT", "action_history", "EAT", "tab:green"),
@@ -758,7 +651,6 @@ def plot_state_space_energy_action(
 
         ax.scatter(energy_all, rate_all, alpha=0.06, s=8, color=color)
 
-        # Bin energy to show average trend.
         bins = np.linspace(0.0, 1.0, 21)
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
         bin_means = []
@@ -778,7 +670,7 @@ def plot_state_space_energy_action(
 
     fig.suptitle(
         f"State Space: Energy vs Action/Motivation — {name.upper()}\n"
-        f"Tick samples across {len(results)} runs | smoothing window = {window}",
+        f"MotherAgent | Tick samples across {len(results)} runs | window = {window}",
         fontsize=14,
         fontweight="bold",
     )
@@ -791,13 +683,7 @@ def plot_state_space_energy_action(
 # 4) Food consumption rate over time
 # ============================================================
 
-def plot_food_consumption_over_time(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-):
+def plot_food_consumption_over_time(name, results, duration, out_dir, window=25):
     ticks = np.arange(duration)
 
     pick_matrix = event_rate_matrix(results, "food_history", "PICK", duration, window=window)
@@ -863,14 +749,10 @@ def plot_food_consumption_over_time(
 
 
 # ============================================================
-# 5) Spatial heatmap of population
+# 5) Spatial heatmap
 # ============================================================
 
-def plot_spatial_heatmap_population(
-    name,
-    results,
-    out_dir,
-):
+def plot_spatial_heatmap_population(name, results, out_dir):
     heatmaps = []
 
     for r in results:
@@ -920,11 +802,7 @@ def plot_spatial_heatmap_population(
 # 6) Energy expenditure breakdown
 # ============================================================
 
-def plot_energy_expenditure_breakdown(
-    name,
-    results,
-    out_dir,
-):
+def plot_energy_expenditure_breakdown(name, results, out_dir):
     rows = []
 
     for r in results:
@@ -993,6 +871,7 @@ def plot_energy_expenditure_breakdown(
         f"eat gain = {means['eat_gain']:.3f}\n"
         f"net = {means['net_energy_change']:.3f}"
     )
+
     ax.text(
         0.02,
         0.96,
@@ -1005,23 +884,13 @@ def plot_energy_expenditure_breakdown(
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"energy_expenditure_breakdown_{name}.png")
-    
-def plot_homeostatic_balance(
-    name,
-    results,
-    duration,
-    out_dir,
-    window=25,
-):
-    """
-    Plot homeostatic balance between energy and fatigue.
 
-    Left Y-axis:
-        Mean Energy
 
-    Right Y-axis:
-        Mean Fatigue
-    """
+# ============================================================
+# 7) Homeostatic balance
+# ============================================================
+
+def plot_homeostatic_balance(name, results, duration, out_dir, window=25):
     ticks = np.arange(duration)
 
     energy_matrix = np.asarray(
@@ -1055,7 +924,6 @@ def plot_homeostatic_balance(
     fig, ax_energy = plt.subplots(figsize=(13, 6))
     ax_fatigue = ax_energy.twinx()
 
-    # Individual runs: gray, like validation plots.
     for i in range(len(results)):
         label = "Individual Runs" if i == 0 else "_nolegend_"
 
@@ -1076,7 +944,6 @@ def plot_homeostatic_balance(
             linewidth=0.7,
         )
 
-    # Energy: blue solid.
     ax_energy.fill_between(
         ticks,
         mean_energy - std_energy,
@@ -1094,7 +961,6 @@ def plot_homeostatic_balance(
         label="Mean Energy",
     )
 
-    # Fatigue: red dashed.
     ax_fatigue.fill_between(
         ticks,
         mean_fatigue - std_fatigue,
@@ -1115,7 +981,7 @@ def plot_homeostatic_balance(
 
     fig.suptitle(
         f"Homeostatic Balance: Energy vs Fatigue — {name.upper()}\n"
-        f"Runs: {len(results)} total | smoothing window = {window} ticks",
+        f"MotherAgent | Runs: {len(results)} total | smoothing window = {window} ticks",
         fontsize=14,
         fontweight="bold",
     )
@@ -1164,9 +1030,4 @@ def plot_homeostatic_balance(
     )
 
     plt.tight_layout()
-
-    out_path = os.path.join(out_dir, f"homeostatic_balance_{name}.png")
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-
-    print(f"Saved homeostatic balance plot → {out_path}")
+    save_figure(fig, out_dir, f"homeostatic_balance_{name}.png")

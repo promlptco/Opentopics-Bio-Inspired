@@ -32,7 +32,7 @@ ENABLE_FAILED_SELECTION_PLOT = True
 # 1) Stacked area chart of realized actions + failed selections.
 ENABLE_STACKED_ACTION_FAILED_PLOT = True
 
-# 2) Correlation plot: FAILED_SELF vs late/instant energy decay.
+# 2) Correlation plot: FAILED_SELF / FAILED_FORAGE vs energy decay.
 ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT = True
 
 # 3) State-space scatter: Energy vs action/motivation rate.
@@ -52,6 +52,26 @@ ENABLE_HOMEOSTATIC_BALANCE_PLOT = True
 
 
 # ============================================================
+# Baseline genome weights
+# ============================================================
+
+# Phase 2 uses the unified MotherAgent decision interface:
+#   environmental cue × genome weight → softmax motivation
+#
+# For Phase 2 survival-minimal:
+#   - CARE is disabled
+#   - FORAGE and SELF are neutral baseline weights
+#
+# This keeps Phase 2 as an ecological survival baseline, not an evolved
+# behavioral baseline.
+BASELINE_GENOME_WEIGHTS = {
+    "care_weight": 0.0,
+    "forage_weight": 1.0,
+    "self_weight": 1.0,
+}
+
+
+# ============================================================
 # Balanced baseline used as reference for sensitivity sweep
 # ============================================================
 
@@ -62,6 +82,7 @@ BALANCED_BASELINE = {
     "eat_gain": 0.07,
     "init_food": 60,
     "rest_recovery": 0.005,
+    **BASELINE_GENOME_WEIGHTS,
 }
 
 
@@ -212,6 +233,11 @@ def candidate_configs(mode="sweep"):
     mode="sweep":
         Sweeps init_food and rest_recovery while keeping other ecological
         parameters fixed after rough sensitivity analysis.
+
+    Note:
+        BASELINE_GENOME_WEIGHTS are fixed here. Phase 2 is not evolving
+        weights yet; it only validates the ecological survival baseline
+        under neutral FORAGE/SELF weighting.
     """
     if mode == "single":
         return [
@@ -222,6 +248,7 @@ def candidate_configs(mode="sweep"):
                 "eat_gain": 0.08,
                 "init_food": 35,
                 "rest_recovery": 0.005,
+                **BASELINE_GENOME_WEIGHTS,
                 "name": "single_test",
             }
         ]
@@ -244,6 +271,11 @@ def candidate_configs(mode="sweep"):
             0.03, 0.035, 0.04, 0.045, 0.05,
             0.06, 0.08, 0.10, 0.15,
         ],
+
+        # Fixed neutral genome weights for Phase 2.
+        "care_weight": [BASELINE_GENOME_WEIGHTS["care_weight"]],
+        "forage_weight": [BASELINE_GENOME_WEIGHTS["forage_weight"]],
+        "self_weight": [BASELINE_GENOME_WEIGHTS["self_weight"]],
     }
 
     keys = list(grid.keys())

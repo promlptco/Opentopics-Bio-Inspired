@@ -162,7 +162,7 @@ def plot_sensitivity_map(all_results, baseline, out_dir):
 
     fig.suptitle(
         "Phase 2 · OVAT Sensitivity Analysis\n"
-        "Effect of Individual Parameters on Survival Rate and Late-Run Mean Energy",
+        "MotherAgent: Environmental Cue × Genome Weight → Softmax",
         fontsize=14,
         fontweight="bold",
         y=1.01,
