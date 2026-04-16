@@ -43,81 +43,449 @@ All genetic operators and simulation mechanics verified correct. One bug found a
 
 ---
 
-# Phase 2 — Survival Minimal Report
+### Phase 2 · Diagnostic Plot Expansion
 
-**Status:** ✅ COMPLETE — Canonical baseline calibrated. OVAT sensitivity analysis executed.
-**Seeds:** 42–46 (5 seeds × 3 repeats = 15 runs per configuration)
-**Duration:** 1,000 ticks per run
+**Purpose:**  
+Extend Phase 2 analysis beyond survival and energy curves by adding behavioral diagnostic plots. These plots help explain *why* a configuration survives or collapses by linking ecological parameters to motivation selection, realized actions, failed decisions, food intake, spatial behavior, and energy expenditure.
 
----
-
-## Part A: Baseline Calibration
-
-**Method:** Bio-Energetic Equilibrium — iterative tuning of parameters until `Energy In ≈ Energy Out` per foraging cycle, placing the population at the **Edge of Stability**.
-
-**Energy Budget Derivation (avg. 8 steps to food, T≈12 tick cycle):**
-- Energy Out ≈ `(12 × 0.005) + (8 × 0.001)` = **0.068 / cycle**
-- Energy In = `0.07 × U(0.8, 1.2)` = **0.056 – 0.084 / cycle**
-- Result: Just-balanced. Agents survive long-term but 1-2 stochastic deaths per run are expected.
-
-### Three Canonical Conditions (Source: `baseline_20260415_015935`)
-
-All three conditions share the same core energy parameters. Only `init_food` and `rest_recovery` differ — food availability is the sole axis of environmental stress.
-
-| Condition | `hunger_rate` | `move_cost` | `eat_gain` | `init_food` | `rest_recovery` |
-|---|---|---|---|---|---|
-| **Balanced** | 0.005 | 0.001 | 0.07 | **70** | 0.005 |
-| **Easy** | 0.005 | 0.001 | 0.07 | **80** | 0.05 |
-| **Harsh** | 0.005 | 0.001 | 0.07 | **20** | 0.005 |
-
-### Validation Results (Seeds 42–46 × 3 repeats = 15 runs per condition)
-
-| Condition | Survival Rate | Mean Energy | Tail Energy (last 200t) | Interpretation |
-|---|---|---|---|---|
-| **Balanced** | **1.00 ± 0.00** (15/15) | 0.779 ± 0.026 | **0.703 ± 0.038** | Tail energy on-target (0.70–0.75). Full survival. |
-| **Easy** | **1.00 ± 0.00** (15/15) | 0.935 ± 0.011 | **0.943 ± 0.018** | Energy-saturated. Clear contrast to Balanced. |
-| **Harsh** | **0.05 ± 0.05** (0.73/15) | 0.343 ± 0.016 | NaN (extinction) | Near-complete extinction. Collapse confirmed. |
-
-> **Note on Balanced Condition:** `init_food=70` with `rest_recovery=0.005` keeps all 15 agents alive but tightly energy-constrained (tail energy 0.703 ± 0.038 — right at the 0.70 floor). This is the canonical "Edge of Stability" baseline.
-> **Note on Harsh Condition:** `init_food=20` leads to near-complete extinction. The `tail_mean_energy` is `NaN` because virtually no agents survive to the tail window.
-
+This update was added after the baseline calibration and OVAT sensitivity sweep to make the Phase 2 survival-minimal system more interpretable before moving into child-care, plasticity, and evolution phases.
 
 ---
 
-## Part B: OVAT Sensitivity Analysis
+#### Code Structure Update
 
-**Protocol:** One parameter varied per set; all others held at canonical baseline.
-5 seeds × 3 repeats = **15 runs per parameter value**.
-Metric: Tail Mean Energy (last 200 ticks) and Survival Rate.
+Phase 2 survival-minimal code was reorganized into three main files:
 
-### Tipping Points
+| File | Role |
+|---|---|
+| `run.py` | Main simulation loop, validation, sweep selection, logging, and plot orchestration |
+| `config.py` | Centralized parameters, selection targets, sweep ranges, baseline values, and plot enable/disable switches |
+| `plot.py` | All plotting functions, CSV saving, JSON saving, and summary utilities |
 
-| Set | Parameter | Baseline | Tipping Point | Collapse Condition |
-|---|---|---|---|---|
-| A | `hunger_rate` | 0.005 | **0.006** (+20%) | Full extinction at 0.012 |
-| B | `move_cost` | 0.001 | **0.003** (+200%) | < 50% survival at 0.004 |
-| C | `eat_gain` | 0.07 | **0.055** (−21%) | Full extinction at 0.03 |
-| D | `init_food` | **70** | **40** (−43%) | Near-extinction at 20 |
-| E | `rest_recovery` | **0.005** | **None** | Flat — no tipping point found |
+This makes the experiment easier to maintain:
 
-
-### Parameter Elasticity Ranking (most dangerous → safest)
-
-1. 🔴 **`hunger_rate`** — Most dangerous. +0.001 = −5% survival. Tipping point 0.001 above baseline.
-2. 🟠 **`eat_gain`** — Moderate. −0.015 = threshold. Non-linear collapse below 0.055.
-3. 🟡 **`move_cost`** — Moderate. Wider margin (+0.002) before collapse.
-4. 🟡 **`init_food`** — Buffer-dependent. Cliff at 40 units; confirmed baseline at 70 gives a **30-unit safety margin**.
-
-5. 🟢 **`rest_recovery`** — Negligible. ≥ 96% survival across all tested values.
-
-### Key Findings
-
-- **`hunger_rate` is the Key Evolutionary Driver.** It is the only parameter where the tipping point is within +0.001 of the baseline. This makes it the strongest candidate for ecological stress manipulation in Phase 5 (Ecology Sweep).
-- **`rest_recovery` can be held fixed.** It contributes zero evolutionary leverage. Holding it constant in all future phases is scientifically justified and reduces sweep complexity.
-- **The Balanced Baseline is correctly positioned.** All 5 parameters show the baseline value sitting just before or at a non-linear threshold, confirming it represents a genuine "Edge of Stability" rather than an arbitrary choice.
+- `run.py` focuses on running simulation and validation.
+- `config.py` is the main file for changing parameters.
+- `plot.py` handles all output visualization and logging.
 
 ---
 
-## Verdict
+#### Multi-Seed Validation Behavior
 
-Foraging engine verified. Canonical baseline locked. Sensitivity analysis confirms `hunger_rate` as the primary ecological selection lever. Engine ready for Phase 3.
+All validation and diagnostic plots are generated from the same validation result set.
+
+Current validation protocol:
+
+```text
+VALIDATION_SEEDS = [42, 43, 44, 45, 46]
+```
+
+Therefore, total runs per plotted condition are:
+
+```text
+5 seeds × repeats
+```
+
+Example:
+
+```bash
+python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --repeats 10
+```
+
+produces:
+
+```text
+5 seeds × 10 repeats = 50 runs
+```
+
+All diagnostic plots are therefore based on multi-seed, multi-repeat statistics rather than a single stochastic run.
+
+---
+
+#### Motivation and Action Definition
+
+The Phase 2 survival-minimal environment has no child, no care behavior, and no reproduction. Therefore, only two motivation domains are used:
+
+| Level | Variables |
+|---|---|
+| Motivation | `FORAGE`, `SELF` |
+| Action | `MOVE`, `PICK`, `EAT`, `REST` |
+
+Mapping:
+
+```text
+FORAGE motivation → MOVE or PICK
+SELF motivation   → EAT or REST
+```
+
+If a motivation is selected but no valid action is executed, it is counted as a failed realization.
+
+---
+
+#### Added Per-Tick Logs
+
+The simulation now records additional per-tick information:
+
+| Log | Meaning |
+|---|---|
+| `action_history` | Per-tick counts of `MOVE`, `PICK`, `EAT`, `REST` |
+| `motivation_history` | Per-tick counts of `FORAGE`, `SELF` |
+| `failed_history` | Per-tick counts of `FAILED_FORAGE`, `FAILED_SELF` |
+| `food_history` | Per-tick `PICK`, `EAT`, and available food count |
+| `energy_flow_history` | Per-tick hunger loss, movement loss, eating gain, and net energy change |
+| `spatial_heatmap` | Mother population visitation heatmap over the grid |
+
+These logs allow the analysis to connect:
+
+```text
+parameter setting → motivation → realized action → failed decision → energy/population outcome
+```
+
+---
+
+#### Added Diagnostic Plots
+
+The following plots were added to Phase 2. Each plot can be enabled or disabled from `config.py`.
+
+---
+
+##### 1. Action Selection Over Time
+
+**Output:**
+
+```text
+action_selection_<name>.png
+```
+
+**Purpose:**  
+Shows how often each realized action occurs over time.
+
+Actions:
+
+```text
+MOVE, PICK, EAT, REST
+```
+
+**Interpretation:**  
+This plot explains what agents are actually doing during survival. For example, a high `MOVE` rate indicates active foraging, while a high `REST` rate indicates self-maintenance through fatigue recovery.
+
+---
+
+##### 2. Motivation Selection Over Time
+
+**Output:**
+
+```text
+motivation_selection_<name>.png
+```
+
+**Purpose:**  
+Shows the motivation-level decision trend over time.
+
+Motivations:
+
+```text
+FORAGE, SELF
+```
+
+**Interpretation:**  
+This plot reveals whether the population is primarily driven by food-seeking or self-maintenance. In the tested balanced-style configuration, agents initially prioritize `FORAGE`, then gradually shift toward `SELF` as energy and fatigue dynamics stabilize.
+
+---
+
+##### 3. Failed Selection Over Time
+
+**Output:**
+
+```text
+failed_selection_<name>.png
+```
+
+**Purpose:**  
+Shows when motivation selection fails to become a realized action.
+
+Definitions:
+
+```text
+FAILED_FORAGE = FORAGE selected but neither MOVE nor PICK occurred
+FAILED_SELF   = SELF selected but neither EAT nor REST occurred
+```
+
+**Interpretation:**  
+This plot explains the gap between motivation and action. For example, if `FORAGE` is high but `MOVE + PICK` is lower, the missing portion is explained by `FAILED_FORAGE`.
+
+Possible causes of `FAILED_FORAGE`:
+
+- food outside perception radius
+- no valid target
+- movement conflict
+- position update failure
+
+Possible causes of `FAILED_SELF`:
+
+- `EAT` selected while no food is held
+- self-maintenance selected but no valid self-action executes
+
+---
+
+##### 4. Stacked Action + Failed Selection Chart
+
+**Output:**
+
+```text
+stacked_action_failed_<name>.png
+```
+
+**Purpose:**  
+Combines realized actions and failed selections into one stacked area chart.
+
+Stacked components:
+
+```text
+MOVE
+PICK
+EAT
+REST
+FAILED_FORAGE
+FAILED_SELF
+```
+
+**Interpretation:**  
+This plot gives a compact overview of how each tick is behaviorally distributed. It shows the proportion of useful actions versus wasted or unrealized decisions.
+
+---
+
+##### 5. FAILED_SELF / FAILED_FORAGE vs Energy Decay Correlation
+
+**Outputs:**
+
+```text
+correlation_failed_self_energy_<name>.png
+correlation_failed_forage_energy_<name>.png
+correlation_summary_<name>.csv
+correlation_failed_forage_summary_<name>.csv
+```
+
+**Purpose:**  
+Tests whether failed decisions are associated with energy decline.
+
+Correlation examples:
+
+```text
+FAILED_SELF rate vs energy drop per tick
+FAILED_FORAGE rate vs energy drop per tick
+```
+
+**Interpretation:**  
+A positive correlation suggests that failed decision realization may be related to energy loss. This is useful for diagnosing whether late-run energy decay is caused by poor self-maintenance, failed foraging, or another energy imbalance.
+
+---
+
+##### 6. State Space Plot: Energy vs Action/Motivation
+
+**Output:**
+
+```text
+state_space_energy_action_<name>.png
+```
+
+**Purpose:**  
+Shows how action or motivation probability changes with energy.
+
+Examples:
+
+```text
+Energy vs REST
+Energy vs EAT
+Energy vs SELF
+Energy vs FORAGE
+```
+
+**Interpretation:**  
+This plot helps identify behavioral thresholds. For example, it can reveal whether `SELF` or `REST` begins to dominate when energy drops below a certain level.
+
+---
+
+##### 7. Food Consumption Rate Over Time
+
+**Output:**
+
+```text
+food_consumption_rate_<name>.png
+```
+
+**Purpose:**  
+Tracks food-related behavior over time.
+
+Variables:
+
+```text
+PICK rate
+EAT rate
+available food count
+```
+
+**Interpretation:**  
+This plot tests whether the population maintains energy because food intake roughly balances energy expenditure. It is useful for identifying break-even behavior between energy gain and energy loss.
+
+---
+
+##### 8. Spatial Heatmap of Mother Population
+
+**Output:**
+
+```text
+spatial_heatmap_population_<name>.png
+```
+
+**Purpose:**  
+Shows where mothers spend most time on the grid.
+
+**Interpretation:**  
+This helps determine whether agents spread across the environment, cluster around food-rich zones, or repeatedly occupy specific regions. This is important for later phases involving child care, because spatial clustering may influence mother-child interaction dynamics.
+
+---
+
+##### 9. Energy Expenditure Breakdown
+
+**Output:**
+
+```text
+energy_expenditure_breakdown_<name>.png
+```
+
+**Purpose:**  
+Compares major energy loss and gain terms.
+
+Components:
+
+```text
+hunger_loss
+move_loss
+eat_gain
+net_energy_change
+```
+
+**Interpretation:**  
+This plot shows whether the main survival pressure comes from basal hunger cost or movement cost. It also indicates whether eating compensates for total energy expenditure.
+
+---
+
+#### Plot Enable / Disable System
+
+All additional plots can be turned on or off from `config.py`.
+
+Example:
+
+```python
+ENABLE_ACTION_SELECTION_PLOT = True
+ENABLE_MOTIVATION_SELECTION_PLOT = True
+ENABLE_FAILED_SELECTION_PLOT = True
+ENABLE_STACKED_ACTION_FAILED_PLOT = True
+ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT = True
+ENABLE_STATE_SPACE_ENERGY_ACTION_PLOT = True
+ENABLE_FOOD_CONSUMPTION_PLOT = True
+ENABLE_SPATIAL_HEATMAP_PLOT = True
+ENABLE_ENERGY_EXPENDITURE_PLOT = True
+```
+
+To disable a specific plot:
+
+```python
+ENABLE_SPATIAL_HEATMAP_PLOT = False
+ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT = False
+```
+
+The main validation plot is always generated. The switches only control diagnostic plots.
+
+---
+
+#### Updated Outputs
+
+For `single` mode:
+
+```text
+outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
+├── validation_single.png
+├── action_selection_single.png
+├── motivation_selection_single.png
+├── failed_selection_single.png
+├── stacked_action_failed_single.png
+├── correlation_failed_self_energy_single.png
+├── correlation_failed_forage_energy_single.png
+├── state_space_energy_action_single.png
+├── food_consumption_rate_single.png
+├── spatial_heatmap_population_single.png
+├── energy_expenditure_breakdown_single.png
+├── validation_single.csv
+├── correlation_summary_single.csv
+├── correlation_failed_forage_summary_single.csv
+└── auto_baseline_summary.json
+```
+
+For `sweep` mode, the same diagnostic outputs are generated separately for:
+
+```text
+balanced
+easy
+harsh
+```
+
+Example:
+
+```text
+validation_balanced.png
+action_selection_balanced.png
+motivation_selection_balanced.png
+failed_selection_balanced.png
+stacked_action_failed_balanced.png
+correlation_failed_self_energy_balanced.png
+correlation_failed_forage_energy_balanced.png
+state_space_energy_action_balanced.png
+food_consumption_rate_balanced.png
+spatial_heatmap_population_balanced.png
+energy_expenditure_breakdown_balanced.png
+```
+
+---
+
+#### Current Diagnostic Interpretation
+
+From the current single-condition diagnostic plots:
+
+1. **Motivation-to-action gap exists.**  
+   Early in the run, `FORAGE` can be higher than `MOVE + PICK`, meaning some forage motivations fail to become realized actions.
+
+2. **Failed forage should be inspected separately.**  
+   `FAILED_FORAGE` explains cases where the agent attempts to forage but cannot move or pick food.
+
+3. **SELF is mainly expressed through REST and EAT.**  
+   When `SELF` is higher than `REST + EAT`, the remaining gap is represented by `FAILED_SELF`.
+
+4. **Energy is quasi-stable, not perfectly steady.**  
+   The validation plot shows a slight late-run downward slope in energy. This suggests the system is stable over 1,000 ticks but should be tested over longer durations before claiming absolute steady state.
+
+5. **Correlation plots are diagnostic, not causal proof.**  
+   Positive correlation between failed selections and energy drop suggests a relationship, but does not alone prove causality.
+
+---
+
+#### Updated Usage
+
+Run full sweep and generate enabled diagnostic plots:
+
+```bash
+python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3
+```
+
+Run one hand-picked configuration with more repeats:
+
+```bash
+python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --repeats 10
+```
+
+Run sensitivity sweep:
+
+```bash
+python experiments/phase2_survival_minimal/sensitivity_sweep.py --duration 1000 --seeds 5 --repeats 3
+```
