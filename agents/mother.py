@@ -212,13 +212,13 @@ class MotherAgent(Agent):
         """
         Environmental CARE cue.
 
-        CARE is based on:
-          - child distress
-          - child hunger
-          - separation between mother and child
-          - whether mother is carrying food
+        CARE uses two mostly independent dimensions:
+        - biological need: child hunger
+        - spatial need: mother-child distance
 
-        This cue is only active when a living child exists.
+        child.distress is intentionally not used here because distress is already
+        derived from hunger and separation. It should be used as an outcome metric,
+        not as an additional input to avoid double-counting.
         """
         if child is None or not child.alive:
             return 0.0
@@ -228,20 +228,18 @@ class MotherAgent(Agent):
 
         child_dist = world.get_distance(self.pos, child.pos)
         distance_pressure = min(1.0, child_dist / perception_radius)
-
-        distress_pressure = max(0.0, child.distress)
         hunger_pressure = max(0.0, child.hunger)
 
         care_cue = (
             BASE_CARE_CUE
-            + 0.55 * distress_pressure
-            + 0.25 * hunger_pressure
-            + 0.20 * distance_pressure
+            + 0.60 * hunger_pressure
+            + 0.40 * distance_pressure
         )
 
-        # If mother has food and the child is hungry, care becomes more actionable.
+        # If the mother already has food, child hunger becomes more actionable
+        # because FEED can happen once she reaches the child.
         if self.held_food > 0:
-            care_cue += 0.35 * hunger_pressure
+            care_cue += 0.40 * hunger_pressure
 
         return float(max(0.0, care_cue))
 
