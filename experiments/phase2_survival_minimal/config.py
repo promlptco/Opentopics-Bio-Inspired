@@ -239,8 +239,10 @@ def candidate_configs(mode="sweep"):
         11-point init_food grid (35–60). Covers the balanced→easy range.
 
     mode="pipeline":
-        19-point init_food grid (15–60). Wider range exposes harsh territory
-        at low food counts so all three conditions can be auto-selected.
+        Fine multi-dimensional grid across all 5 ecological parameters.
+        Only perception_radius is fixed; everything else varies.
+        2400 configs total (5×4×5×6×4) covering harsh→balanced→easy territory.
+        Expected runtime: ~15–22 min with --workers 8 at duration 1000.
 
     Note:
         BASELINE_GENOME_WEIGHTS are fixed here. Phase 2 is not evolving
@@ -261,18 +263,36 @@ def candidate_configs(mode="sweep"):
             }
         ]
 
-    init_food_values = {
-        "sweep":    [35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
-        "pipeline": [15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
+    # fmt: off
+    _GRIDS = {
+        "sweep": {
+            "hunger_rate":    [0.0045],
+            "move_cost":      [0.0005],
+            "eat_gain":       [0.08],
+            "init_food":      [35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
+            "rest_recovery":  [0.005],
+        },
+        "pipeline": {
+            # 5/4/5/6/4-level grid. Only perception_radius is fixed.
+            # 5 × 4 × 5 × 6 × 4 = 2400 configs.
+            # Expected runtime: ~15–22 min with --workers 8 at duration 1000.
+            #
+            # Values span each parameter's full viable range so all three
+            # operating zones (harsh / balanced / easy) are covered.
+            "hunger_rate":   [0.002, 0.004, 0.006, 0.009, 0.012],
+            "move_cost":     [0.0005, 0.001, 0.003, 0.006],
+            "eat_gain":      [0.04, 0.06, 0.08, 0.10, 0.13],
+            "init_food":     [20, 30, 40, 55, 70, 90],
+            "rest_recovery": [0.005, 0.02, 0.05, 0.09],
+        },
     }
+    # fmt: on
+
+    param_grid = _GRIDS.get(mode, _GRIDS["sweep"])
 
     grid = {
         "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
-        "hunger_rate": [0.0045],
-        "move_cost": [0.0005],
-        "eat_gain": [0.08],
-        "init_food": init_food_values.get(mode, init_food_values["sweep"]),
-        "rest_recovery": [0.005],
+        **param_grid,
         "care_weight":   [BASELINE_GENOME_WEIGHTS["care_weight"]],
         "forage_weight": [BASELINE_GENOME_WEIGHTS["forage_weight"]],
         "self_weight":   [BASELINE_GENOME_WEIGHTS["self_weight"]],

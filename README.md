@@ -76,7 +76,7 @@ python experiments/phase2_survival_minimal/run.py --mode pipeline --duration 100
 ```
 
 Pipeline steps (printed during execution):
-1. **Step 1** — Wide sweep (19 `init_food` configs, 15–60) to cover balanced → easy → harsh territory
+1. **Step 1** — Fine multi-dimensional sweep (2400 configs, 5×4×5×6×4) across all 5 ecological parameters — only `perception_radius` is fixed; expected ~15–22 min with `--workers 8`
 2. **Step 2** — Validation-first selection: picks the best balanced/easy/harsh config from sweep results
 3. **Step 3** — Full diagnostic plots for all three selected conditions
 4. **Step 4** — OVAT sensitivity sweep around the auto-selected balanced baseline → `sensitivity/` subfolder
