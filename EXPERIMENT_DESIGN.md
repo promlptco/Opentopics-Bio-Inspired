@@ -91,35 +91,24 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 
 **Purpose:** Confirm that the core foraging loop and decision-making architecture are stable under stochastic pressure, and identify a canonical "Balanced" baseline parameter set that places the population at the **Edge of Stability** — alive under normal conditions, but susceptible to collapse when any single ecological parameter is worsened.
 
-**Protocol (Executed):**
+**Protocol (Pipeline mode — `--mode pipeline`):**
 - **Mode:** Foraging only. No reproduction, no care, no mutation.
 - **Decision Architecture:** Softmax (τ=0.1) Action Selection.
-- **Environmental Noise:** ±20% Foraging Variance (E gains are stochastic, `variance = U(0.8, 1.2)`).
+- **Environmental Noise:** ±20% Foraging Variance (`variance = U(0.8, 1.2)`).
 - **Perceptual Noise:** Gaussian N(0, σ=0.1) added to perceived distance-to-food.
 - **Grid:** 30×30, 15 mothers, `initial_energy = 0.75`.
-- **Calibration Method:** Bio-Energetic Equilibrium — iterative tuning toward `Energy In ≈ Energy Out`.
-  - **Energy Out per cycle** ≈ `hunger_rate × T + move_cost × D` (T = cycle length, D ≈ 8 steps avg)
-  - **Energy In per cycle** = `eat_gain × U(0.8, 1.2)`
-  - **Target:** Equilibrium slightly below 1.0, placing population ~1-2 agents below 100% survival.
-- **Duration**: 1,000 ticks across 5 seeds (42–46) × 3 repeats per seed.
+- **Duration:** 1,000 ticks. N=50 independent seeds per configuration throughout.
 
-**Three Canonical Conditions (selected by auto-sweep, validated Seeds 42–46 × 3 repeats):**
+**6-Step Automated Pipeline:**
 
-| Condition | `hunger_rate` | `move_cost` | `eat_gain` | `init_food` | `rest_recovery` |
-|---|---|---|---|---|---|
-| **Balanced** | 0.005 | 0.001 | 0.07 | **70** | 0.005 |
-| **Easy** | 0.005 | 0.001 | 0.07 | **80** | 0.05 |
-| **Harsh** | 0.005 | 0.001 | 0.07 | **20** | 0.005 |
+1. **Synthetic baseline** — uses `BALANCED_BASELINE` from `config.py` as the starting center.
+2. **OVAT sweep (N=50 per point)** — all five parameters swept one-at-a-time; each point averaged over 50 seeds.
+3. **Dual-metric cliff-edge detection** — for each CLEAR parameter (survival range ≥ 0.20), finds the last stable point where survival ∈ [0.80–0.95] AND energy ∈ [0.65–0.75] with steepest next-step drop. UNCLEAR (flat) parameters become secondary axes in Step 4.
+4. **Multi-dimensional validation grid (N=50 per config)** — base params = synthetic baseline; primary axis = `init_food` spanning harsh→easy zone (anchored between detected and synthetic food values, ±4 steps each side); secondary axes = UNCLEAR params × 5 evenly-spaced values.
+5. **Penalty scoring selection** — scores all Step 4 configs; hard constraint violations = +1000/unit; soft terms penalize distance from targets: Balanced ≈ 14/15 survival + energy ≈ 0.70 + flat slope; Easy ≈ 15/15 + energy ≥ 0.85; Harsh ≈ 2–5/15 + energy ≤ 0.40.
+6. **Diagnostic report generation** — full N=50 validation + complete diagnostic suite for all three selected conditions.
 
-> **Note:** Core energy parameters (`hunger_rate`, `move_cost`, `eat_gain`) are identical across all three conditions — only `init_food` and `rest_recovery` vary. The environmental stress is driven entirely by food availability.
-
-**Validation Results (Seeds 42–46 × 3 repeats = 15 runs per condition):**
-
-| Condition | Survival Rate | Mean Energy | Tail Energy (last 200t) | Interpretation |
-|---|---|---|---|---|
-| **Balanced** | **1.00 ± 0.00** (15/15) | 0.779 ± 0.026 | **0.703 ± 0.038** | Stable. Tail energy on-target at 0.70–0.75. |
-| **Easy** | **1.00 ± 0.00** (15/15) | 0.935 ± 0.011 | **0.943 ± 0.018** | Energy-saturated. Clear contrast to Balanced. |
-| **Harsh** | **0.05 ± 0.05** (0.73/15) | 0.343 ± 0.016 | NaN (extinction) | Near-complete extinction. Collapse confirmed. |
+**Three Canonical Conditions** are selected automatically by the pipeline. Exact values depend on the OVAT-detected cliff-edge and are reported in `auto_baseline_summary.json`.
 
 
 ---
@@ -129,10 +118,10 @@ Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k
 **Purpose:** Map the non-linear response of the system to each of the 5 ecological parameters, one at a time (One-Variable-at-a-Time / OVAT), to empirically justify the Balanced baseline and identify the Key Evolutionary Driver for Phase 3 and beyond.
 
 **Protocol:**
-- One parameter varied per set; all others fixed at the Balanced Baseline above.
-- 5 seeds (42–46) × 3 repeats per seed = **15 runs per parameter value**.
-- Metric: Late-run tail_mean_energy (last 200 ticks) and survival rate (0.0–1.0).
-- Script: `experiments/phase2_survival_minimal/sensitivity_sweep.py`
+- One parameter varied per set; all others fixed at `BALANCED_BASELINE` from `config.py`.
+- **50 independent seeds per parameter value** (pipeline mode); N=15 (5 seeds × 3 repeats) in standalone `sensitivity_sweep.py`.
+- Metric: tail_mean_energy (last 200 ticks) and survival rate (0.0–1.0).
+- Script: `experiments/phase2_survival_minimal/sensitivity_sweep.py` (standalone) or embedded in `--mode pipeline`.
 
 **Results Summary & Tipping Points:**
 

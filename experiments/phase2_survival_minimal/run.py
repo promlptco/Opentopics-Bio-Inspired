@@ -958,20 +958,23 @@ def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
     unclear_keys = {c["key"] for c in clarity.values() if not c["is_clear"]}
     key_to_setid = {v["key"]: k for k, v in SENSITIVITY_SWEEPS.items()}
 
-    # Primary axis: init_food
-    center      = int(detected_params.get("init_food", synthetic_baseline["init_food"]))
-    step        = max(3, center // 8)
-    food_values = sorted({
-        max(10, center - 4 * step),
-        max(10, center - 3 * step),
-        max(10, center - 2 * step),
-        max(10, center -     step),
-        center,
-        center +     step,
-        center + 2 * step,
-        center + 3 * step,
-        center + 4 * step,
-    })
+    # Base params: synthetic baseline.
+    # Combining all CLEAR cliff-edge values simultaneously creates a super-harsh
+    # operating point (e.g. high hunger + high move_cost + low eat_gain) that drives
+    # total extinction across the whole food axis.  Individual cliff-edge values
+    # are reported in Step 3 for reference but should not all be locked at once.
+    base_params = dict(synthetic_baseline)
+
+    # Primary axis: init_food — span from harsh to easy zone.
+    # Anchor between min(detected, synthetic) and max(detected, synthetic) + buffer
+    # so the grid covers all three operating zones.
+    center     = int(detected_params.get("init_food", synthetic_baseline["init_food"]))
+    synth_food = int(synthetic_baseline["init_food"])
+    step       = max(3, max(center, synth_food) // 8)
+    food_lo    = max(10, min(center, synth_food) - 4 * step)
+    food_hi    = max(center, synth_food) + 4 * step
+    food_raw   = np.linspace(food_lo, food_hi, 9)
+    food_values = sorted({int(round(v)) for v in food_raw} | {center, synth_food})
 
     # Secondary axes for UNCLEAR params (excluding init_food — already on primary axis)
     extra_keys   = []
@@ -991,7 +994,7 @@ def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
 
     configs = []
     for combo in iproduct(*all_axes):
-        params = dict(detected_params)
+        params = dict(base_params)
         for k, v in zip(all_keys, combo):
             params[k] = int(v) if k == "init_food" else float(v)
         params["name"] = "candidate"

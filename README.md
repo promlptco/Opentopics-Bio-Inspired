@@ -94,9 +94,9 @@ For each parameter curve, locates the *last stable point* before the tipping-poi
 Prints a table: Parameter | Synthetic | Detected Cliff-Edge | Status | Justification.
 
 **Step 4 — Multi-dimensional validation grid (N=50 per config)**
-- **Primary axis**: `init_food` ±4 steps around the cliff-edge center.
+- **Base params**: synthetic baseline (combining all individual cliff-edge values simultaneously would make the system too harsh for partial survival).
+- **Primary axis**: `init_food` spanning from harsh to easy zone — anchored between `min(detected_food, synthetic_food)` and `max(detected_food, synthetic_food)`, extended ±4 steps on each side.
 - **Secondary axes**: one axis per UNCLEAR parameter (5 evenly-spaced values from its sweep range).
-- **CLEAR params**: locked to their cliff-edge values.
 - Total configs = food_steps × UNCLEAR_param_combinations; each run N=50 seeds.
 
 **Step 5 — Automated penalty scoring selection**

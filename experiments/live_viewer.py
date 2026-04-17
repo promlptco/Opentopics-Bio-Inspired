@@ -63,6 +63,8 @@ class LiveStateProvider:
         total_ticks        : int          max ticks for this run
     """
 
+    total_ticks: int
+
     def get(self) -> dict:
         raise NotImplementedError
 
