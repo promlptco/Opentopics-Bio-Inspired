@@ -76,30 +76,56 @@ python experiments/phase2_survival_minimal/run.py --mode pipeline --duration 100
 ```
 
 Pipeline steps (printed during execution):
-1. **Step 1** — Fine multi-dimensional sweep (2400 configs, 5×4×5×6×4) across all 5 ecological parameters — only `perception_radius` is fixed; expected ~15–22 min with `--workers 8`
-2. **Step 2** — Validation-first selection: picks the best balanced/easy/harsh config from sweep results
-3. **Step 3** — Full diagnostic plots for all three selected conditions
-4. **Step 4** — OVAT sensitivity sweep around the auto-selected balanced baseline → `sensitivity/` subfolder
+
+**Step 1 — Synthetic starting baseline**
+Uses `BALANCED_BASELINE` from `config.py` as the absolute center point.
+No manual calibration required. Logs starting parameters.
+
+**Step 2 — OVAT sensitivity sweep (N=50 seeds per point)**
+Runs all five OVAT sets (A–E) around the synthetic center.
+Each sweep point is averaged over **50 independent seeds** to account for Softmax stochasticity.
+Saves `sensitivity_ovat/sensitivity_map.png` with vertical synthetic-center lines visible.
+
+**Step 3 — Dual-metric cliff-edge detection**
+For each parameter curve, locates the *last stable point* before the tipping-point collapse:
+- **CLEAR** (survival span ≥ 0.20): finds the point satisfying survival ∈ [0.80–0.95] **AND** energy ∈ [0.65–0.75] where the *next adjacent step* shows the steepest drop.
+- **UNCLEAR** (flat curve): synthetic value retained; parameter becomes a secondary axis in Step 4.
+
+Prints a table: Parameter | Synthetic | Detected Cliff-Edge | Status | Justification.
+
+**Step 4 — Multi-dimensional validation grid (N=50 per config)**
+- **Primary axis**: `init_food` ±4 steps around the cliff-edge center.
+- **Secondary axes**: one axis per UNCLEAR parameter (5 evenly-spaced values from its sweep range).
+- **CLEAR params**: locked to their cliff-edge values.
+- Total configs = food_steps × UNCLEAR_param_combinations; each run N=50 seeds.
+
+**Step 5 — Automated penalty scoring selection**
+Scores every Step 4 config with a penalty function combining hard constraints and soft distance-to-target terms:
+- **Balanced**: target ≈ 14/15 survival, energy ≈ 0.70, flat slope (slope heavily penalised).
+- **Easy**: target ≈ 15/15 survival, energy ≥ 0.85.
+- **Harsh**: target ≈ 2–5/15 survival, energy ≤ 0.40.
+
+Prints the final ecological baseline table (exact genome + environment for all three states).
+
+**Step 6 — Diagnostic report generation**
+Runs full N=50-seed validation for each selected condition and generates the complete diagnostic suite.
 
 Output layout:
 ```
 outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
-├── auto_baseline_summary.json        ← includes _ovat_baseline key
+├── auto_baseline_summary.json        ← includes _pipeline_meta key
 ├── validation_balanced.csv / .png
 ├── validation_easy.csv / .png
 ├── validation_harsh.csv / .png
 ├── <all other diagnostic plots>
-└── sensitivity/
-    ├── sensitivity_map.png
+└── sensitivity_ovat/
+    ├── sensitivity_map.png           ← baseline lines mark synthetic center
     ├── set_A_hunger_rate.csv
     ├── set_B_move_cost.csv
     ├── set_C_eat_gain.csv
     ├── set_D_init_food.csv
     └── set_E_rest_recovery.csv
 ```
-
-> Baseline lines in the sensitivity map are shown automatically,
-> marking the auto-selected balanced operating point.
 
 ---
 

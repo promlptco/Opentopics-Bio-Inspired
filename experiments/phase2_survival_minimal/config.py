@@ -194,31 +194,32 @@ HIDE_BASELINE_FOR = {
 
 SELECTION_TARGETS = {
     "balanced": {
-        # Stability boundary: ~70-85% survival, moderate energy, flat trend.
-        # Represents the minimum viable ecological niche for the emergence of care.
-        "min_final_pop": 10.5,        # ≥70% survival (10.5/15)
-        "energy_low": 0.58,
-        "energy_high": 0.75,
-        "target_energy": 0.68,
+        # Stability boundary: cliff-edge of survival, flat energy trajectory.
+        # Penalty scoring target: ~93% (14/15) survival, energy ~0.70.
+        "min_final_pop": 10.5,        # hard: ≥70% survival (10.5/15)
+        "energy_low": 0.55,           # hard lower energy bound
+        "energy_high": 0.82,          # hard upper energy bound
+        "target_energy": 0.70,
         "max_tail_sd": 0.06,
         "max_abs_energy_slope": 0.00005,
         "max_abs_pop_slope": 0.002,
     },
     "easy": {
-        # Resource-rich: ≥90% survival, high energy — minimal ecological pressure.
-        "min_final_pop": 13.5,        # ≥90% survival (13.5/15)
-        "min_energy": 0.75,
+        # Resource-rich: near-full survival, high sustained energy.
+        # Penalty scoring target: ~100% (15/15) survival, energy ≥ 0.85.
+        "min_final_pop": 13.5,        # hard: ≥90% survival (13.5/15)
+        "min_energy": 0.75,           # hard lower energy bound
         "target_energy": 0.85,
         "max_tail_sd": 0.08,
     },
     "harsh": {
-        # Ecological stress: 20-60% survival, limited energy.
-        # Left tail of the sensitivity curves; survival is marginal but viable.
-        "min_final_pop": 3.0,         # ≥20% survival (3/15)
-        "max_final_pop": 9.0,         # ≤60% survival (9/15)
-        "energy_low": 0.15,
-        "energy_high": 0.60,
-        "target_pop": 5.0,
+        # Ecological stress: 13–33% survival (2–5/15), energy ≤ 0.40.
+        # Penalty scoring target: ~23% (3.5/15) survival, energy ~0.35.
+        "min_final_pop": 1.5,         # hard: ≥10% survival (≈1.5/15)
+        "max_final_pop": 5.0,         # hard: ≤33% survival (5/15)
+        "energy_low": 0.10,           # hard lower energy bound
+        "energy_high": 0.40,          # hard upper energy bound
+        "target_pop": 3.5,
         "target_energy": 0.35,
     },
 }
@@ -239,10 +240,8 @@ def candidate_configs(mode="sweep"):
         11-point init_food grid (35–60). Covers the balanced→easy range.
 
     mode="pipeline":
-        Fine multi-dimensional grid across all 5 ecological parameters.
-        Only perception_radius is fixed; everything else varies.
-        2400 configs total (5×4×5×6×4) covering harsh→balanced→easy territory.
-        Expected runtime: ~15–22 min with --workers 8 at duration 1000.
+        Not used — pipeline mode builds its sweep grid dynamically from
+        the OVAT-detected balanced baseline via _pipeline_sweep_configs().
 
     Note:
         BASELINE_GENOME_WEIGHTS are fixed here. Phase 2 is not evolving

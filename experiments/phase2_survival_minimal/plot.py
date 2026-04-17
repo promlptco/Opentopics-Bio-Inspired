@@ -12,6 +12,7 @@ from experiments.phase2_survival_minimal.config import (
     INIT_MOTHERS,
     DEFAULT_PERCEPTION_RADIUS,
     TAIL_WINDOW,
+    SELECTION_TARGETS,
 )
 
 
@@ -208,8 +209,11 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="tab:green", alpha=0.15, label="Mean ± SD")
     ax2.plot(ticks, mean_p, color="tab:green", linewidth=2.0, label="Group Mean")
 
-    ax1.axhline(0.70, color="gray", linestyle=":", label="Target 0.70")
-    ax1.axhline(0.75, color="gray", linestyle="--", alpha=0.6, label="Target 0.75")
+    _t = SELECTION_TARGETS.get(name, {})
+    _target_e  = _t.get("target_energy",  0.70)
+    _ceiling_e = _t.get("energy_high",    _t.get("min_energy", 0.85))
+    ax1.axhline(_target_e,  color="gray", linestyle=":",  label=f"Target E={_target_e:.2f}")
+    ax1.axhline(_ceiling_e, color="gray", linestyle="--", alpha=0.6, label=f"Ceiling E={_ceiling_e:.2f}")
     ax1.axhline(0.0, color="tab:red", linestyle="--", alpha=0.5, label="Death")
 
     ax2.axhline(0.0, color="tab:red", linestyle="--", alpha=0.5, label="Extinction")

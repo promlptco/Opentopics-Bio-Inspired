@@ -58,6 +58,7 @@ from experiments.phase2_survival_minimal.config import (
     DEFAULT_SWEEP_SEED_BASE,
     DEFAULT_PERCEPTION_RADIUS,
     SELECTION_TARGETS,
+    BALANCED_BASELINE,
     SENSITIVITY_SWEEPS,
     TAIL_WINDOW,
     PLOT_SMOOTH_WINDOW,
@@ -851,6 +852,453 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
 
 
 # ============================================================
+# Pipeline helpers
+# ============================================================
+
+def _detect_cliff_edge_from_ovat(ovat_all, synthetic_baseline,
+                                  surv_lo=0.80, surv_hi=0.95,
+                                  energy_lo=0.65, energy_hi=0.75,
+                                  min_surv_range=0.20):
+    """
+    Detect the cliff-edge balanced operating point from OVAT sweeps (N=50).
+
+    For each parameter:
+      CLEAR (surv range >= min_surv_range):
+        Scan for the last stable point satisfying BOTH dual-metric conditions:
+          - survival in [surv_lo, surv_hi]
+          - tail energy in [energy_lo, energy_hi]
+        Among those, pick the one where the NEXT adjacent x-step shows the
+        steepest drop in survival (i.e., the point right at the cliff edge).
+        Falls back to max-gradient boundary crossing if no dual-metric point exists.
+
+      UNCLEAR (flat curve — surv range < min_surv_range):
+        Retain the synthetic center value. Parameter becomes a secondary axis
+        in the Step 4 multi-dimensional grid to expose hidden tipping points.
+
+    Returns (detected_params dict, clarity dict keyed by set_id).
+    """
+    detected = dict(synthetic_baseline)
+    clarity  = {}
+
+    for set_id, data in ovat_all.items():
+        key    = SENSITIVITY_SWEEPS[set_id]["key"]
+        xs     = np.array([d["param_value"]        for d in data], dtype=float)
+        surv   = np.array([d["survival_rate_mean"] for d in data], dtype=float)
+        energy = np.array([d["tail_energy_mean"]   for d in data], dtype=float)
+
+        surv_range = float(np.nanmax(surv) - np.nanmin(surv))
+        is_clear   = surv_range >= min_surv_range
+
+        if not is_clear:
+            justification = f"Flat curve — Δsurvival={surv_range:.3f} < {min_surv_range}"
+            # detected[key] already == synthetic_baseline[key] from dict(synthetic_baseline)
+        else:
+            gradients = np.diff(surv)  # length n-1
+
+            # Find all candidate points satisfying dual-metric boundary conditions
+            candidates = []
+            for i in range(len(xs)):
+                if (surv_lo <= surv[i] <= surv_hi) and (energy_lo <= energy[i] <= energy_hi):
+                    drop_next = abs(gradients[i])     if i < len(gradients) else 0.0
+                    drop_prev = abs(gradients[i - 1]) if i > 0              else 0.0
+                    candidates.append((i, drop_next, drop_prev))
+
+            if candidates:
+                # Select candidate with steepest drop at the *next* adjacent step
+                best     = max(candidates, key=lambda c: c[1])
+                best_i   = best[0]
+                edge_val = float(xs[best_i])
+                justification = (
+                    f"Sharp drop at next step — "
+                    f"Δsurv_next={best[1]:.3f} | "
+                    f"surv@edge={surv[best_i]:.2f}, energy@edge={energy[best_i]:.2f}"
+                )
+            else:
+                # Fallback: largest absolute gradient — use stable side
+                max_grad_i = int(np.argmax(np.abs(gradients)))
+                if gradients[max_grad_i] < 0:
+                    best_i = max_grad_i               # last stable before drop
+                else:
+                    best_i = min(max_grad_i + 1, len(xs) - 1)  # first stable after rise
+                edge_val = float(xs[best_i])
+                justification = (
+                    f"Dual-metric band not met; max-gradient fallback — "
+                    f"surv={surv[best_i]:.2f}, energy={energy[best_i]:.2f}"
+                )
+
+            detected[key] = (
+                int(round(edge_val)) if key == "init_food" else round(edge_val, 6)
+            )
+
+        clarity[set_id] = {
+            "key":           key,
+            "is_clear":      is_clear,
+            "surv_range":    round(surv_range, 3),
+            "detected_val":  detected[key],
+            "synthetic_val": float(synthetic_baseline.get(key, 0)),
+            "justification": justification,
+        }
+
+    return detected, clarity
+
+
+def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
+    """
+    Build the multi-dimensional Step 4 validation grid.
+
+    Primary axis  : init_food ±4 steps around the detected cliff-edge center.
+    Secondary axes: one axis per UNCLEAR parameter (5 evenly-spaced values from
+                    SENSITIVITY_SWEEPS range) to expose hidden tipping points.
+    CLEAR params  : locked to their detected cliff-edge values throughout.
+
+    Returns (configs list, description string).
+    """
+    from itertools import product as iproduct
+
+    unclear_keys = {c["key"] for c in clarity.values() if not c["is_clear"]}
+    key_to_setid = {v["key"]: k for k, v in SENSITIVITY_SWEEPS.items()}
+
+    # Primary axis: init_food
+    center      = int(detected_params.get("init_food", synthetic_baseline["init_food"]))
+    step        = max(3, center // 8)
+    food_values = sorted({
+        max(10, center - 4 * step),
+        max(10, center - 3 * step),
+        max(10, center - 2 * step),
+        max(10, center -     step),
+        center,
+        center +     step,
+        center + 2 * step,
+        center + 3 * step,
+        center + 4 * step,
+    })
+
+    # Secondary axes for UNCLEAR params (excluding init_food — already on primary axis)
+    extra_keys   = []
+    extra_values = []
+    for key in sorted(unclear_keys):
+        if key == "init_food":
+            continue
+        set_id = key_to_setid.get(key)
+        if set_id:
+            vals    = SENSITIVITY_SWEEPS[set_id]["values"]
+            indices = np.linspace(0, len(vals) - 1, min(5, len(vals)), dtype=int)
+            extra_keys.append(key)
+            extra_values.append([vals[i] for i in indices])
+
+    all_keys   = ["init_food"] + extra_keys
+    all_axes   = [food_values] + extra_values
+
+    configs = []
+    for combo in iproduct(*all_axes):
+        params = dict(detected_params)
+        for k, v in zip(all_keys, combo):
+            params[k] = int(v) if k == "init_food" else float(v)
+        params["name"] = "candidate"
+        configs.append(params)
+
+    extra_desc = (
+        " × ".join(f"{len(v)} {k}" for k, v in zip(extra_keys, extra_values))
+        if extra_keys else "no UNCLEAR secondary axes"
+    )
+    desc = f"{len(food_values)} food × ({extra_desc}) = {len(configs)} configs"
+    return configs, desc
+
+
+def _penalty_score(name, result):
+    """
+    Penalty score for condition selection (lower = better).
+
+    Hard constraint violations add +1000 per unit deviation.
+    Soft terms penalize proportional distance from target.
+
+    Balanced : target ~14/15 survival, energy ~0.70, flat energy slope.
+    Easy     : target ~15/15 survival, energy ≥ 0.85.
+    Harsh    : target ~2–5/15 survival, energy ≤ 0.40.
+    """
+    surv    = result["final_pop"] / INIT_MOTHERS
+    energy  = safe(result["tail_mean_energy"])
+    e_sd    = safe(result["tail_energy_sd"], nan=1.0)
+    e_slope = abs(safe(result.get("tail_energy_slope", 0.0)))
+
+    HARD  = 1000.0
+    score = 0.0
+
+    if name == "balanced":
+        if surv < 10.5 / INIT_MOTHERS:
+            score += HARD * (10.5 / INIT_MOTHERS - surv) * 15
+        if energy < 0.55:
+            score += HARD * (0.55 - energy) * 10
+        elif energy > 0.82:
+            score += HARD * (energy - 0.85) * 10
+        score += abs(surv - 14.0 / INIT_MOTHERS) * 30.0
+        score += abs(energy - 0.70) * 30.0
+        score += e_slope * 10_000.0   # slope is heavily penalized
+        score += e_sd * 10.0
+
+    elif name == "easy":
+        if surv < 13.5 / INIT_MOTHERS:
+            score += HARD * (13.5 / INIT_MOTHERS - surv) * 15
+        if energy < 0.75:
+            score += HARD * (0.75 - energy) * 10
+        score += abs(surv - 1.0) * 20.0
+        score += max(0.0, 0.85 - energy) * 40.0
+        score += e_sd * 5.0
+
+    elif name == "harsh":
+        if surv < 2.0 / INIT_MOTHERS:
+            score += HARD * (2.0 / INIT_MOTHERS - surv) * 15
+        elif surv > 5.0 / INIT_MOTHERS:
+            score += HARD * (surv - 5.0 / INIT_MOTHERS) * 15
+        if energy > 0.40:
+            score += HARD * (energy - 0.40) * 10
+        score += abs(surv - 3.5 / INIT_MOTHERS) * 30.0
+        score += abs(energy - 0.35) * 30.0
+
+    return score
+
+
+def select_by_penalty_score(name, sweep_records):
+    """
+    Select the best configuration for `name` using penalty scoring.
+
+    Returns (best_record, best_score, all_scored_list).
+    all_scored_list is sorted best → worst: [(score, record), ...].
+    """
+    scored = [(  _penalty_score(name, rec["result"]), rec) for rec in sweep_records]
+    scored.sort(key=lambda x: x[0])
+    if not scored:
+        raise RuntimeError(f"No candidates for {name}")
+    best_score, best_rec = scored[0]
+    return best_rec, best_score, scored
+
+
+def _pipeline_validate(params, n_seeds, duration, tau, noise, workers):
+    """Run N independent seeds for diagnostic validation. Returns (results, labels, summary)."""
+    seeds = list(range(42, 42 + n_seeds))
+    tasks = [(dict(params), seed, duration, tau, noise) for seed in seeds]
+
+    if workers <= 1:
+        raw = [_run_task(t) for t in tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            raw = list(pool.map(_run_task, tasks))
+
+    results = []
+    for seed, r in zip(seeds, raw):
+        r["base_seed"] = seed
+        r["repeat"]    = 1
+        r["run_seed"]  = seed
+        results.append(r)
+
+    labels  = [str(s) for s in seeds]
+    summary = summarize_repeats(results, duration)
+    return results, labels, summary
+
+
+def _run_pipeline(args, out_dir, n_workers):
+    from experiments.phase2_survival_minimal.sensitivity_sweep import (
+        run_set,
+        plot_sensitivity_map,
+        save_csv as save_sens_csv,
+    )
+
+    N_SEEDS       = 50
+    pipeline_seeds = list(range(42, 42 + N_SEEDS))
+
+    # ── Step 1: Synthetic baseline ────────────────────────────────────────────
+    synthetic = dict(BALANCED_BASELINE)
+    print("\n" + "=" * 70)
+    print("PIPELINE Step 1 — Synthetic Starting Baseline (BALANCED_BASELINE)")
+    print("=" * 70)
+    eco_keys = ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery")
+    for k in eco_keys:
+        print(f"  {k:<20} = {synthetic[k]}")
+
+    # ── Step 2: OVAT (N=50 seeds per sweep point) ─────────────────────────────
+    ovat_dir = os.path.join(out_dir, "sensitivity_ovat")
+    os.makedirs(ovat_dir, exist_ok=True)
+
+    print("\n" + "=" * 70)
+    print(f"PIPELINE Step 2 — OVAT Sensitivity Sweep  (N={N_SEEDS} seeds per point)")
+    print("=" * 70)
+    print(f"  Duration={args.duration}  Workers={n_workers}")
+
+    ovat_all = {}
+    for set_id in "ABCDE":
+        sweep_def = SENSITIVITY_SWEEPS[set_id]
+        key       = sweep_def["key"]
+        n_vals    = len(sweep_def["values"])
+        print(f"\n── Set {set_id}: '{key}'  ({n_vals} values × {N_SEEDS} seeds = {n_vals * N_SEEDS} runs) ──")
+        results = run_set(
+            set_id=set_id,
+            sweep=sweep_def,
+            baseline=synthetic,
+            seeds=pipeline_seeds,
+            repeats=1,
+            duration=args.duration,
+            tau=args.tau,
+            noise=args.perceptual_noise,
+            tail_window=TAIL_WINDOW,
+            workers=n_workers,
+        )
+        ovat_all[set_id] = results
+        save_sens_csv(results, os.path.join(ovat_dir, f"set_{set_id}_{key}.csv"))
+
+    plot_sensitivity_map(ovat_all, synthetic, ovat_dir, hide_keys=set())
+    print(f"\n  OVAT plots saved → {ovat_dir}")
+
+    # ── Step 3: Dual-metric cliff-edge detection ───────────────────────────────
+    print("\n" + "=" * 70)
+    print("PIPELINE Step 3 — Dual-Metric Cliff-Edge Detection")
+    print("=" * 70)
+    detected, clarity = _detect_cliff_edge_from_ovat(ovat_all, synthetic)
+
+    hdr = f"  {'Parameter':<18}  {'Synthetic':>10}  {'Detected':>10}  {'Status':<8}  Justification"
+    print(hdr)
+    print("  " + "-" * (len(hdr) - 2))
+    for set_id in "ABCDE":
+        c      = clarity[set_id]
+        status = "CLEAR" if c["is_clear"] else "UNCLEAR"
+        print(
+            f"  {c['key']:<18}  {c['synthetic_val']:>10g}  "
+            f"{c['detected_val']:>10g}  {status:<8}  {c['justification']}"
+        )
+
+    unclear_keys_list = [c["key"] for c in clarity.values() if not c["is_clear"]]
+    if unclear_keys_list:
+        print(f"\n  NOTE: {unclear_keys_list} are UNCLEAR (flat curves).")
+        print( "  Synthetic values retained for CLEAR locking.")
+        print( "  These become secondary axes in Step 4 to expose hidden tipping points.")
+
+    # ── Step 4: Multi-dimensional validation grid (N=50 per config) ───────────
+    print("\n" + "=" * 70)
+    print(f"PIPELINE Step 4 — Multi-Dimensional Validation Grid  (N={N_SEEDS} per config)")
+    print("=" * 70)
+
+    sweep_configs, grid_desc = _pipeline_multidim_configs(detected, clarity, synthetic)
+    total_runs = len(sweep_configs) * N_SEEDS
+    print(f"  Grid    : {grid_desc}")
+    print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs × {N_SEEDS} seeds)")
+    print(f"  CLEAR params locked to cliff-edge values; UNCLEAR varied across plausible range")
+
+    sweep_tasks = [
+        (dict(p), seed, args.duration, args.tau, args.perceptual_noise)
+        for p in sweep_configs
+        for seed in pipeline_seeds
+    ]
+
+    if n_workers <= 1:
+        flat_results = [_run_task(t) for t in sweep_tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            flat_results = list(pool.map(_run_task, sweep_tasks))
+
+    step4_records = []
+    print(f"\n  {'#':>4}  {'food':>5}  {'surv':>6}  {'tailE':>7}  {'E±':>6}  {'slope':>9}")
+    for idx, params in enumerate(sweep_configs):
+        reps = flat_results[idx * N_SEEDS : (idx + 1) * N_SEEDS]
+        sr   = summarize_repeats(reps, args.duration)
+        step4_records.append({"params": dict(params), "result": sr})
+        print(
+            f"  {idx + 1:>4}  {params['init_food']:>5}  "
+            f"{sr['final_pop'] / INIT_MOTHERS:>6.2f}  "
+            f"{sr['tail_mean_energy']:>7.3f}  "
+            f"{sr['tail_energy_sd']:>6.3f}  "
+            f"{sr.get('tail_energy_slope', 0.0):>9.6f}"
+        )
+
+    # ── Step 5: Penalty scoring → final ecological baselines ──────────────────
+    print("\n" + "=" * 70)
+    print("PIPELINE Step 5 — Automated Selection via Penalty Scoring")
+    print("=" * 70)
+    print(f"  {'Condition':<12}  {'Score':>9}  {'Surv':>6}  {'TailE':>7}  {'E±':>6}  Config")
+    print(f"  {'-'*12}  {'-'*9}  {'-'*6}  {'-'*7}  {'-'*6}  {'-'*40}")
+
+    selected   = {}
+    scored_all = {}
+    for cond_name in ["balanced", "easy", "harsh"]:
+        best_rec, best_score, all_scored = select_by_penalty_score(cond_name, step4_records)
+        selected[cond_name]   = best_rec
+        scored_all[cond_name] = all_scored
+        r = best_rec["result"]
+        p = best_rec["params"]
+        cfg_str = "  ".join(
+            f"{k}={p[k]:g}"
+            for k in ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery")
+        )
+        print(
+            f"  {cond_name.upper():<12}  {best_score:>9.2f}  "
+            f"{r['final_pop'] / INIT_MOTHERS:>6.2f}  "
+            f"{r['tail_mean_energy']:>7.3f}  "
+            f"{r['tail_energy_sd']:>6.3f}  {cfg_str}"
+        )
+
+    print("\n  ── Final Ecological Baselines (exact genome + environment) ──")
+    for cond_name, rec in selected.items():
+        print(f"\n  [{cond_name.upper()}]")
+        for k, v in sorted(rec["params"].items()):
+            if k != "name":
+                print(f"    {k:<22} = {v}")
+
+    # ── Step 6: Diagnostic report generation (N=50 validation seeds) ──────────
+    print("\n" + "=" * 70)
+    print(f"PIPELINE Step 6 — Diagnostic Report Generation  (N={N_SEEDS} validation seeds)")
+    print("=" * 70)
+
+    summary = {}
+    for cond_name, rec in selected.items():
+        params = dict(rec["params"])
+        params["name"] = cond_name
+        print(f"\n  Validating + plotting {cond_name.upper()} ...")
+
+        val_results, val_labels, val_summary = _pipeline_validate(
+            params, N_SEEDS, args.duration, args.tau, args.perceptual_noise, n_workers
+        )
+
+        print_validation_runs(cond_name, val_results)
+        generate_diagnostic_plots(
+            name=cond_name,
+            results=val_results,
+            params=params,
+            labels=val_labels,
+            args=args,
+            out_dir=out_dir,
+        )
+        save_validation_csv(cond_name, val_results, out_dir)
+
+        final_score = _penalty_score(cond_name, val_summary)
+        summary[cond_name] = {
+            "selected_config":    params,
+            "penalty_score":      final_score,
+            "sweep_summary":      rec["result"],
+            "validation_summary": val_summary,
+            "validation_runs":    build_validation_summary(val_results),
+        }
+
+    summary["_penalty_score_trace"] = {
+        cond: [
+            {"params": rec["params"], "score": score, "result": rec["result"]}
+            for score, rec in all_scored[:20]
+        ]
+        for cond, all_scored in scored_all.items()
+    }
+
+    summary["_pipeline_meta"] = {
+        "n_seeds":          N_SEEDS,
+        "synthetic_baseline": {k: v for k, v in synthetic.items() if k != "name"},
+        "detected_balanced":  {k: v for k, v in detected.items()  if k != "name"},
+        "edge_clarity":       {c["key"]: c for c in clarity.values()},
+        "ovat_dir":           ovat_dir,
+        "step4_grid_desc":    grid_desc,
+        "step4_n_configs":    len(sweep_configs),
+    }
+
+    save_summary_json(summary, out_dir)
+    print(f"\nDone. All outputs saved to: {out_dir}")
+
+
+# ============================================================
 # Main experiment
 # ============================================================
 
@@ -871,6 +1319,10 @@ def run_experiment(args):
     print(f"Duration: {args.duration} | Tau: {args.tau}")
     print(f"Perceptual noise: {args.perceptual_noise}")
     print(f"Repeats: {args.repeats} | Workers: {n_workers}")
+
+    if args.mode == "pipeline":
+        _run_pipeline(args, out_dir, n_workers)
+        return
 
     if args.mode == "single":
         name   = "single"
@@ -923,7 +1375,7 @@ def run_experiment(args):
         print(f"\nDone. Outputs saved to: {out_dir}")
         return
 
-    configs = candidate_configs(mode="pipeline" if args.mode == "pipeline" else "sweep")
+    configs = candidate_configs(mode="sweep")
 
     # ── parallel sweep ────────────────────────────────────────────────────────
     sweep_tasks = [
@@ -1015,53 +1467,6 @@ def run_experiment(args):
         ]
         for name, trace in traces.items()
     }
-
-    if args.mode == "pipeline":
-        from experiments.phase2_survival_minimal.sensitivity_sweep import (
-            run_set,
-            plot_sensitivity_map,
-            save_csv as save_sens_csv,
-        )
-
-        balanced_params = selected["balanced"]["params"]
-        ovat_seeds = list(range(42, 47))
-        ovat_dir = os.path.join(out_dir, "sensitivity")
-        os.makedirs(ovat_dir, exist_ok=True)
-
-        print("\nStep 4: OVAT sensitivity sweep around auto-selected BALANCED baseline")
-        print(f"  Baseline: food={balanced_params['init_food']}  "
-              f"hunger={balanced_params['hunger_rate']}  "
-              f"eat_gain={balanced_params['eat_gain']}")
-        print(f"  Seeds: {ovat_seeds}  Repeats: {args.repeats}  Workers: {n_workers}")
-
-        ovat_all = {}
-        for set_id in "ABCDE":
-            sweep_def = SENSITIVITY_SWEEPS[set_id]
-            key = sweep_def["key"]
-            print(f"\n── Set {set_id}: sweeping '{key}' ──")
-            results = run_set(
-                set_id=set_id,
-                sweep=sweep_def,
-                baseline=balanced_params,
-                seeds=ovat_seeds,
-                repeats=args.repeats,
-                duration=args.duration,
-                tau=args.tau,
-                noise=args.perceptual_noise,
-                tail_window=TAIL_WINDOW,
-                workers=n_workers,
-            )
-            ovat_all[set_id] = results
-            csv_path = os.path.join(ovat_dir, f"set_{set_id}_{key}.csv")
-            save_sens_csv(results, csv_path)
-            print(f"   Saved CSV → {csv_path}")
-
-        # Show baseline lines in OVAT plots — they mark the auto-selected balanced point.
-        plot_sensitivity_map(ovat_all, balanced_params, ovat_dir, hide_keys=set())
-
-        summary["_ovat_baseline"] = {
-            k: v for k, v in balanced_params.items() if k != "name"
-        }
 
     save_summary_json(summary, out_dir)
 
