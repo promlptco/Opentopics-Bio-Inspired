@@ -33,7 +33,13 @@ ENABLE_FAILED_SELECTION_PLOT = True
 ENABLE_STACKED_ACTION_FAILED_PLOT = True
 
 # 2) Correlation plot: FAILED_SELF / FAILED_FORAGE vs energy decay.
-ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT = True
+# Correlation plot for FAILED_FORAGE only.
+# FAILED_SELF is not useful in Phase 2 because SELF always falls back to REST.
+ENABLE_FAILED_FORAGE_ENERGY_CORRELATION_PLOT = True
+ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT = False
+
+# Diagnostic plot to verify whether action/motivation rates sum to 1.
+ENABLE_RATE_SUM_CHECK_PLOT = True
 
 # 3) State-space scatter: Energy vs action/motivation rate.
 ENABLE_STATE_SPACE_ENERGY_ACTION_PLOT = True
@@ -188,33 +194,32 @@ HIDE_BASELINE_FOR = {
 
 SELECTION_TARGETS = {
     "balanced": {
-        # Edge-of-stability baseline:
-        # nearly all survive, energy is not too high, and tail slope is near flat.
-        "min_final_pop": 14.0,
-        "energy_low": 0.70,
+        # Stability boundary: ~70-85% survival, moderate energy, flat trend.
+        # Represents the minimum viable ecological niche for the emergence of care.
+        "min_final_pop": 10.5,        # ≥70% survival (10.5/15)
+        "energy_low": 0.58,
         "energy_high": 0.75,
-        "target_energy": 0.725,
-        "max_tail_sd": 0.05,
+        "target_energy": 0.68,
+        "max_tail_sd": 0.06,
         "max_abs_energy_slope": 0.00005,
         "max_abs_pop_slope": 0.002,
     },
     "easy": {
-        # Comfortable survival:
-        # high population and high remaining energy.
-        "min_final_pop": 14.5,
-        "min_energy": 0.90,
-        "target_energy": 0.95,
+        # Resource-rich: ≥90% survival, high energy — minimal ecological pressure.
+        "min_final_pop": 13.5,        # ≥90% survival (13.5/15)
+        "min_energy": 0.75,
+        "target_energy": 0.85,
         "max_tail_sd": 0.08,
     },
     "harsh": {
-        # Difficult survival:
-        # small surviving population with low-to-medium energy.
-        "min_final_pop": 0.5,
-        "max_final_pop": 5.0,
-        "energy_low": 0.05,
-        "energy_high": 0.55,
-        "target_pop": 3.0,
-        "target_energy": 0.30,
+        # Ecological stress: 20-60% survival, limited energy.
+        # Left tail of the sensitivity curves; survival is marginal but viable.
+        "min_final_pop": 3.0,         # ≥20% survival (3/15)
+        "max_final_pop": 9.0,         # ≤60% survival (9/15)
+        "energy_low": 0.15,
+        "energy_high": 0.60,
+        "target_pop": 5.0,
+        "target_energy": 0.35,
     },
 }
 
@@ -231,8 +236,11 @@ def candidate_configs(mode="sweep"):
         Runs one hand-picked configuration for detailed diagnostic plots.
 
     mode="sweep":
-        Sweeps init_food and rest_recovery while keeping other ecological
-        parameters fixed after rough sensitivity analysis.
+        11-point init_food grid (35–60). Covers the balanced→easy range.
+
+    mode="pipeline":
+        19-point init_food grid (15–60). Wider range exposes harsh territory
+        at low food counts so all three conditions can be auto-selected.
 
     Note:
         BASELINE_GENOME_WEIGHTS are fixed here. Phase 2 is not evolving
@@ -246,33 +254,28 @@ def candidate_configs(mode="sweep"):
                 "hunger_rate": 0.0045,
                 "move_cost": 0.0005,
                 "eat_gain": 0.08,
-                "init_food": 38,
+                "init_food": 35,
                 "rest_recovery": 0.005,
                 **BASELINE_GENOME_WEIGHTS,
                 "name": "single_test",
             }
         ]
 
+    init_food_values = {
+        "sweep":    [35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
+        "pipeline": [15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
+    }
+
     grid = {
         "perception_radius": [DEFAULT_PERCEPTION_RADIUS],
-
-        # Fixed from rough sensitivity sweep.
         "hunger_rate": [0.0045],
         "move_cost": [0.0005],
         "eat_gain": [0.08],
-
-        # Main ecological pressure parameters for baseline selection.
-        "init_food": [
-            35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60,
-        ],
-        "rest_recovery": [
-            0.005,
-        ],
-
-        # Fixed neutral genome weights for Phase 2.
-        "care_weight": [BASELINE_GENOME_WEIGHTS["care_weight"]],
+        "init_food": init_food_values.get(mode, init_food_values["sweep"]),
+        "rest_recovery": [0.005],
+        "care_weight":   [BASELINE_GENOME_WEIGHTS["care_weight"]],
         "forage_weight": [BASELINE_GENOME_WEIGHTS["forage_weight"]],
-        "self_weight": [BASELINE_GENOME_WEIGHTS["self_weight"]],
+        "self_weight":   [BASELINE_GENOME_WEIGHTS["self_weight"]],
     }
 
     keys = list(grid.keys())

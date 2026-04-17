@@ -28,6 +28,7 @@ import argparse
 from datetime import datetime
 
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor
 import matplotlib
 
 matplotlib.use("Agg")
@@ -53,6 +54,12 @@ def run_one(params, seed, duration, tau=0.1, noise=0.1):
     cfg = make_config(params, duration)
     sim = SurvivalSimulation(cfg, tau=tau, perceptual_noise=noise)
     return sim.run()
+
+
+def _run_task(task):
+    """Top-level wrapper required for ProcessPoolExecutor pickling."""
+    params, seed, duration, tau, noise = task
+    return run_one(params, seed, duration, tau=tau, noise=noise)
 
 
 def pad_series(values, duration):
@@ -97,7 +104,7 @@ def summarize_runs(run_results, duration, tail_window=TAIL_WINDOW):
     }
 
 
-def run_set(set_id, sweep, baseline, seeds, repeats, duration, tau, noise, tail_window):
+def run_set(set_id, sweep, baseline, seeds, repeats, duration, tau, noise, tail_window, workers=1):
     key = sweep["key"]
     results = []
 
@@ -105,13 +112,17 @@ def run_set(set_id, sweep, baseline, seeds, repeats, duration, tau, noise, tail_
         params = dict(baseline)
         params[key] = int(val) if key == "init_food" else float(val)
 
-        run_results = []
+        tasks = [
+            (dict(params), seed * 1000 + rep, duration, tau, noise)
+            for seed in seeds
+            for rep in range(repeats)
+        ]
 
-        for seed in seeds:
-            for rep in range(repeats):
-                run_seed = seed * 1000 + rep
-                result = run_one(params, run_seed, duration, tau=tau, noise=noise)
-                run_results.append(result)
+        if workers <= 1:
+            run_results = [_run_task(t) for t in tasks]
+        else:
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                run_results = list(pool.map(_run_task, tasks))
 
         summary = summarize_runs(run_results, duration, tail_window=tail_window)
         summary["param_value"] = params[key]
@@ -155,7 +166,7 @@ def save_csv(results, path):
             writer.writerow({k: row.get(k, "") for k in fieldnames})
 
 
-def plot_sensitivity_map(all_results, baseline, out_dir):
+def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
     fig, axes = plt.subplots(2, 3, figsize=(17, 10))
     axes_flat = axes.flatten()
     energy_color = "#2E3440"
@@ -167,6 +178,9 @@ def plot_sensitivity_map(all_results, baseline, out_dir):
         fontweight="bold",
         y=1.01,
     )
+
+    if hide_keys is None:
+        hide_keys = HIDE_BASELINE_FOR
 
     for idx, (set_id, key, xlabel, color) in enumerate(SENSITIVITY_SUBPLOT_CONFIG):
         ax_surv = axes_flat[idx]
@@ -250,7 +264,7 @@ def plot_sensitivity_map(all_results, baseline, out_dir):
         ax_energy.set_ylabel("Tail Mean Energy", color=energy_color, fontsize=9)
         ax_energy.tick_params(axis="y", labelcolor=energy_color)
 
-        if key not in HIDE_BASELINE_FOR:
+        if key not in hide_keys:
             baseline_val = float(baseline[key])
             ax_surv.axvline(
                 baseline_val,
@@ -295,8 +309,13 @@ def main():
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--tail_window", type=int, default=TAIL_WINDOW)
+    parser.add_argument("--workers", type=int, default=1,
+                        help="Parallel workers (0=auto/cpu_count, 1=sequential)")
 
     args = parser.parse_args()
+
+    import os as _os
+    n_workers = ((_os.cpu_count() or 1) if args.workers == 0 else max(1, args.workers))
 
     seeds = list(range(42, 42 + args.seeds))
     sets_to_run = [s.upper() for s in args.sets if s.upper() in SENSITIVITY_SWEEPS]
@@ -326,6 +345,7 @@ def main():
     print(f"Tau              : {args.tau}")
     print(f"Perceptual noise : {args.perceptual_noise}")
     print(f"Tail window      : {args.tail_window}")
+    print(f"Workers          : {n_workers}")
     print(f"Baseline         : {BALANCED_BASELINE}")
     print(f"Output           : {out_dir}")
     print("=" * 70)
@@ -349,6 +369,7 @@ def main():
             tau=args.tau,
             noise=args.perceptual_noise,
             tail_window=args.tail_window,
+            workers=n_workers,
         )
 
         all_results[set_id] = results

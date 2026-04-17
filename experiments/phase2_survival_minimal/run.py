@@ -40,6 +40,7 @@ import random
 from datetime import datetime
 
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
@@ -57,12 +58,16 @@ from experiments.phase2_survival_minimal.config import (
     DEFAULT_SWEEP_SEED_BASE,
     DEFAULT_PERCEPTION_RADIUS,
     SELECTION_TARGETS,
+    SENSITIVITY_SWEEPS,
+    TAIL_WINDOW,
     PLOT_SMOOTH_WINDOW,
     ENABLE_ACTION_SELECTION_PLOT,
     ENABLE_MOTIVATION_SELECTION_PLOT,
     ENABLE_FAILED_SELECTION_PLOT,
     ENABLE_STACKED_ACTION_FAILED_PLOT,
     ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT,
+    ENABLE_FAILED_FORAGE_ENERGY_CORRELATION_PLOT,
+    ENABLE_RATE_SUM_CHECK_PLOT,
     ENABLE_STATE_SPACE_ENERGY_ACTION_PLOT,
     ENABLE_FOOD_CONSUMPTION_PLOT,
     ENABLE_SPATIAL_HEATMAP_PLOT,
@@ -81,6 +86,7 @@ from experiments.phase2_survival_minimal.plot import (
     plot_stacked_action_failed_over_time,
     plot_failed_self_energy_correlation,
     plot_failed_forage_energy_correlation,
+    plot_rate_sum_check,
     plot_state_space_energy_action,
     plot_food_consumption_over_time,
     plot_spatial_heatmap_population,
@@ -212,6 +218,7 @@ class SurvivalSimulation:
     def step(self):
         alive_mothers = [m for m in self.mothers if m.alive]
         random.shuffle(alive_mothers)
+        processed_alive_count = len(alive_mothers)
 
         tick_actions = {"MOVE": 0, "PICK": 0, "EAT": 0, "REST": 0}
         tick_motivations = {"FORAGE": 0, "SELF": 0}
@@ -356,12 +363,12 @@ class SurvivalSimulation:
 
         alive_count = len(alive_now)
 
-        tick_actions["alive"] = alive_count
-        tick_motivations["alive"] = alive_count
-        tick_failed["alive"] = alive_count
-        tick_food["alive"] = alive_count
+        tick_actions["alive"] = processed_alive_count
+        tick_motivations["alive"] = processed_alive_count
+        tick_failed["alive"] = processed_alive_count
+        tick_food["alive"] = processed_alive_count
         tick_food["food_available"] = len(self.world.food_positions)
-        tick_energy_flow["alive"] = alive_count
+        tick_energy_flow["alive"] = processed_alive_count
 
         self.action_history.append(tick_actions)
         self.motivation_history.append(tick_motivations)
@@ -373,6 +380,34 @@ class SurvivalSimulation:
     # Run
     # ============================================================
 
+    def collect_result(self) -> dict:
+        """Build and return the result dict from current simulation state.
+
+        Called by run() after the loop, or by the live viewer after it drives
+        the loop externally via step().
+        """
+        final_pop    = sum(1 for m in self.mothers if m.alive)
+        mean_energy  = float(np.mean(self.energy_history))  if self.energy_history else 0.0
+        final_energy = float(self.energy_history[-1])        if self.energy_history else 0.0
+
+        return {
+            "final_pop":          final_pop,
+            "mean_energy":        mean_energy,
+            "final_energy":       final_energy,
+            "energy_history":     self.energy_history,
+            "fatigue_history":    self.fatigue_history,
+            "population_history": self.population_history,
+            "actions":            self.action_counts,
+            "motivations":        self.motivation_counts,
+            "failed":             self.failed_counts,
+            "action_history":     self.action_history,
+            "motivation_history": self.motivation_history,
+            "failed_history":     self.failed_history,
+            "food_history":       self.food_history,
+            "energy_flow_history":self.energy_flow_history,
+            "spatial_heatmap":    self.spatial_heatmap,
+        }
+
     def run(self):
         self.initialize()
 
@@ -383,27 +418,7 @@ class SurvivalSimulation:
             if not any(m.alive for m in self.mothers):
                 break
 
-        final_pop = sum(1 for m in self.mothers if m.alive)
-        mean_energy = float(np.mean(self.energy_history)) if self.energy_history else 0.0
-        final_energy = float(self.energy_history[-1]) if self.energy_history else 0.0
-
-        return {
-            "final_pop": final_pop,
-            "mean_energy": mean_energy,
-            "final_energy": final_energy,
-            "energy_history": self.energy_history,
-            "fatigue_history": self.fatigue_history,
-            "population_history": self.population_history,
-            "actions": self.action_counts,
-            "motivations": self.motivation_counts,
-            "failed": self.failed_counts,
-            "action_history": self.action_history,
-            "motivation_history": self.motivation_history,
-            "failed_history": self.failed_history,
-            "food_history": self.food_history,
-            "energy_flow_history": self.energy_flow_history,
-            "spatial_heatmap": self.spatial_heatmap,
-        }
+        return self.collect_result()
 
 
 # ============================================================
@@ -445,28 +460,41 @@ def run_one(params, seed, duration, tau, noise):
     return sim.run()
 
 
-def validate_params(params, args):
-    results = []
-    labels = []
+def _run_task(task):
+    """Top-level wrapper required for ProcessPoolExecutor pickling."""
+    params, seed, duration, tau, noise = task
+    return run_one(params, seed, duration, tau, noise)
 
-    for seed in VALIDATION_SEEDS:
-        for rep in range(args.repeats):
-            run_seed = seed * 1000 + rep
 
-            result = run_one(
-                params=params,
-                seed=run_seed,
-                duration=args.duration,
-                tau=args.tau,
-                noise=args.perceptual_noise,
-            )
+def _n_workers(w: int) -> int:
+    if w == 0:
+        return os.cpu_count() or 1
+    return max(1, w)
 
-            result["base_seed"] = seed
-            result["repeat"] = rep + 1
-            result["run_seed"] = run_seed
 
-            results.append(result)
-            labels.append(f"{seed}-r{rep + 1}")
+def validate_params(params, args, workers: int = 1):
+    tasks = [
+        (params, seed * 1000 + rep, args.duration, args.tau, args.perceptual_noise)
+        for seed in VALIDATION_SEEDS
+        for rep in range(args.repeats)
+    ]
+
+    if workers <= 1:
+        raw = [_run_task(t) for t in tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            raw = list(pool.map(_run_task, tasks))
+
+    results, labels = [], []
+    for flat_idx, (task, r) in enumerate(zip(tasks, raw)):
+        seed_idx  = flat_idx // args.repeats
+        rep_idx   = flat_idx  % args.repeats
+        base_seed = VALIDATION_SEEDS[seed_idx]
+        r["base_seed"] = base_seed
+        r["repeat"]    = rep_idx + 1
+        r["run_seed"]  = task[1]
+        results.append(r)
+        labels.append(f"{base_seed}-r{rep_idx + 1}")
 
     return results, labels, summarize_repeats(results, args.duration)
 
@@ -624,7 +652,7 @@ def build_validation_pool(name, sweep_records):
     return sorted(sweep_records, key=lambda r: fallback_sort_key(name, r))
 
 
-def select_condition_by_validation(name, sweep_records, args):
+def select_condition_by_validation(name, sweep_records, args, workers: int = 1):
     pool = build_validation_pool(name, sweep_records)
 
     if not pool:
@@ -639,7 +667,7 @@ def select_condition_by_validation(name, sweep_records, args):
         params = dict(rec["params"])
         params["name"] = name
 
-        results, labels, validation_summary = validate_params(params, args)
+        results, labels, validation_summary = validate_params(params, args, workers=workers)
 
         candidate = {
             "params": params,
@@ -753,6 +781,14 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             window=PLOT_SMOOTH_WINDOW,
             as_rate=True,
         )
+    
+    if ENABLE_RATE_SUM_CHECK_PLOT:
+        plot_rate_sum_check(
+            name=name,
+            results=results,
+            duration=args.duration,
+            out_dir=out_dir,
+        )
 
     if ENABLE_FAILED_SELF_ENERGY_CORRELATION_PLOT:
         plot_failed_self_energy_correlation(
@@ -763,6 +799,7 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             window=PLOT_SMOOTH_WINDOW,
         )
 
+    if ENABLE_FAILED_FORAGE_ENERGY_CORRELATION_PLOT:
         plot_failed_forage_energy_correlation(
             name=name,
             results=results,
@@ -827,16 +864,40 @@ def run_experiment(args):
     )
     os.makedirs(out_dir, exist_ok=True)
 
+    n_workers = _n_workers(args.workers)
+
     print(f"Phase 2 Baseline Calibration - Mode: {args.mode}")
     print(f"Output dir: {out_dir}")
     print(f"Duration: {args.duration} | Tau: {args.tau}")
     print(f"Perceptual noise: {args.perceptual_noise}")
-    print(f"Repeats: {args.repeats}")
+    print(f"Repeats: {args.repeats} | Workers: {n_workers}")
 
     if args.mode == "single":
-        name = "single"
+        name   = "single"
         params = candidate_configs(mode="single")[0]
-        results, labels, val_summary = validate_params(params, args)
+
+        if args.live:
+            from experiments.live_viewer import LiveViewer, Phase2LiveProvider
+
+            run_seed = VALIDATION_SEEDS[0] * 1000
+            print(f"\nLive mode: seed={VALIDATION_SEEDS[0]}  speed=×{args.speed}")
+            set_seed(run_seed)
+            cfg = make_config(params, args.duration)
+            sim = SurvivalSimulation(cfg, tau=args.tau, perceptual_noise=args.perceptual_noise)
+            sim.initialize()
+
+            viewer   = LiveViewer(speed=args.speed, title="Phase 2")
+            provider = Phase2LiveProvider(sim, total_ticks=args.duration)
+            viewer.run_live(sim, provider)
+
+            r = sim.collect_result()
+            r.update(base_seed=VALIDATION_SEEDS[0], repeat=1, run_seed=run_seed)
+            results    = [r]
+            labels     = [f"{VALIDATION_SEEDS[0]}-r1"]
+            val_summary = summarize_repeats(results, args.duration)
+            print(f"Live run done: pop={r['final_pop']}/15 | energy={r['final_energy']:.3f}")
+        else:
+            results, labels, val_summary = validate_params(params, args, workers=n_workers)
 
         generate_diagnostic_plots(
             name=name,
@@ -851,50 +912,46 @@ def run_experiment(args):
 
         summary = {
             name: {
-                "selected_config": params,
-                "selection_status": "single_mode",
+                "selected_config":   params,
+                "selection_status":  "live_mode" if args.live else "single_mode",
                 "validation_summary": val_summary,
-                "validation_runs": build_validation_summary(results),
+                "validation_runs":   build_validation_summary(results),
             }
         }
 
         save_summary_json(summary, out_dir)
-
         print(f"\nDone. Outputs saved to: {out_dir}")
         return
 
-    configs = candidate_configs(mode="sweep")
+    configs = candidate_configs(mode="pipeline" if args.mode == "pipeline" else "sweep")
+
+    # ── parallel sweep ────────────────────────────────────────────────────────
+    sweep_tasks = [
+        (dict(params), DEFAULT_SWEEP_SEED_BASE + rep, args.duration, args.tau, args.perceptual_noise)
+        for params in configs
+        for rep in range(args.repeats)
+    ]
+
+    print(
+        f"\nStep 1: Auto sweep | {len(configs)} configs × {args.repeats} reps"
+        f" = {len(sweep_tasks)} tasks | workers={n_workers}"
+    )
+
+    if n_workers <= 1:
+        flat_results = [_run_task(t) for t in sweep_tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            flat_results = list(pool.map(_run_task, sweep_tasks))
+
     sweep_records = []
+    for idx, params in enumerate(configs):
+        reps           = flat_results[idx * args.repeats : (idx + 1) * args.repeats]
+        summary_result = summarize_repeats(reps, args.duration)
+        sweep_records.append({"params": dict(params), "result": summary_result})
 
-    print(f"\nStep 1: Auto sweep | Total configs: {len(configs)}")
-    print(f"Total sweep runs: {len(configs) * args.repeats}")
-
-    for idx, params in enumerate(configs, start=1):
-        repeat_results = []
-
-        for rep in range(args.repeats):
-            sweep_run_seed = DEFAULT_SWEEP_SEED_BASE + rep
-            res = run_one(
-                params=params,
-                seed=sweep_run_seed,
-                duration=args.duration,
-                tau=args.tau,
-                noise=args.perceptual_noise,
-            )
-            repeat_results.append(res)
-
-        summary_result = summarize_repeats(repeat_results, args.duration)
-
-        sweep_records.append(
-            {
-                "params": dict(params),
-                "result": summary_result,
-            }
-        )
-
-        if idx % 20 == 0 or idx == len(configs):
+        if idx % 5 == 0 or idx == len(configs) - 1:
             print(
-                f"  [{idx:03d}/{len(configs)}] "
+                f"  [{idx + 1:03d}/{len(configs)}] "
                 f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
                 f"tailE={summary_result['tail_mean_energy']:.3f} ± "
                 f"{summary_result['tail_energy_sd']:.3f}"
@@ -906,7 +963,7 @@ def run_experiment(args):
     traces = {}
 
     for name in ["balanced", "easy", "harsh"]:
-        selected[name], traces[name] = select_condition_by_validation(name, sweep_records, args)
+        selected[name], traces[name] = select_condition_by_validation(name, sweep_records, args, workers=n_workers)
 
     print("\nFinal selected conditions:")
     for name, rec in selected.items():
@@ -959,6 +1016,53 @@ def run_experiment(args):
         for name, trace in traces.items()
     }
 
+    if args.mode == "pipeline":
+        from experiments.phase2_survival_minimal.sensitivity_sweep import (
+            run_set,
+            plot_sensitivity_map,
+            save_csv as save_sens_csv,
+        )
+
+        balanced_params = selected["balanced"]["params"]
+        ovat_seeds = list(range(42, 47))
+        ovat_dir = os.path.join(out_dir, "sensitivity")
+        os.makedirs(ovat_dir, exist_ok=True)
+
+        print("\nStep 4: OVAT sensitivity sweep around auto-selected BALANCED baseline")
+        print(f"  Baseline: food={balanced_params['init_food']}  "
+              f"hunger={balanced_params['hunger_rate']}  "
+              f"eat_gain={balanced_params['eat_gain']}")
+        print(f"  Seeds: {ovat_seeds}  Repeats: {args.repeats}  Workers: {n_workers}")
+
+        ovat_all = {}
+        for set_id in "ABCDE":
+            sweep_def = SENSITIVITY_SWEEPS[set_id]
+            key = sweep_def["key"]
+            print(f"\n── Set {set_id}: sweeping '{key}' ──")
+            results = run_set(
+                set_id=set_id,
+                sweep=sweep_def,
+                baseline=balanced_params,
+                seeds=ovat_seeds,
+                repeats=args.repeats,
+                duration=args.duration,
+                tau=args.tau,
+                noise=args.perceptual_noise,
+                tail_window=TAIL_WINDOW,
+                workers=n_workers,
+            )
+            ovat_all[set_id] = results
+            csv_path = os.path.join(ovat_dir, f"set_{set_id}_{key}.csv")
+            save_sens_csv(results, csv_path)
+            print(f"   Saved CSV → {csv_path}")
+
+        # Show baseline lines in OVAT plots — they mark the auto-selected balanced point.
+        plot_sensitivity_map(ovat_all, balanced_params, ovat_dir, hide_keys=set())
+
+        summary["_ovat_baseline"] = {
+            k: v for k, v in balanced_params.items() if k != "name"
+        }
+
     save_summary_json(summary, out_dir)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
@@ -970,7 +1074,13 @@ if __name__ == "__main__":
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--mode", type=str, choices=["sweep", "single"], default="sweep")
+    parser.add_argument("--mode", type=str, choices=["sweep", "single", "pipeline"], default="sweep")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="Parallel workers (0=auto/cpu_count, 1=sequential)")
+    parser.add_argument("--live", action="store_true", default=False,
+                        help="Open live viewer window (single mode only)")
+    parser.add_argument("--speed", type=int, choices=[1, 2, 5], default=1,
+                        help="Live viewer speed multiplier")
     args = parser.parse_args()
 
     run_experiment(args)

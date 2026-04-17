@@ -134,14 +134,36 @@ def history_value_matrix(results, history_key, value_key, duration, window=25):
     return np.asarray(runs, dtype=float)
 
 
+_ANNOT_BOX = dict(
+    boxstyle="round,pad=0.4",
+    facecolor="white",
+    edgecolor="#cccccc",
+    alpha=0.90,
+)
+
+_LEGEND_KW = dict(fontsize=8, framealpha=0.92, edgecolor="#cccccc", fancybox=True)
+
+
 def style_axes(ax):
-    ax.grid(True, linestyle="--", alpha=0.25)
-    ax.tick_params(labelsize=9)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(0.8)
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.35, color="#888888")
+    ax.grid(True, which="minor", linestyle=":", linewidth=0.35, alpha=0.2, color="#aaaaaa")
+    ax.minorticks_on()
+    ax.tick_params(which="major", labelsize=9, length=4, width=0.8)
+    ax.tick_params(which="minor", labelsize=0, length=2, width=0.5)
+    ax.set_facecolor("#fafafa")
+    ax.xaxis.label.set_size(10)
+    ax.yaxis.label.set_size(10)
+    ax.title.set_size(11)
 
 
 def save_figure(fig, out_dir, filename):
+    fig.patch.set_facecolor("white")
     path = os.path.join(out_dir, filename)
-    fig.savefig(path, dpi=200, bbox_inches="tight")
+    fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved plot → {path}")
 
@@ -214,12 +236,12 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
         summary,
         transform=ax1.transAxes,
         fontsize=9,
-        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+        bbox=_ANNOT_BOX,
     )
 
     for ax in (ax1, ax2):
         style_axes(ax)
-        ax.legend(loc="lower right", fontsize=7, framealpha=0.88)
+        ax.legend(loc="lower right", **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"validation_{name}.png")
@@ -418,7 +440,7 @@ def plot_event_selection_over_time(
         ax.set_ylim(-0.05, 1.05)
 
     style_axes(ax)
-    ax.legend(loc="upper right", fontsize=7, framealpha=0.88)
+    ax.legend(loc="upper right", **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"{filename_prefix}_{name}.png")
@@ -520,7 +542,7 @@ def plot_stacked_action_failed_over_time(name, results, duration, out_dir, windo
     ax.set_ylim(0.0, 1.15)
 
     style_axes(ax)
-    ax.legend(loc="upper right", fontsize=8, framealpha=0.88, ncol=2)
+    ax.legend(loc="upper right", ncol=2, **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"stacked_action_failed_{name}.png")
@@ -601,7 +623,7 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
                 transform=ax.transAxes,
                 fontsize=9,
                 va="top",
-                bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+                bbox=_ANNOT_BOX,
             )
     else:
         ax.text(
@@ -611,7 +633,7 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
             transform=ax.transAxes,
             fontsize=9,
             va="top",
-            bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+            bbox=_ANNOT_BOX,
         )
 
     fig.suptitle(
@@ -626,7 +648,7 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
     ax.set_ylabel("Energy drop per tick")
 
     style_axes(ax)
-    ax.legend(loc="upper right", fontsize=8, framealpha=0.88)
+    ax.legend(loc="upper right", **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, filename)
@@ -730,7 +752,7 @@ def plot_state_space_energy_action(name, results, duration, out_dir, window=25):
         ax.set_xlim(-0.02, 1.02)
         ax.set_ylim(-0.05, 1.05)
         style_axes(ax)
-        ax.legend(loc="upper right", fontsize=7, framealpha=0.88)
+        ax.legend(loc="upper right", **_LEGEND_KW)
 
     fig.suptitle(
         f"State Space: Energy vs Action/Motivation — {name.upper()}\n"
@@ -806,7 +828,7 @@ def plot_food_consumption_over_time(name, results, duration, out_dir, window=25)
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=7, framealpha=0.88)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"food_consumption_rate_{name}.png")
@@ -943,7 +965,7 @@ def plot_energy_expenditure_breakdown(name, results, out_dir):
         transform=ax.transAxes,
         fontsize=9,
         va="top",
-        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.85),
+        bbox=_ANNOT_BOX,
     )
 
     plt.tight_layout()
@@ -1089,9 +1111,137 @@ def plot_homeostatic_balance(name, results, duration, out_dir, window=25):
         lines_energy + lines_fatigue,
         labels_energy + labels_fatigue,
         loc="upper right",
-        fontsize=8,
-        framealpha=0.88,
+        **_LEGEND_KW,
     )
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"homeostatic_balance_{name}.png")
+    
+def plot_rate_sum_check(
+    name,
+    results,
+    duration,
+    out_dir,
+):
+    """
+    Check whether event rates are normalized correctly.
+
+    Denominator is reconstructed from motivation counts:
+        processed_count = FORAGE + SELF
+
+    Ticks where processed == 0 (run already ended) are set to NaN so they
+    do not pull down the mean.  nanmean / nanstd are used across runs.
+    Smoothing is disabled (window=1) to avoid edge artifacts.
+    """
+    ticks = np.arange(duration)
+
+    action_keys = ["MOVE", "PICK", "EAT", "REST"]
+    failed_keys = ["FAILED_FORAGE", "FAILED_SELF"]
+    motivation_keys = ["FORAGE", "SELF"]
+
+    action_sum_runs = []
+    failed_sum_runs = []
+    action_failed_sum_runs = []
+    motivation_sum_runs = []
+
+    for r in results:
+        action_history = r.get("action_history", [])
+        failed_history = r.get("failed_history", [])
+        motivation_history = r.get("motivation_history", [])
+
+        action_arrays, _ = pad_event_history(action_history, duration, action_keys)
+        failed_arrays, _ = pad_event_history(failed_history, duration, failed_keys)
+        motivation_arrays, _ = pad_event_history(motivation_history, duration, motivation_keys)
+
+        action_count = np.zeros(duration, dtype=float)
+        failed_count = np.zeros(duration, dtype=float)
+        motivation_count = np.zeros(duration, dtype=float)
+
+        for key in action_keys:
+            action_count += action_arrays[key]
+
+        for key in failed_keys:
+            failed_count += failed_arrays[key]
+
+        for key in motivation_keys:
+            motivation_count += motivation_arrays[key]
+
+        # Use motivation count as the true processed denominator.
+        # Every processed mother generates exactly one motivation.
+        # Ticks where processed == 0 become NaN (run ended) so they
+        # are excluded from nanmean/nanstd instead of pulling rates to 0.
+        processed = motivation_count.copy()
+        active = processed > 0
+
+        def _nan_rate(numerator):
+            out = np.full(duration, np.nan)
+            out[active] = numerator[active] / processed[active]
+            return out
+
+        action_sum_runs.append(_nan_rate(action_count))
+        failed_sum_runs.append(_nan_rate(failed_count))
+        action_failed_sum_runs.append(_nan_rate(action_count + failed_count))
+        motivation_sum_runs.append(_nan_rate(motivation_count))
+
+    action_sum_runs = np.asarray(action_sum_runs, dtype=float)
+    failed_sum_runs = np.asarray(failed_sum_runs, dtype=float)
+    action_failed_sum_runs = np.asarray(action_failed_sum_runs, dtype=float)
+    motivation_sum_runs = np.asarray(motivation_sum_runs, dtype=float)
+
+    fig, ax = plt.subplots(figsize=(13, 6))
+
+    curves = [
+        ("Action only", action_sum_runs, "tab:blue", "-"),
+        ("Failed only", failed_sum_runs, "tab:red", "--"),
+        ("Action + Failed", action_failed_sum_runs, "tab:green", "-"),
+        ("Motivation", motivation_sum_runs, "tab:orange", ":"),
+    ]
+
+    for label, matrix, color, linestyle in curves:
+        mean_y = np.nanmean(matrix, axis=0)
+        std_y = np.nanstd(matrix, axis=0)
+
+        ax.fill_between(
+            ticks,
+            mean_y - std_y,
+            mean_y + std_y,
+            color=color,
+            alpha=0.10,
+            label=f"{label} Mean ± SD",
+        )
+
+        ax.plot(
+            ticks,
+            mean_y,
+            color=color,
+            linestyle=linestyle,
+            linewidth=2.2,
+            label=f"{label} Group Mean",
+        )
+
+    ax.axhline(
+        1.0,
+        color="black",
+        linestyle="--",
+        linewidth=1.2,
+        alpha=0.75,
+        label="Expected normalized total = 1.0",
+    )
+
+    fig.suptitle(
+        f"Rate Sum Check — {name.upper()}\n"
+        f"MotherAgent | Runs: {len(results)} total | no smoothing (NaN-padded ends)",
+        fontsize=14,
+        fontweight="bold",
+    )
+
+    ax.set_title("Check event-rate completeness using processed mothers as denominator")
+    ax.set_xlabel("Tick")
+    ax.set_ylabel("Rate sum per processed mother")
+    ax.set_ylim(-0.05, 1.25)
+
+    style_axes(ax)
+    ax.legend(loc="upper right", ncol=2, **_LEGEND_KW)
+
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"rate_sum_check_{name}.png")
