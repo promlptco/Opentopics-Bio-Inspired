@@ -169,23 +169,25 @@ and which we must the the care relate code in these 4 files run.py, plot.py, sen
 
 **Protocol:**
 - Fixed genomes: `mutation=False`. Drop mother + infant into sim, observe.
+- **Mother ecological parameters:** Copied from the Phase 2 pipeline-selected balanced baseline (`auto_baseline_summary.json`): `perception_radius=8`, `hunger_rate=0.005`, `move_cost=0.001`, `eat_gain=0.07`, `init_food=48`, `rest_recovery=0.11`. This isolates the effect of the child — any difference in survival outcome relative to Phase 2 is attributable to caregiving demand, not to a shifted ecological regime.
 - Grid search:
   - `care` ∈ {0.3, 0.5, 0.7, 0.9}
   - `forage` ∈ {0.5, 0.7, 0.85, 1.0}
   - `self` ∈ {0.3, 0.5, 0.7}
+- **Seeds:** 15–30 independent seeds per combination. Single-seed results are not accepted.
 - Per combination, run 1,000 ticks and record:
   - Mother survival rate
   - Child survival rate
   - Mother energy trajectory
   - Child energy trajectory
-  - Motivation selected event count
-  - 
+  - Motivation selected event count (mean ± SD across seeds)
 
 **Selection criteria for canonical genome:**
 - Both mother AND infant survive to tick 1,000.
 - Child energy stable after initial adjustment.
 - Care events non-trivial — care is actively happening.
 - Among all passing configs, prefer the *lowest* care weight that still satisfies the above. Avoids an artificially generous baseline.
+- **Tie-breaker:** If two or more configurations share the same (lowest) care weight, select the one with the highest mean mother energy averaged across all seeds and all 1,000 ticks. More energetic mothers are more robust to downstream ecological stress.
 
 **Required outputs:**
 - Heatmap or table: (care, forage) × child survival rate and child energy at tick 1,000.
@@ -213,7 +215,7 @@ and which we must the the care relate code in these 4 files run.py, plot.py, sen
 **Required plots:**
 1. Stacked area chart: action type distribution aggregated per tick window.
 2. Single-agent raster: one representative mother, color-coded action per tick.
-3. Child energy over time with care event markers.
+3. Child energy over time with care event markers **and Distance-to-Child overlaid on the same graph** (secondary y-axis or normalized scale). Co-occurrence of care events with low distance-to-child is spatial evidence that mothers are physically present during caregiving — not just selecting CARE as a motivation while standing far away.
 
 **Output:** A concise behavioral description referenced in the final report. Example: *"Under genome (care=0.7, forage=0.85, self=0.55), mothers spend 38% of ticks on care, predominantly: move-toward-infant → feed. Care clusters in ticks 0–200 when infant energy is lowest."*
 

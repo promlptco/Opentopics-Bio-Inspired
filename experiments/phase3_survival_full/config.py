@@ -41,16 +41,20 @@ ENABLE_SPATIAL_HEATMAP_PLOT = True
 #   adding a child increases caregiving demand,
 #   therefore the required resource level should increase.
 PHASE3_BASELINE = {
-    # Mother ecology, inherited from Phase 2 style baseline.
+    # Mother ecology — copied from Phase 2 pipeline-selected balanced baseline.
+    # Source: outputs/phase2_survival_minimal/auto_1000_percept8_repeat3_validation_selected_baselines/auto_baseline_summary.json
+    # Phase 3a starts from the same ecological regime as Phase 2 so that any
+    # behavioural difference is attributable to the child, not to a shifted
+    # resource environment.
     "width": 30,
     "height": 30,
-    "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-    "hunger_rate": 0.0045,
-    "move_cost": 0.0005,
-    "eat_gain": 0.08,
-    "init_food": 35,
-    "rest_recovery": 0.005,
-    "fatigue_rate": 0.01, # 0.01 was proven by homeostatic balance plot that fatigue is not a major driver of phase2.
+    "perception_radius": DEFAULT_PERCEPTION_RADIUS,  # 8.0
+    "hunger_rate": 0.005,
+    "move_cost": 0.001,
+    "eat_gain": 0.07,
+    "init_food": 48,
+    "rest_recovery": 0.11,
+    "fatigue_rate": 0.01,
 
     # Child physiology.
     # ChildAgent.update_hunger() increases child hunger by this amount per tick.
@@ -130,7 +134,6 @@ def candidate_configs(mode="sweep"):
         return [
             {
                 **PHASE3_BASELINE,
-                "init_food": 70,
                 "name": "single_test",
             }
         ]
@@ -139,8 +142,8 @@ def candidate_configs(mode="sweep"):
         **{k: [v] for k, v in PHASE3_BASELINE.items() if k != "init_food"},
 
         # Main Phase 3 resource axis.
-        # Start near Phase 2 levels and extend upward because caregiving
-        # should require more resources.
+        # Baseline is Phase 2 BALANCED_BASELINE (init_food=60).
+        # Sweep below and above to characterise the child's impact on required resources.
         "init_food": [
             20, 25, 30, 35, 40, 45, 50, 55, 60,
             65, 70, 75, 80, 90, 100, 110, 120,
