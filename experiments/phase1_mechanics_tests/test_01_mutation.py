@@ -367,6 +367,6 @@ if __name__ == "__main__":
         writer.writerows(_results)
 
     plot_path = plot_mutation_histogram(out_dir, n_samples=1000)
-    print(f"Plot saved  → {plot_path}")
     print(f"\n=== All mutation tests PASSED ===")
-    print(f"Logs saved  → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Plot saved → {plot_path}")

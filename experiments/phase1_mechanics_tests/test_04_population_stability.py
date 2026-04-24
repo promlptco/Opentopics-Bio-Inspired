@@ -225,6 +225,11 @@ def test_children_do_not_remain_alive_after_maturation():
         "Possible bug: matured children are still counted as alive children."
     )
 
+    _log(
+        "test_children_do_not_remain_alive_after_maturation",
+        f"initial_children={initial_children};final_children={final_children}",
+    )
+
 def plot_population_trajectory(out_dir: str, ticks: int = 200) -> str:
     """Save polished population stability trajectory plot."""
     config = Config()
@@ -361,6 +366,7 @@ if __name__ == "__main__":
     test_no_immediate_explosion()
     test_deterministic_with_seed()
     test_no_food_causes_extinction_or_strong_decline()
+    test_children_do_not_remain_alive_after_maturation()
 
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
@@ -374,4 +380,4 @@ if __name__ == "__main__":
 
     print(f"\n=== All population stability tests PASSED ===")
     print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
-    print(f"Plot saved → {plot_path}")
+    print(f"Plot saved  → {plot_path}")
