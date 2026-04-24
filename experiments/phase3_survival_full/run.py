@@ -403,7 +403,18 @@ class MotherChildSurvivalSimulation:
             # FORAGE
             # -------------------------
             if motivation == "FORAGE":
-                if mother.pos in self.world.food_positions:
+                if mother.held_food > 0:
+                    # Eat held food immediately — mirrors Phase 2 mechanics so that
+                    # CARE interruptions between PICK and SELF don't starve the mother.
+                    variance = random.uniform(0.8, 1.2)
+                    mother.energy = min(1.0, mother.energy + self.config.eat_gain * variance)
+                    mother.held_food -= 1
+
+                    tick_actions["EAT"] += 1
+                    self.action_counts["EAT"] += 1
+                    executed_action = "EAT"
+
+                elif mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
                     mother.held_food += 1
 
@@ -415,7 +426,6 @@ class MotherChildSurvivalSimulation:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
 
                     if self.world.update_position(mother, new_pos):
-                        before_move = mother.energy
                         mother.energy = max(0.0, mother.energy - self.config.move_cost)
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
 
@@ -430,8 +440,9 @@ class MotherChildSurvivalSimulation:
                 if child is not None and child.alive:
                     dist = self.world.get_distance(mother.pos, child.pos)
 
-                    if dist <= self.config.feed_distance and mother.held_food > 0:
-                        mother.held_food -= 1
+                    if dist <= self.config.feed_distance:
+                        # Direct energy-donation feeding — no held_food required.
+                        # Matches Phase 2: care is an energy cost, not a food-item transfer.
                         mother.energy = max(0.0, mother.energy - self.config.feed_cost)
 
                         hunger_reduced = child.receive_food(self.config.feed_amount)
@@ -491,7 +502,7 @@ class MotherChildSurvivalSimulation:
                 self.world.remove_entity(mother.id)
 
         target = int(self.config.init_food * self.food_mult)
-        if len(self.world.food_positions) < max(1, target // 3):
+        if len(self.world.food_positions) < max(1, target // 2):
             self._spawn_food(self.config.food_respawn_per_tick)
 
         alive_mothers_now = self._alive_mothers()

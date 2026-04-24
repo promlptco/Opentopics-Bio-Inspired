@@ -29,7 +29,9 @@
       "Bash(PYTHONIOENCODING=utf-8 python -m experiments.phase1_mechanics_tests.test_04_population_stability)",
       "Bash(echo \"---T01_EXIT:$?\")",
       "Bash(echo \"---T02_EXIT:$?\")",
-      "Bash(echo \"---T03_EXIT:$?\")"
+      "Bash(echo \"---T03_EXIT:$?\")",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(PYTHONIOENCODING=utf-8 python experiments/phase3_survival_full/motivation_sweep.py --seeds 15)"
     ]
   }
 }
