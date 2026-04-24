@@ -42,7 +42,7 @@ def _log(name: str, detail: str = "") -> None:
 
 
 def test_mutation_changes_values():
-    """Mutated genome should differ from parent."""
+    """Mutated genome should differ from parent — verified across all 5 fields."""
     _seed()
     parent = Genome(
         care_weight=0.5,
@@ -52,17 +52,21 @@ def test_mutation_changes_values():
         learning_cost=0.05
     )
 
-    changes = 0
     trials = 100
+    field_changes = {f: 0 for f in FIELDS}
 
     for _ in range(trials):
         child = parent.mutate(mutation_rate=1.0)
-        if child.care_weight != parent.care_weight:
-            changes += 1
+        for f in FIELDS:
+            if getattr(child, f) != getattr(parent, f):
+                field_changes[f] += 1
 
-    print(f"Mutations occurred: {changes}/{trials}")
-    assert changes > 90, "Mutation should change values most of the time"
-    _log("test_mutation_changes_values", f"mutations_occurred={changes}/{trials}")
+    detail = "; ".join(f"{f}={field_changes[f]}/{trials}" for f in FIELDS)
+    print(f"Mutations per field: {detail}")
+    for f in FIELDS:
+        assert field_changes[f] > 90, \
+            f"{f}: only {field_changes[f]}/{trials} mutations (expected >90)"
+    _log("test_mutation_changes_values", detail)
 
 
 def test_mutation_stays_in_bounds():
@@ -79,8 +83,47 @@ def test_mutation_stays_in_bounds():
     _log("test_mutation_stays_in_bounds", "1000 mutations, all 5 fields in [0,1]")
 
 
+def test_mutation_rate_zero():
+    """mutation_rate=0.0 must leave all 5 fields exactly unchanged."""
+    _seed()
+    parent = Genome(care_weight=0.3, forage_weight=0.6, self_weight=0.4,
+                    learning_rate=0.2, learning_cost=0.1)
+    for _ in range(100):
+        child = parent.mutate(mutation_rate=0.0)
+        for f in FIELDS:
+            assert getattr(child, f) == getattr(parent, f), \
+                f"mutation_rate=0.0 changed {f}: {getattr(parent, f)} → {getattr(child, f)}"
+    _log("test_mutation_rate_zero", "100 trials, all 5 fields unchanged")
+
+
+def test_mutation_partial_rate():
+    """mutation_rate=0.5 should mutate ~50% of genes per field independently."""
+    _seed()
+    parent = Genome(care_weight=0.5, forage_weight=0.5, self_weight=0.5,
+                    learning_rate=0.5, learning_cost=0.5)
+    trials = 2000
+    field_changes = {f: 0 for f in FIELDS}
+    for _ in range(trials):
+        child = parent.mutate(mutation_rate=0.5)
+        for f in FIELDS:
+            if getattr(child, f) != getattr(parent, f):
+                field_changes[f] += 1
+    detail_parts = []
+    for f in FIELDS:
+        rate = field_changes[f] / trials
+        detail_parts.append(f"{f}={rate:.3f}")
+        print(f"  {f}: mutated {field_changes[f]}/{trials} = {rate:.3f}")
+        assert 0.40 < rate < 0.60, \
+            f"{f}: observed mutation rate {rate:.3f} not near 0.50 (±0.10 tolerance)"
+    _log("test_mutation_partial_rate", "; ".join(detail_parts))
+
+
 def test_mutation_distribution():
-    """All five genome fields should mutate with roughly Gaussian distribution."""
+    """Mutation deltas (child − parent) across all fields should be ~N(0, sigma).
+
+    Tests deltas, not final values, to avoid confounding with parent position or
+    clamping artefacts. Normality verified with D'Agostino/Pearson test (p > 0.01).
+    """
     _seed()
     parent = Genome(
         care_weight=0.5,
@@ -90,22 +133,24 @@ def test_mutation_distribution():
         learning_cost=0.5,
     )
 
-    samples = {f: [] for f in FIELDS}
+    deltas = {f: [] for f in FIELDS}
 
     for _ in range(1000):
         child = parent.mutate(mutation_rate=1.0, sigma=CANONICAL_SIGMA)
         for f in FIELDS:
-            samples[f].append(getattr(child, f))
+            deltas[f].append(getattr(child, f) - getattr(parent, f))
 
     detail_parts = []
     for f in FIELDS:
-        mean  = statistics.mean(samples[f])
-        stdev = statistics.stdev(samples[f])
-        detail_parts.append(f"{f}:mean={mean:.3f},stdev={stdev:.3f}")
-        print(f"  {f}: Mean={mean:.3f}, Stdev={stdev:.3f}")
-        assert 0.4 < mean < 0.6, f"{f} mean should be near 0.5, got {mean}"
-        # Bounds: expected stdev ≈ CANONICAL_SIGMA; allow ±0.03 margin
-        assert 0.04 < stdev < 0.10, f"{f} stdev should be near {CANONICAL_SIGMA}, got {stdev}"
+        d     = deltas[f]
+        mean  = statistics.mean(d)
+        stdev = statistics.stdev(d)
+        _, p_norm = scipy_stats.normaltest(d)
+        detail_parts.append(f"{f}:mean={mean:.4f},stdev={stdev:.4f},p_norm={p_norm:.3f}")
+        print(f"  {f}: delta mean={mean:.4f}, stdev={stdev:.4f}, normaltest p={p_norm:.3f}")
+        assert abs(mean) < 0.01, f"{f} delta mean not near 0: {mean:.4f}"
+        assert 0.04 < stdev < 0.10, f"{f} delta stdev not near {CANONICAL_SIGMA}: {stdev:.4f}"
+        assert p_norm > 0.01, f"{f} deltas fail normality test (p={p_norm:.4f})"
 
     _log("test_mutation_distribution", "; ".join(detail_parts))
 
@@ -308,6 +353,8 @@ if __name__ == "__main__":
 
     test_mutation_changes_values()
     test_mutation_stays_in_bounds()
+    test_mutation_rate_zero()
+    test_mutation_partial_rate()
     test_mutation_distribution()
     test_mutation_rate_sensitivity()
 

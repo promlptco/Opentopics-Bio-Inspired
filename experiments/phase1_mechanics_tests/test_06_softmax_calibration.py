@@ -1,26 +1,27 @@
 """
 Test 06: Softmax Calibration
 
-Verifies that the Softmax (Gibbs) action selection is correctly implemented:
-  (a) Mathematical correctness — softmax_probs() output matches the Boltzmann equation.
-  (b) Empirical proportionality — sampling from softmax_probs() at a fixed seed
-      selects the highest-utility action at a rate consistent with Softmax(τ=0.1).
-  (c) Temperature sensitivity — higher τ flattens distribution; lower τ sharpens it.
-  (d) Boundary robustness — handles equal scores, zero-score vectors, and a single option.
-
-Design reference: EXPERIMENT_DESIGN.md Phase 1, Test 06 (amended 2026-04-14).
+Verifies that Softmax / Gibbs action selection is correctly implemented:
+- softmax_probs() matches the Boltzmann equation
+- sampled frequencies match theoretical probabilities
+- lower tau sharpens the distribution
+- higher tau flattens the distribution
+- boundary cases are handled safely
+- calibration plot is saved
 """
 import sys
 import os
+import math
+import csv
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-import math
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # headless — no display needed
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+
 from agents.mother import softmax_probs, SOFTMAX_TAU
 
 MODULE_NUM = "06"
@@ -31,8 +32,8 @@ TAG = f"test{MODULE_NUM}_{DEFAULT_SEED}_{RUN_NUM}"
 _results = []
 
 
-def _seed():
-    np.random.seed(DEFAULT_SEED)
+def _seed(seed: int = DEFAULT_SEED) -> None:
+    np.random.seed(seed)
 
 
 def _log(name: str, detail: str = "") -> None:
@@ -40,225 +41,234 @@ def _log(name: str, detail: str = "") -> None:
     print(f"✓ {name} PASSED")
 
 
+def _assert_valid_probs(probs: dict[str, float], tol: float = 1e-9) -> None:
+    """Check probabilities are numerically valid."""
+    total = sum(probs.values())
+
+    assert abs(total - 1.0) < tol, f"Probabilities do not sum to 1: {total}"
+
+    for action, p in probs.items():
+        assert not math.isnan(p), f"NaN probability for {action}"
+        assert not math.isinf(p), f"Inf probability for {action}"
+        assert p >= 0.0, f"Negative probability for {action}: {p}"
+        assert p <= 1.0, f"Probability above 1 for {action}: {p}"
+
+
+def _manual_softmax(scores: dict[str, float], tau: float) -> dict[str, float]:
+    """Stable manual softmax used as gold-standard reference."""
+    max_score = max(scores.values())
+    raw = {
+        k: math.exp((v - max_score) / tau)
+        for k, v in scores.items()
+    }
+    total = sum(raw.values())
+    return {k: raw[k] / total for k in raw}
+
+
 # ---------------------------------------------------------------------------
-# Sub-test A: Mathematical correctness
+# A: Mathematical correctness
 # ---------------------------------------------------------------------------
 
 def test_softmax_math_correct():
-    """softmax_probs() must exactly reproduce the Boltzmann equation.
-
-    P(a) = exp(u_a / τ) / Σ exp(u_i / τ)
-
-    We compute the gold-standard probability for a known 3-action input
-    and verify the function output matches to 8 decimal places.
-    """
+    """softmax_probs() should match the Boltzmann equation."""
     scores = {"care": 0.7, "forage": 0.4, "self": 0.2}
-    tau = SOFTMAX_TAU  # 0.1
+    tau = SOFTMAX_TAU
 
-    # Gold-standard manual calculation
-    raw = {k: math.exp(v / tau) for k, v in scores.items()}
-    total = sum(raw.values())
-    expected = {k: raw[k] / total for k in raw}
-
+    expected = _manual_softmax(scores, tau=tau)
     got = softmax_probs(scores, tau=tau)
+
+    _assert_valid_probs(got)
 
     for action in scores:
         diff = abs(got[action] - expected[action])
-        print(f"  {action}: expected={expected[action]:.8f}, got={got[action]:.8f}, diff={diff:.2e}")
-        assert diff < 1e-8, (
-            f"{action}: softmax_probs differs from Boltzmann equation by {diff:.2e}"
+        print(
+            f"{action}: expected={expected[action]:.8f}, "
+            f"got={got[action]:.8f}, diff={diff:.2e}"
         )
-
-    # Probabilities must sum to 1.0
-    total_prob = sum(got.values())
-    assert abs(total_prob - 1.0) < 1e-9, f"Probabilities do not sum to 1: {total_prob}"
+        assert diff < 1e-8, \
+            f"{action}: softmax output differs from expected by {diff:.2e}"
 
     _log(
         "test_softmax_math_correct",
-        f"tau={tau};care={got['care']:.6f};forage={got['forage']:.6f};self={got['self']:.6f}"
+        f"tau={tau};care={got['care']:.6f};"
+        f"forage={got['forage']:.6f};self={got['self']:.6f}",
     )
 
 
+def test_probability_validity():
+    """Softmax output should always be valid probabilities."""
+    cases = [
+        {"care": 0.7, "forage": 0.4, "self": 0.2},
+        {"care": 0.0, "forage": 0.0, "self": 0.0},
+        {"care": 10.0, "forage": 1.0, "self": -2.0},
+        {"care": -1.0, "forage": -2.0, "self": -3.0},
+    ]
+
+    for scores in cases:
+        probs = softmax_probs(scores, tau=SOFTMAX_TAU)
+        _assert_valid_probs(probs)
+
+    _log("test_probability_validity", f"checked_cases={len(cases)}")
+
+
 # ---------------------------------------------------------------------------
-# Sub-test B: Empirical proportionality (sampling distribution)
+# B: Empirical sampling calibration
 # ---------------------------------------------------------------------------
 
 def test_empirical_selection_rate():
-    """Sampling repeatedly from softmax_probs must converge to the expected probabilities.
-
-    Setup: scores = {high: 0.9, low: 0.1} with τ=0.1.
-    The Softmax probability of 'high' is extremely close to 1 at τ=0.1.
-    We verify:
-      - 'high' is selected at a rate ≥ 99% (consistent with Softmax(τ=0.1))
-      - The empirical rate is within 1% of the theoretical Softmax probability.
-    """
+    """Sampling should match theoretical softmax probabilities."""
     _seed()
+
     scores = {"high": 0.9, "low": 0.1}
-    tau = SOFTMAX_TAU  # 0.1
-
+    tau = SOFTMAX_TAU
     probs = softmax_probs(scores, tau=tau)
-    p_high_theoretical = probs["high"]
-    print(f"  Theoretical P(high) at τ={tau}: {p_high_theoretical:.6f}")
 
-    # Sample N times
-    N = 5_000
+    _assert_valid_probs(probs)
+
+    n_samples = 5000
     keys = list(probs.keys())
     weights = [probs[k] for k in keys]
-    counts = {k: 0 for k in keys}
-    for _ in range(N):
-        chosen = np.random.choice(len(keys), p=weights)
-        counts[keys[chosen]] += 1
 
-    p_high_empirical = counts["high"] / N
-    print(f"  Empirical  P(high) over {N} samples: {p_high_empirical:.6f}")
-    print(f"  |empirical - theoretical| = {abs(p_high_empirical - p_high_theoretical):.6f}")
+    sampled = np.random.choice(keys, size=n_samples, p=weights)
+    p_high_empirical = np.mean(sampled == "high")
+    p_high_theory = probs["high"]
 
-    # Must select 'high' at ≥ 99% rate (theoretical is > 0.9999 at these parameters)
-    assert p_high_empirical >= 0.99, (
-        f"Expected 'high' to dominate (≥99%) at τ={tau}, got {p_high_empirical:.4f}"
-    )
+    delta = abs(p_high_empirical - p_high_theory)
 
-    # Empirical rate must be within 1% of theory
-    assert abs(p_high_empirical - p_high_theoretical) < 0.01, (
-        f"Empirical rate {p_high_empirical:.4f} deviates from "
-        f"theoretical {p_high_theoretical:.4f} by more than 1%"
-    )
+    print(f"Theoretical P(high): {p_high_theory:.6f}")
+    print(f"Empirical  P(high): {p_high_empirical:.6f}")
+    print(f"Delta: {delta:.6f}")
+
+    assert p_high_empirical >= 0.99, \
+        f"Expected high action to dominate, got {p_high_empirical:.4f}"
+
+    assert delta < 0.01, \
+        f"Empirical rate differs from theory too much: delta={delta:.4f}"
 
     _log(
         "test_empirical_selection_rate",
-        f"tau={tau};N={N};p_high_theory={p_high_theoretical:.6f};"
-        f"p_high_empirical={p_high_empirical:.6f};"
-        f"delta={abs(p_high_empirical - p_high_theoretical):.6f}"
+        f"tau={tau};n_samples={n_samples};"
+        f"p_high_theory={p_high_theory:.6f};"
+        f"p_high_empirical={p_high_empirical:.6f};delta={delta:.6f}",
     )
 
-
-# ---------------------------------------------------------------------------
-# Sub-test B2: Weaker contrast — intermediate τ stays proportional
-# ---------------------------------------------------------------------------
 
 def test_moderate_contrast_proportional():
-    """At τ=0.5 (looser), selection should be clearly proportional — not dominated.
-
-    scores = {A: 0.6, B: 0.4} at τ=0.5.
-    A should win more often than B, but not overwhelmingly.
-    Verify the Softmax probabilities reflect the relative utilities correctly.
-    """
-    _seed()
+    """Moderate contrast should prefer higher utility without collapsing fully."""
     scores = {"A": 0.6, "B": 0.4}
-    tau = 0.5  # Wider distribution — both actions have real probability
+    tau = 0.5
 
     probs = softmax_probs(scores, tau=tau)
-    p_A = probs["A"]
-    p_B = probs["B"]
-    print(f"  τ={tau}: P(A=0.6)={p_A:.4f}, P(B=0.4)={p_B:.4f}")
+    expected = _manual_softmax(scores, tau=tau)
 
-    # A must be more probable than B
-    assert p_A > p_B, f"Higher utility action must have higher probability: P(A)={p_A} ≤ P(B)={p_B}"
+    _assert_valid_probs(probs)
 
-    # Both must have non-trivial probability (neither is negligible at τ=0.5)
-    assert p_B > 0.01, f"Lower action should still have non-trivial probability at τ=0.5, got {p_B:.4f}"
+    assert probs["A"] > probs["B"], \
+        f"Higher utility should have higher probability: {probs}"
 
-    # Gold-standard check
-    exp_A = math.exp(0.6 / tau)
-    exp_B = math.exp(0.4 / tau)
-    expected_p_A = exp_A / (exp_A + exp_B)
-    assert abs(p_A - expected_p_A) < 1e-10, (
-        f"P(A) mismatch: expected {expected_p_A:.8f}, got {p_A:.8f}"
-    )
+    assert probs["B"] > 0.01, \
+        f"Lower utility action should still have non-trivial probability: {probs['B']}"
+
+    assert abs(probs["A"] - expected["A"]) < 1e-10, \
+        f"P(A) mismatch: expected={expected['A']}, got={probs['A']}"
 
     _log(
         "test_moderate_contrast_proportional",
-        f"tau={tau};p_A={p_A:.6f};p_B={p_B:.6f};expected_p_A={expected_p_A:.6f}"
+        f"tau={tau};p_A={probs['A']:.6f};p_B={probs['B']:.6f}",
     )
 
 
 # ---------------------------------------------------------------------------
-# Sub-test C: Temperature sensitivity
+# C: Temperature sensitivity
 # ---------------------------------------------------------------------------
 
 def test_temperature_sensitivity():
-    """Lower τ must produce a sharper (more argmax-like) distribution.
-    Higher τ must produce a flatter (more uniform) distribution.
-
-    We use a fixed asymmetric score vector and compare entropy across τ values.
-    Lower τ → lower entropy (more deterministic).
-    Higher τ → higher entropy (more uniform).
-    """
+    """Entropy should increase as tau increases."""
     scores = {"care": 0.8, "forage": 0.5, "self": 0.2}
     taus = [0.05, 0.1, 0.5, 1.0]
+
     entropies = {}
 
     for tau in taus:
         probs = softmax_probs(scores, tau=tau)
-        # Shannon entropy H = -Σ p·log(p)
-        H = -sum(p * math.log(p) for p in probs.values() if p > 1e-300)
-        entropies[tau] = H
-        top_action = max(probs, key=probs.get)
-        print(f"  τ={tau:.2f}: entropy={H:.4f}, top={top_action}({probs[top_action]:.4f})")
+        _assert_valid_probs(probs)
 
-    # Entropy must be monotonically increasing with τ
-    sorted_taus = sorted(taus)
-    for i in range(len(sorted_taus) - 1):
-        t_low, t_high = sorted_taus[i], sorted_taus[i + 1]
-        assert entropies[t_low] < entropies[t_high], (
-            f"Entropy not monotonic: τ={t_low} H={entropies[t_low]:.4f} "
-            f"≥ τ={t_high} H={entropies[t_high]:.4f}"
+        entropy = -sum(p * math.log(p) for p in probs.values() if p > 0.0)
+        entropies[tau] = entropy
+
+        top_action = max(probs, key=probs.get)
+        print(
+            f"tau={tau:.2f}: entropy={entropy:.4f}, "
+            f"top={top_action}, p_top={probs[top_action]:.4f}"
         )
 
-    # At the canonical τ=0.1, the highest-utility action (care=0.8) must dominate
+    sorted_taus = sorted(taus)
+
+    for i in range(len(sorted_taus) - 1):
+        t_low = sorted_taus[i]
+        t_high = sorted_taus[i + 1]
+
+        assert entropies[t_low] < entropies[t_high], (
+            f"Entropy should increase with tau: "
+            f"tau={t_low}, H={entropies[t_low]:.4f}; "
+            f"tau={t_high}, H={entropies[t_high]:.4f}"
+        )
+
     probs_canonical = softmax_probs(scores, tau=SOFTMAX_TAU)
-    assert probs_canonical["care"] > 0.95, (
-        f"At τ={SOFTMAX_TAU}, care (score=0.8) should dominate (>95%), "
-        f"got {probs_canonical['care']:.4f}"
-    )
+
+    assert probs_canonical["care"] > 0.95, \
+        f"At tau={SOFTMAX_TAU}, top action should dominate, got {probs_canonical['care']:.4f}"
 
     detail = ";".join(f"tau={t}:H={entropies[t]:.4f}" for t in sorted_taus)
     _log("test_temperature_sensitivity", detail)
 
 
 # ---------------------------------------------------------------------------
-# Sub-test D: Boundary robustness
+# D: Boundary robustness
 # ---------------------------------------------------------------------------
 
 def test_boundary_equal_scores():
-    """With all equal utility scores, Softmax must return uniform probabilities."""
+    """Equal scores should produce uniform probabilities."""
     scores = {"care": 0.5, "forage": 0.5, "self": 0.5}
     probs = softmax_probs(scores)
 
+    _assert_valid_probs(probs)
+
+    expected = 1.0 / len(scores)
+
     for action, p in probs.items():
-        expected = 1.0 / 3.0
-        assert abs(p - expected) < 1e-10, (
-            f"Equal scores should give uniform probs. {action}: {p:.8f} ≠ {expected:.8f}"
-        )
-    print(f"  Equal scores → uniform: {list(probs.values())}")
-    _log("test_boundary_equal_scores", f"p_each={list(probs.values())[0]:.6f}")
+        assert abs(p - expected) < 1e-10, \
+            f"Equal scores should be uniform. {action}: {p} != {expected}"
+
+    _log("test_boundary_equal_scores", f"p_each={expected:.6f}")
 
 
 def test_boundary_zero_scores():
-    """With all-zero utility scores, Softmax must still return uniform probabilities
-    and must not crash (no division by zero, no NaN, no inf).
-    """
+    """Zero scores should also produce uniform probabilities."""
     scores = {"care": 0.0, "forage": 0.0, "self": 0.0}
     probs = softmax_probs(scores)
 
-    total = sum(probs.values())
-    assert abs(total - 1.0) < 1e-9, f"Probabilities don't sum to 1: {total}"
+    _assert_valid_probs(probs)
+
+    expected = 1.0 / len(scores)
+
     for action, p in probs.items():
-        assert not math.isnan(p), f"NaN probability for {action}"
-        assert not math.isinf(p), f"Inf probability for {action}"
-    print(f"  Zero scores → probabilities: {probs}")
-    _log("test_boundary_zero_scores", f"sum={total:.8f};no_nan=True;no_inf=True")
+        assert abs(p - expected) < 1e-10, \
+            f"Zero scores should be uniform. {action}: {p} != {expected}"
+
+    _log("test_boundary_zero_scores", f"p_each={expected:.6f}")
 
 
 def test_boundary_single_action():
-    """With a single action, Softmax must assign probability 1.0 to that action."""
+    """A single action should receive probability 1.0."""
     scores = {"care": 0.7}
     probs = softmax_probs(scores)
 
-    assert abs(probs["care"] - 1.0) < 1e-10, (
-        f"Single action must get probability 1.0, got {probs['care']}"
-    )
-    print(f"  Single action → P(care)={probs['care']:.8f}")
+    _assert_valid_probs(probs)
+
+    assert abs(probs["care"] - 1.0) < 1e-10, \
+        f"Single action should have probability 1.0, got {probs['care']}"
+
     _log("test_boundary_single_action", f"p_care={probs['care']:.8f}")
 
 
@@ -266,270 +276,322 @@ def test_boundary_single_action():
 # Plotting
 # ---------------------------------------------------------------------------
 
-# Canonical scenarios (care, forage, self) used for bar chart panels
-_SCENARIOS: list[dict] = [
+ACTIONS = ["care", "forage", "self"]
+
+SCENARIOS = [
     {
-        "label": "High Contrast\n(care=0.9, forage=0.5, self=0.1)",
+        "label": "High Contrast",
         "scores": {"care": 0.9, "forage": 0.5, "self": 0.1},
     },
     {
-        "label": "Moderate\n(care=0.7, forage=0.4, self=0.2)",
+        "label": "Moderate",
         "scores": {"care": 0.7, "forage": 0.4, "self": 0.2},
     },
     {
-        "label": "Near-Equal\n(care=0.5, forage=0.45, self=0.4)",
+        "label": "Near Equal",
         "scores": {"care": 0.5, "forage": 0.45, "self": 0.4},
     },
 ]
 
-_ACTION_COLORS = {
-    "care":   "#2166AC",   # strong blue
-    "forage": "#1A9850",   # strong green
-    "self":   "#D6604D",   # warm red
-}
-
-# Temperature sensitivity panel uses this fixed scenario
-_TEMP_SCENARIO = {"care": 0.7, "forage": 0.4, "self": 0.2}
-_TEMP_TAUS     = [0.05, 0.1, 0.2, 0.5, 1.0]
+TEMP_SCENARIO = {"care": 0.7, "forage": 0.4, "self": 0.2}
+TEMP_TAUS = [0.05, 0.1, 0.2, 0.5, 1.0]
 
 
-def _sample_freqs(
+def _sample_frequencies(
     scores: dict[str, float],
     tau: float,
-    n_trials: int,
     n_samples: int,
-    base_seed: int,
-) -> dict[str, np.ndarray]:
-    """Return per-action arrays of shape (n_trials,) with observed frequency [0, 1].
+    seed: int,
+) -> dict[str, float]:
+    """Sample actions and return empirical frequencies."""
+    np.random.seed(seed)
 
-    Each trial is seeded independently so the set of trials is reproducible
-    but each trial is a different draw from the same distribution.
-    """
     probs = softmax_probs(scores, tau=tau)
-    keys  = list(probs.keys())
-    weights = np.array([probs[k] for k in keys])
+    keys = list(probs.keys())
+    weights = [probs[k] for k in keys]
 
-    freq: dict[str, list[float]] = {k: [] for k in keys}
-    for t in range(n_trials):
-        np.random.seed(base_seed + t)
-        chosen = np.random.choice(len(keys), size=n_samples, p=weights)
-        for i, k in enumerate(keys):
-            freq[k].append(np.sum(chosen == i) / n_samples)
+    chosen = np.random.choice(keys, size=n_samples, p=weights)
 
-    return {k: np.array(freq[k]) for k in keys}
+    return {
+        action: float(np.mean(chosen == action))
+        for action in keys
+    }
 
 
 def plot_softmax_calibration(
     out_dir: str,
-    n_trials: int = 30,
-    n_samples: int = 5_000,
-    base_seed: int = DEFAULT_SEED,
+    n_samples: int = 5000,
+    seed: int = DEFAULT_SEED,
 ) -> str:
-    """Generate a 2×2 Softmax calibration figure and save to *out_dir*.
+    """Save polished softmax calibration plot."""
+    tau = SOFTMAX_TAU
 
-    Layout:
-      Row 1: scenario panels — High Contrast | Moderate | Near-Equal
-      Row 2: Temperature sensitivity panel (full width)
+    ACTION_COLORS = {
+        "care": "#2166AC",
+        "forage": "#1A9850",
+        "self": "#D6604D",
+    }
 
-    Bar chart design (panels 1–3):
-      - Actions on X-axis: care / forage / self
-      - Y-axis: frequency %
-      - Two bars per action: Observed (mean over trials) and Theoretical
-      - Error bars on Observed bar: ± 1 SD across trials
-
-    Temperature panel:
-      - X-axis: τ ∈ {0.05, 0.1, 0.5, 1.0}
-      - Grouped bars per action, showing how theoretical probability shifts with τ
-
-    Returns the path of the saved image.
-    """
-    ACTIONS = ["care", "forage", "self"]
-    TAU     = SOFTMAX_TAU  # 0.1
-
-    # ── Figure layout: 1×3 top panels + 1 bottom spanning panel ──────────
     plt.style.use("default")
-    fig = plt.figure(figsize=(17, 10), facecolor="#FAFAFA")
-    fig.patch.set_facecolor("#FAFAFA")
 
-    # Grid: 2 rows, 3 columns. Bottom panel spans all 3 columns.
+    fig = plt.figure(figsize=(15, 9), facecolor="#FFFFFF")
+    fig.patch.set_facecolor("#FFFFFF")
+
     gs = fig.add_gridspec(
-        2, 3,
-        height_ratios=[1.0, 0.85],
-        hspace=0.45, wspace=0.35,
+        2,
+        3,
+        height_ratios=[1.0, 0.9],
+        hspace=0.42,
+        wspace=0.32,
     )
-    axes_top  = [fig.add_subplot(gs[0, c]) for c in range(3)]
+
+    axes_top = [fig.add_subplot(gs[0, i]) for i in range(3)]
     ax_bottom = fig.add_subplot(gs[1, :])
 
     fig.suptitle(
-        f"Softmax Calibration — Test 06  │  τ={TAU}  │  "
-        f"{n_trials} trials × {n_samples:,} samples each",
-        fontsize=13, fontweight="bold", color="#1A1A1A", y=1.01,
+        f"Softmax Calibration — Phase 1 Test 06  |  "
+        f"τ={tau}, samples={n_samples:,}, seed={seed}",
+        fontsize=14,
+        fontweight="bold",
+        color="#1A1A1A",
+        y=1.02,
     )
 
-    # Shared bar geometry
-    x       = np.arange(len(ACTIONS))  # 0, 1, 2
-    bar_w   = 0.30
-    gap     = 0.04
+    def _style_ax(ax, title: str) -> None:
+        ax.set_facecolor("#FAFAFA")
+        ax.set_title(
+            title,
+            fontsize=10,
+            fontweight="bold",
+            color="#1A1A1A",
+            pad=8,
+        )
+        ax.tick_params(colors="#333333", labelsize=8.5)
 
-    def _style_ax(ax: plt.Axes, title: str) -> None:
-        ax.set_facecolor("#FFFFFF")
-        ax.set_title(title, fontsize=9.5, fontweight="bold",
-                     color="#1A1A1A", pad=7)
         for spine in ax.spines.values():
             spine.set_edgecolor("#CCCCCC")
-            spine.set_linewidth(0.8)
-        ax.tick_params(colors="#333333", labelsize=8.5)
-        ax.set_axisbelow(True)
-        ax.grid(axis="y", color="#EBEBEB", linewidth=0.7, linestyle="--")
+            spine.set_linewidth(0.85)
 
-    # ── Panels 1–3: scenario bar charts ──────────────────────────────────
-    for scenario, ax in zip(_SCENARIOS, axes_top):
+        ax.grid(
+            axis="y",
+            color="#E0E0E0",
+            linewidth=0.7,
+            linestyle="--",
+            alpha=0.9,
+        )
+        ax.set_axisbelow(True)
+
+    # ------------------------------------------------------------
+    # Top row: observed vs theoretical for three scenarios
+    # ------------------------------------------------------------
+    x = np.arange(len(ACTIONS))
+    bar_w = 0.32
+    gap = 0.04
+
+    for idx, scenario in enumerate(SCENARIOS):
+        ax = axes_top[idx]
         scores = scenario["scores"]
 
-        # Theoretical probabilities
-        theory = softmax_probs(scores, tau=TAU)
+        theory = softmax_probs(scores, tau=tau)
+        observed = _sample_frequencies(
+            scores=scores,
+            tau=tau,
+            n_samples=n_samples,
+            seed=seed + idx,
+        )
 
-        # Observed frequencies across trials (per action)
-        freq_data = _sample_freqs(scores, TAU, n_trials, n_samples, base_seed)
-
-        # Draw bars: observed first, then theoretical, side by side
         for i, action in enumerate(ACTIONS):
-            obs_arr   = freq_data[action] * 100.0  # → %
-            obs_mean  = obs_arr.mean()
-            obs_std   = obs_arr.std(ddof=1)
-            theory_pct = theory[action] * 100.0
-            color      = _ACTION_COLORS[action]
+            color = ACTION_COLORS[action]
 
-            # Observed bar (slightly left)
+            obs_pct = observed[action] * 100.0
+            theory_pct = theory[action] * 100.0
+
             ax.bar(
                 x[i] - bar_w / 2 - gap / 2,
-                obs_mean, bar_w,
-                color=color, alpha=0.75,
-                edgecolor="#FFFFFF", linewidth=0.6,
-                yerr=obs_std, capsize=4,
-                error_kw=dict(elinewidth=1.5, ecolor="#333333", capthick=1.5),
+                obs_pct,
+                bar_w,
+                color=color,
+                alpha=0.75,
+                edgecolor="#FFFFFF",
+                linewidth=0.7,
                 label="Observed" if i == 0 else "",
             )
 
-            # Theoretical bar (slightly right, hatched)
             ax.bar(
                 x[i] + bar_w / 2 + gap / 2,
-                theory_pct, bar_w,
-                color=color, alpha=0.30,
-                edgecolor=color, linewidth=1.2,
+                theory_pct,
+                bar_w,
+                color=color,
+                alpha=0.28,
+                edgecolor=color,
+                linewidth=1.2,
                 hatch="//",
                 label="Theoretical" if i == 0 else "",
             )
 
-            # Annotate observed mean above bar
             ax.text(
                 x[i] - bar_w / 2 - gap / 2,
-                obs_mean + obs_std + 0.8,
-                f"{obs_mean:.1f}%",
-                ha="center", va="bottom", fontsize=7, color="#333333",
+                obs_pct + 1.0,
+                f"{obs_pct:.1f}%",
+                ha="center",
+                va="bottom",
+                fontsize=7.2,
+                color="#333333",
             )
-            # Annotate theoretical value
+
             ax.text(
                 x[i] + bar_w / 2 + gap / 2,
-                theory_pct + 0.8,
+                theory_pct + 1.0,
                 f"{theory_pct:.1f}%",
-                ha="center", va="bottom", fontsize=7, color="#666666",
+                ha="center",
+                va="bottom",
+                fontsize=7.2,
+                color="#666666",
             )
+
+        score_text = ", ".join(f"{k}={v}" for k, v in scores.items())
 
         _style_ax(ax, scenario["label"])
         ax.set_xticks(x)
-        ax.set_xticklabels([a.capitalize() for a in ACTIONS], fontsize=9)
-        ax.set_ylabel("Frequency (%)", fontsize=8.5, color="#444444")
-        ax.set_xlabel("Action (motivation)", fontsize=8.5, color="#444444")
+        ax.set_xticklabels([a.capitalize() for a in ACTIONS])
         ax.set_ylim(0, 110)
+        ax.set_xlabel("Action", fontsize=8.5, color="#444444")
+        ax.set_ylabel("Frequency (%)", fontsize=8.5, color="#444444")
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
 
-        # Legend: first panel only (shared)
-        if scenario is _SCENARIOS[0]:
-            obs_patch    = mpatches.Patch(color="#888888", alpha=0.75, label="Observed (mean ± 1 SD)")
-            theory_patch = mpatches.Patch(facecolor="#CCCCCC", edgecolor="#888888",
-                                          hatch="//", label=f"Theoretical Softmax(τ={TAU})")
+        ax.text(
+            0.03,
+            0.95,
+            score_text,
+            transform=ax.transAxes,
+            fontsize=7.3,
+            verticalalignment="top",
+            horizontalalignment="left",
+            color="#1A1A1A",
+            bbox=dict(
+                boxstyle="round,pad=0.35",
+                facecolor="#FFFFFF",
+                edgecolor="#CCCCCC",
+                alpha=0.95,
+            ),
+        )
+
+        if idx == 0:
             ax.legend(
-                handles=[obs_patch, theory_patch],
-                fontsize=7.5, loc="upper right",
-                facecolor="#FFFFFF", edgecolor="#CCCCCC", framealpha=0.95,
+                fontsize=7.5,
+                loc="upper right",
+                facecolor="#FFFFFF",
+                edgecolor="#CCCCCC",
+                labelcolor="#333333",
+                framealpha=0.95,
             )
 
-    # ── Bottom panel: Temperature sensitivity ────────────────────────────
-    tau_x   = np.arange(len(_TEMP_TAUS))
-    bar_w_t = 0.18
+    # ------------------------------------------------------------
+    # Bottom row: temperature sensitivity
+    # ------------------------------------------------------------
+    tau_x = np.arange(len(TEMP_TAUS))
+    bar_w_t = 0.20
 
     for j, action in enumerate(ACTIONS):
-        color = _ACTION_COLORS[action]
-        theory_vals = [
-            softmax_probs(_TEMP_SCENARIO, tau=tau)[action] * 100.0
-            for tau in _TEMP_TAUS
+        color = ACTION_COLORS[action]
+
+        vals = [
+            softmax_probs(TEMP_SCENARIO, tau=t)[action] * 100.0
+            for t in TEMP_TAUS
         ]
-        offset = (j - 1) * (bar_w_t + 0.03)
+
+        offset = (j - 1) * (bar_w_t + 0.035)
+
         ax_bottom.bar(
-            tau_x + offset, theory_vals, bar_w_t,
-            color=color, alpha=0.75,
-            edgecolor="#FFFFFF", linewidth=0.5,
+            tau_x + offset,
+            vals,
+            bar_w_t,
+            color=color,
+            alpha=0.78,
+            edgecolor="#FFFFFF",
+            linewidth=0.6,
             label=action.capitalize(),
         )
-        # Value labels
-        for xi, val in zip(tau_x + offset, theory_vals):
+
+        for xi, val in zip(tau_x + offset, vals):
             ax_bottom.text(
-                xi, val + 0.6, f"{val:.1f}%",
-                ha="center", va="bottom", fontsize=6.8, color="#333333",
+                xi,
+                val + 0.8,
+                f"{val:.1f}%",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+                color="#333333",
             )
 
-    # Mark canonical τ
-    canonical_idx = _TEMP_TAUS.index(TAU)
-    ax_bottom.axvspan(
-        tau_x[canonical_idx] - 0.40, tau_x[canonical_idx] + 0.40,
-        color="#2166AC", alpha=0.08, zorder=0,
-    )
-    ax_bottom.text(
-        tau_x[canonical_idx], -8,
-        f"τ={TAU}\n(canonical)",
-        ha="center", va="top", fontsize=7.5, color="#2166AC",
-        fontweight="bold",
-    )
+    # Highlight canonical tau
+    if tau in TEMP_TAUS:
+        canonical_idx = TEMP_TAUS.index(tau)
+        ax_bottom.axvspan(
+            tau_x[canonical_idx] - 0.45,
+            tau_x[canonical_idx] + 0.45,
+            color="#2166AC",
+            alpha=0.07,
+            zorder=0,
+        )
+
+        ax_bottom.text(
+            tau_x[canonical_idx],
+            -8,
+            "canonical\nτ",
+            ha="center",
+            va="top",
+            fontsize=8,
+            color="#2166AC",
+            fontweight="bold",
+        )
+
+    temp_score_text = ", ".join(f"{k}={v}" for k, v in TEMP_SCENARIO.items())
 
     _style_ax(
         ax_bottom,
-        f"Temperature Sensitivity  │  Theoretical Softmax(care=0.7, forage=0.4, self=0.2)",
-    )
-    ax_bottom.set_xticks(tau_x)
-    ax_bottom.set_xticklabels([f"τ = {t}" for t in _TEMP_TAUS], fontsize=9)
-    ax_bottom.set_ylabel("Theoretical Frequency (%)", fontsize=8.5, color="#444444")
-    ax_bottom.set_xlabel("Softmax Temperature (τ)",    fontsize=8.5, color="#444444")
-    ax_bottom.set_ylim(0, 115)
-    ax_bottom.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax_bottom.legend(
-        fontsize=8.5, loc="upper right",
-        facecolor="#FFFFFF", edgecolor="#CCCCCC", framealpha=0.95,
+        f"Temperature Sensitivity — Theoretical Softmax ({temp_score_text})",
     )
 
-    # ── Save ─────────────────────────────────────────────────────────────
+    ax_bottom.set_xticks(tau_x)
+    ax_bottom.set_xticklabels([f"τ = {t}" for t in TEMP_TAUS])
+    ax_bottom.set_ylim(0, 115)
+    ax_bottom.set_xlabel("Softmax temperature", fontsize=8.5, color="#444444")
+    ax_bottom.set_ylabel("Theoretical probability (%)", fontsize=8.5, color="#444444")
+    ax_bottom.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
+
+    ax_bottom.legend(
+        fontsize=8.5,
+        loc="upper right",
+        facecolor="#FFFFFF",
+        edgecolor="#CCCCCC",
+        labelcolor="#333333",
+        framealpha=0.95,
+    )
+
+    plt.tight_layout()
+
     save_path = os.path.join(out_dir, "softmax_calibration.png")
-    fig.savefig(save_path, dpi=150, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
+    fig.savefig(
+        save_path,
+        dpi=150,
+        bbox_inches="tight",
+        facecolor=fig.get_facecolor(),
+    )
     plt.close(fig)
+
     return save_path
 
 
-
 if __name__ == "__main__":
-    import csv
-
-    # A: Mathematical correctness
     test_softmax_math_correct()
+    test_probability_validity()
 
-    # B: Empirical proportionality
     test_empirical_selection_rate()
     test_moderate_contrast_proportional()
 
-    # C: Temperature sensitivity
     test_temperature_sensitivity()
 
-    # D: Boundary robustness
     test_boundary_equal_scores()
     test_boundary_zero_scores()
     test_boundary_single_action()
@@ -537,15 +599,13 @@ if __name__ == "__main__":
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
 
-    # Save test log
     with open(os.path.join(out_dir, "logs.csv"), "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["test_name", "status", "detail"])
         writer.writeheader()
         writer.writerows(_results)
 
-    # Generate calibration plot
     plot_path = plot_softmax_calibration(out_dir)
-    print(f"Plot saved  → {plot_path}")
 
+    print(f"Plot saved → {plot_path}")
     print(f"\n=== All Softmax calibration tests PASSED ===")
-    print(f"Logs saved  → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
