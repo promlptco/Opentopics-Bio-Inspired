@@ -227,7 +227,9 @@ class MotherChildSurvivalSimulation:
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
 
-            if (x, y) not in self.world.food_positions:
+            # Do not place food on entity-occupied cells — food there is
+            # unreachable by mothers and inflates the food count falsely.
+            if (x, y) not in self.world.food_positions and (x, y) not in self.world.occupied:
                 self.world.place_food(x, y)
                 spawned += 1
 
@@ -236,9 +238,16 @@ class MotherChildSurvivalSimulation:
     # ============================================================
 
     def _nearest_food(self, pos):
-        if not self.world.food_positions:
+        # Only consider food on cells not blocked by another entity.
+        # Food under a child is unreachable — skipping it prevents mothers
+        # from getting stuck in a permanent FAILED_FORAGE loop.
+        accessible = [
+            f for f in self.world.food_positions
+            if f == pos or f not in self.world.occupied
+        ]
+        if not accessible:
             return None
-        return min(self.world.food_positions, key=lambda f: self.world.get_distance(pos, f))
+        return min(accessible, key=lambda f: self.world.get_distance(pos, f))
 
     def _child_of(self, mother):
         for child in self.children:
@@ -360,6 +369,8 @@ class MotherChildSurvivalSimulation:
 
             child.update_distress()
             child.check_death()
+            if not child.alive:
+                self.world.remove_entity(child.id)
 
         for mother in alive_mothers:
             mother.tick_age()
@@ -502,7 +513,7 @@ class MotherChildSurvivalSimulation:
                 self.world.remove_entity(mother.id)
 
         target = int(self.config.init_food * self.food_mult)
-        if len(self.world.food_positions) < max(1, target // 2):
+        if len(self.world.food_positions) < target:
             self._spawn_food(self.config.food_respawn_per_tick)
 
         alive_mothers_now = self._alive_mothers()
