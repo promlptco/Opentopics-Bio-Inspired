@@ -1,0 +1,28 @@
+{
+  "phase": "Phase 3 Balanced Baseline (MVE)",
+  "init_food": 50,
+  "n_seeds": 15,
+  "duration": 1000,
+  "mve_criteria": {
+    "mother_survival_rate_threshold": 0.8,
+    "child_survival_rate_threshold": 0.8
+  },
+  "selection_rule": "First init_food level where at least one genome achieves mother_surv>=0.8 AND child_surv>=0.8. Tie-breaker: lowest care_weight -> highest mean_mother_energy.",
+  "canonical_genome": {
+    "care_weight": 0.3,
+    "forage_weight": 1.0,
+    "self_weight": 0.5
+  },
+  "canonical_stats": {
+    "mother_survival_rate_mean": 1.0,
+    "mother_survival_rate_sd": 0.0,
+    "child_survival_rate_mean": 0.9644444444444444,
+    "child_survival_rate_sd": 0.053702426549309186,
+    "mean_mother_energy_mean": 0.9569081679708141,
+    "mean_mother_energy_sd": 0.017209473527435452,
+    "care_rate_mean": 0.22094222222222223,
+    "care_rate_sd": 0.010230350391643609,
+    "passes_threshold": 1,
+    "selection_status": "mve_pass"
+  }
+}

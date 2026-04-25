@@ -1,0 +1,49 @@
+========================================================================
+PHASE 3b — BEHAVIORAL CHARACTERIZATION
+========================================================================
+Canonical genome : care=0.3 / forage=1.0 / self=0.7
+Ecological params : food=48, hunger_rate=0.005, eat_gain=0.07, rest_recovery=0.11
+Duration          : 1000 ticks
+Seeds             : [42, 43, 44, 45, 46]
+
+--- SURVIVAL OUTCOMES ---
+  Mother survival rate (mean) : 100.0%
+  Child  survival rate (mean) : 93.3%
+
+--- MOTIVATION FREQUENCY (across all ticks & agents) ---
+  FORAGE :   52,310  (69.7%)
+  CARE   :   16,023  (21.4%)
+  SELF   :    6,667  (8.9%)
+
+--- ACTION FREQUENCY (realised sub-actions) ---
+  FORAGE  sub-total :   53,804  (72.2%)
+    MOVE_FOOD       :   32,259  (43.3%)
+    PICK            :   10,785  (14.5%)
+    EAT             :   10,760  (14.4%)
+  CARE    sub-total :   15,841  (21.3%)
+    MOVE_CHILD      :   13,787  (18.5%)
+    FEED            :    2,054  (2.8%)
+  SELF    sub-total :    4,827  (6.5%)
+    REST            :    4,827  (6.5%)
+
+--- FAILED ACTIONS ---
+  FAILED_FORAGE :      346
+  FAILED_CARE   :      182
+  FAILED_SELF   :        0
+
+--- TAIL-WINDOW STATS (last 200 ticks, mean across seeds) ---
+  Motivation mix  : FORAGE=69.2%  CARE=20.6%  SELF=8.6%
+  Child hunger    : 0.311
+  FEED rate       : 0.030 per alive mother per tick
+  Mother-child distance : 3.81 grid cells
+
+--- BEHAVIORAL INTERPRETATION ---
+  Under genome (care=0.3, forage=1.0, self=0.7), mothers devote
+  ~70% of ticks to foraging, ~21% to care, and ~9% to rest.
+  Within CARE: the dominant sub-action is FEED (13% of care ticks),
+  with proximity navigation (MOVE_CHILD) comprising the remainder.
+  Child hunger stabilises at ~0.31 by the tail window,
+  well below the starvation threshold (1.0).
+  Mother-child distance averages 3.8 grid cells in steady state,
+  confirming spatial co-location during care events.
+========================================================================

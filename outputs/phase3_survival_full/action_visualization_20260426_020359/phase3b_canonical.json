@@ -1,0 +1,33 @@
+{
+  "phase": "Phase 3b Action Visualization",
+  "canonical_genome": {
+    "care_weight": 0.3,
+    "forage_weight": 1.0,
+    "self_weight": 0.7
+  },
+  "ecological_params": {
+    "init_food": 48,
+    "hunger_rate": 0.005,
+    "eat_gain": 0.07,
+    "rest_recovery": 0.11
+  },
+  "duration": 1000,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "raster_seed": 42,
+  "motivation_tail_stats": {
+    "forage_tail": 0.6919333333333333,
+    "care_tail": 0.206064,
+    "self_tail": 0.08640266666666666
+  },
+  "child_care_tail_stats": {
+    "tail_child_hunger": 0.3111819723809532,
+    "tail_feed_rate": 0.029816000000000002,
+    "tail_distance": 3.8073685714285714
+  }
+}

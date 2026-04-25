@@ -145,6 +145,11 @@ class MotherChildSurvivalSimulation:
         self.feed_history = []
         self.family_history = []
 
+        # Per-agent tick-level log (disabled by default — only used for Phase 3b raster)
+        self._agent_log_enabled = False
+        self._agent_log = {}  # mother_id -> [action_at_t0, action_at_t1, ...]
+        self._agent_order = []
+
         self.spatial_heatmap_mother = np.zeros((config.height, config.width), dtype=float)
         self.spatial_heatmap_child = np.zeros((config.height, config.width), dtype=float)
 
@@ -187,6 +192,10 @@ class MotherChildSurvivalSimulation:
             self.world.place_entity(child)
 
         self._spawn_food(food_count)
+
+        if self._agent_log_enabled:
+            self._agent_log = {m.id: [] for m in self.mothers}
+            self._agent_order = [m.id for m in self.mothers]
 
     def _random_free_pos(self):
         for _ in range(300):
@@ -508,6 +517,11 @@ class MotherChildSurvivalSimulation:
                 tick_failed[failed_key] += 1
                 self.failed_counts[failed_key] += 1
 
+            if self._agent_log_enabled:
+                self._agent_log[mother.id].append(
+                    executed_action if executed_action is not None else f"FAILED_{motivation}"
+                )
+
             if mother.energy <= 0:
                 mother.die()
                 self.world.remove_entity(mother.id)
@@ -666,6 +680,8 @@ class MotherChildSurvivalSimulation:
             "family_history": self.family_history,
             "spatial_heatmap_mother": self.spatial_heatmap_mother,
             "spatial_heatmap_child": self.spatial_heatmap_child,
+            "per_agent_log": dict(self._agent_log) if self._agent_log_enabled else None,
+            "agent_order": list(self._agent_order) if self._agent_log_enabled else None,
         }
 
 
