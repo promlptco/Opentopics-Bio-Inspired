@@ -1,9 +1,9 @@
 """
 experiments/phase3_survival_full/motivation_sweep.py
 
-Phase 3a — Motivation Weight Sweep.
+Phase 3a -- Motivation Weight Sweep.
 
-Grid-searches care × forage × self motivation weights to find the canonical
+Grid-searches care x forage x self motivation weights to find the canonical
 genome: lowest care_weight that produces reliable mother and child survival
 with non-trivial caregiving.
 
@@ -13,8 +13,8 @@ Grid (48 combinations):
   self_weight  : 0.3  0.5  0.7
 
 Selection rule:
-  1. Keep combinations where mother survival ≥ SURVIVAL_THRESHOLD
-     AND child survival ≥ SURVIVAL_THRESHOLD
+  1. Keep combinations where mother survival >= SURVIVAL_THRESHOLD
+     AND child survival >= SURVIVAL_THRESHOLD
      AND mean care selection rate > CARE_RATE_MIN.
   2. Among those, select the lowest care_weight.
   3. Tie-breaker: highest mean mother energy averaged across all seeds and ticks.
@@ -26,14 +26,14 @@ Usage:
 
 Outputs:
   outputs/phase3_survival_full/motivation_sweep/<timestamp>/
-    sweep_results.csv                 ← mandatory per-run results table
+    sweep_results.csv                 <- mandatory per-run results table
     motivation_sweep_raw.csv
     motivation_sweep_summary.csv
     motivation_sweep_canonical.json
     motivation_sweep_heatmap.png
-    survival_zone_heatmap.png         ← joint survival by forage×care (3 self_weight panels)
-    top5_candidates.png               ← bar chart justifying canonical genome selection
-    anova_results.csv                 ← one-way ANOVA p-values per metric across all combos
+    survival_zone_heatmap.png         <- joint survival by foragexcare (3 self_weight panels)
+    top5_candidates.png               <- bar chart justifying canonical genome selection
+    anova_results.csv                 <- one-way ANOVA p-values per metric across all combos
 """
 
 import sys
@@ -210,7 +210,7 @@ def _save_summary_csv(summaries, path):
 
 
 # ============================================================
-# sweep_results.csv  — mandatory per-run table (6 columns)
+# sweep_results.csv  -- mandatory per-run table (6 columns)
 # ============================================================
 
 _SWEEP_RESULTS_FIELDS = [
@@ -236,7 +236,7 @@ def _nearest_idx(vals, target):
 
 
 def _build_matrix(summaries, value_key, care_vals, forage_vals, self_w):
-    """4×4 matrix indexed [forage_idx, care_idx] for a single self_weight slice."""
+    """4x4 matrix indexed [forage_idx, care_idx] for a single self_weight slice."""
     mat = np.full((len(forage_vals), len(care_vals)), np.nan)
     for s in summaries:
         if abs(s["self_weight"] - self_w) > 1e-9:
@@ -308,15 +308,15 @@ def plot_heatmap(summaries, canonical, out_dir):
                     fill=False, edgecolor="#00FF00", linewidth=2.5,
                 ))
                 ax.text(
-                    cx, fy + 0.38, "◆",
+                    cx, fy + 0.38, "*",
                     ha="center", va="center",
                     fontsize=11, color="#00FF00", fontweight="bold",
                 )
 
     fig.suptitle(
-        "Phase 3a — Motivation Weight Sweep\n"
-        f"care×{CARE_WEIGHTS}  forage×{FORAGE_WEIGHTS}  self×{SELF_WEIGHTS}\n"
-        f"Canonical ★  care={can_c}  forage={can_f}  self={can_s}"
+        "Phase 3a -- Motivation Weight Sweep\n"
+        f"carex{CARE_WEIGHTS}  foragex{FORAGE_WEIGHTS}  selfx{SELF_WEIGHTS}\n"
+        f"Canonical *  care={can_c}  forage={can_f}  self={can_s}"
         f"  [{canonical.get('selection_status', '')}]",
         fontsize=12,
         fontweight="bold",
@@ -327,7 +327,7 @@ def plot_heatmap(summaries, canonical, out_dir):
     out_path = os.path.join(out_dir, "motivation_sweep_heatmap.png")
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved heatmap → {out_path}")
+    print(f"Saved heatmap -> {out_path}")
 
 
 # ============================================================
@@ -413,16 +413,16 @@ def plot_survival_zone(summaries, canonical, out_dir):
                 fill=False, edgecolor="#FF6600", linewidth=2.5,
             ))
             ax.text(
-                fx, cy + 0.35, "◆",
+                fx, cy + 0.35, "*",
                 ha="center", va="center",
                 fontsize=12, color="#FF6600", fontweight="bold",
             )
 
     fig.suptitle(
-        "Phase 3a — Survival Zone  |  colour = min(mother_surv, child_surv)\n"
+        "Phase 3a -- Survival Zone  |  colour = min(mother_surv, child_surv)\n"
         f"Dashed border: passes all thresholds "
-        f"(surv≥{SURVIVAL_THRESHOLD}, care_rate>{CARE_RATE_MIN})   "
-        f"★ canonical: care={can_c}  forage={can_f}  self={can_s}",
+        f"(surv>={SURVIVAL_THRESHOLD}, care_rate>{CARE_RATE_MIN})   "
+        f"* canonical: care={can_c}  forage={can_f}  self={can_s}",
         fontsize=11,
         fontweight="bold",
         y=1.04,
@@ -432,7 +432,7 @@ def plot_survival_zone(summaries, canonical, out_dir):
     out_path = os.path.join(out_dir, "survival_zone_heatmap.png")
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved survival zone  → {out_path}")
+    print(f"Saved survival zone  -> {out_path}")
 
 
 # ============================================================
@@ -489,7 +489,7 @@ def plot_top5_candidates(summaries, canonical, out_dir):
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 val * 0.5,
-                "★ canonical",
+                "* canonical",
                 ha="center", va="center",
                 fontsize=7.5, color="white", fontweight="bold",
             )
@@ -499,9 +499,9 @@ def plot_top5_candidates(summaries, canonical, out_dir):
     ax.set_ylabel("Mean Mother Energy", fontsize=10)
     ax.set_xlabel("Configuration  (care / forage / self weights)", fontsize=9)
     ax.set_title(
-        "Phase 3a — Top Candidates by Mean Mother Energy\n"
-        f"(all pass: surv≥{SURVIVAL_THRESHOLD:.0%}, care_rate>{CARE_RATE_MIN:.0%}; "
-        f"ranked by mean_mother_energy; canonical = lowest care_weight → highest energy)",
+        "Phase 3a -- Top Candidates by Mean Mother Energy\n"
+        f"(all pass: surv>={SURVIVAL_THRESHOLD:.0%}, care_rate>{CARE_RATE_MIN:.0%}; "
+        f"ranked by mean_mother_energy; canonical = lowest care_weight -> highest energy)",
         fontsize=10,
         fontweight="bold",
     )
@@ -527,11 +527,11 @@ def plot_top5_candidates(summaries, canonical, out_dir):
     out_path = os.path.join(out_dir, "top5_candidates.png")
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved top-5 chart    → {out_path}")
+    print(f"Saved top-5 chart    -> {out_path}")
 
 
 # ============================================================
-# ANOVA — one-way across all combos, per metric, per seed
+# ANOVA -- one-way across all combos, per metric, per seed
 # ============================================================
 
 _ANOVA_METRICS = [
@@ -555,7 +555,7 @@ def compute_and_save_anova(raw_rows, out_dir):
     Tests whether motivation-weight combination has a statistically significant
     effect on that metric (F-test across 48 groups).
 
-    Requires scipy — already a project dependency (used in phase1 tests).
+    Requires scipy -- already a project dependency (used in phase1 tests).
     """
     from scipy import stats as scipy_stats
 
@@ -592,7 +592,7 @@ def compute_and_save_anova(raw_rows, out_dir):
         writer = csv.DictWriter(f, fieldnames=_ANOVA_FIELDS)
         writer.writeheader()
         writer.writerows(results)
-    print(f"Saved ANOVA results  → {anova_path}")
+    print(f"Saved ANOVA results  -> {anova_path}")
     return results
 
 
@@ -602,11 +602,11 @@ def compute_and_save_anova(raw_rows, out_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Phase 3a: Motivation Weight Sweep — find canonical genome."
+        description="Phase 3a: Motivation Weight Sweep -- find canonical genome."
     )
     parser.add_argument("--duration", type=int, default=1000)
     parser.add_argument("--seeds",    type=int, default=15,
-                        help="Seeds per combination (15–30 per EXPERIMENT_DESIGN).")
+                        help="Seeds per combination (15-30 per EXPERIMENT_DESIGN).")
     parser.add_argument("--tau",      type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     args = parser.parse_args()
@@ -621,14 +621,14 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     print("=" * 70)
-    print("Phase 3a · Motivation Weight Sweep")
+    print("Phase 3a * Motivation Weight Sweep")
     print(f"Duration     : {args.duration} ticks")
-    print(f"Seeds        : {args.seeds}  ({seeds[0]}–{seeds[-1]})")
+    print(f"Seeds        : {args.seeds}  ({seeds[0]}-{seeds[-1]})")
     print(f"Combinations : {len(combos)}")
     print(f"Total runs   : {len(combos) * args.seeds}")
     print(f"Tau          : {args.tau}")
     print(f"Noise        : {args.perceptual_noise}")
-    print(f"Thresholds   : survival≥{SURVIVAL_THRESHOLD}  care_rate>{CARE_RATE_MIN}")
+    print(f"Thresholds   : survival>={SURVIVAL_THRESHOLD}  care_rate>{CARE_RATE_MIN}")
     print(f"Output       : {out_dir}")
     print("=" * 70)
 
@@ -681,10 +681,10 @@ def main():
         print(
             f"[{idx:03d}/{len(combos)}]"
             f" care={care} forage={forage} self={self_w}"
-            f" | mother={summary['mother_survival_rate_mean']:.2f}±{summary['mother_survival_rate_sd']:.2f}"
-            f" child={summary['child_survival_rate_mean']:.2f}±{summary['child_survival_rate_sd']:.2f}"
+            f" | mother={summary['mother_survival_rate_mean']:.2f}+-{summary['mother_survival_rate_sd']:.2f}"
+            f" child={summary['child_survival_rate_mean']:.2f}+-{summary['child_survival_rate_sd']:.2f}"
             f" energy={summary['mean_mother_energy_mean']:.3f}"
-            f" care_rate={summary['care_rate_mean']:.3f}±{summary['care_rate_sd']:.3f}"
+            f" care_rate={summary['care_rate_mean']:.3f}+-{summary['care_rate_sd']:.3f}"
             f" | {status}"
         )
 
@@ -700,15 +700,15 @@ def main():
     _save_sweep_results_csv(raw_rows, os.path.join(out_dir, "sweep_results.csv"))
     _save_raw_csv(raw_rows,  os.path.join(out_dir, "motivation_sweep_raw.csv"))
     _save_summary_csv(summaries, os.path.join(out_dir, "motivation_sweep_summary.csv"))
-    print(f"\nSaved sweep_results → {os.path.join(out_dir, 'sweep_results.csv')}")
-    print(f"Saved raw CSV       → {os.path.join(out_dir, 'motivation_sweep_raw.csv')}")
-    print(f"Saved summary CSV   → {os.path.join(out_dir, 'motivation_sweep_summary.csv')}")
+    print(f"\nSaved sweep_results -> {os.path.join(out_dir, 'sweep_results.csv')}")
+    print(f"Saved raw CSV       -> {os.path.join(out_dir, 'motivation_sweep_raw.csv')}")
+    print(f"Saved summary CSV   -> {os.path.join(out_dir, 'motivation_sweep_summary.csv')}")
 
     canonical_out = {
         **canonical,
         "selection_rule": (
-            f"Lowest care_weight with mother_surv≥{SURVIVAL_THRESHOLD} "
-            f"AND child_surv≥{SURVIVAL_THRESHOLD} "
+            f"Lowest care_weight with mother_surv>={SURVIVAL_THRESHOLD} "
+            f"AND child_surv>={SURVIVAL_THRESHOLD} "
             f"AND care_rate>{CARE_RATE_MIN}; "
             f"tie-break: highest mean_mother_energy."
         ),
@@ -718,7 +718,7 @@ def main():
     json_path = os.path.join(out_dir, "motivation_sweep_canonical.json")
     with open(json_path, "w") as f:
         json.dump(canonical_out, f, indent=2)
-    print(f"Saved canonical   → {json_path}")
+    print(f"Saved canonical   -> {json_path}")
 
     plot_heatmap(summaries, canonical, out_dir)
     plot_survival_zone(summaries, canonical, out_dir)
@@ -733,13 +733,13 @@ def main():
     print(f"  self_weight   = {canonical['self_weight']}")
     print(f"  status        = {canonical.get('selection_status', '')}")
     print(f"  mother_surv   = {canonical['mother_survival_rate_mean']:.3f} "
-          f"± {canonical['mother_survival_rate_sd']:.3f}")
+          f"+- {canonical['mother_survival_rate_sd']:.3f}")
     print(f"  child_surv    = {canonical['child_survival_rate_mean']:.3f} "
-          f"± {canonical['child_survival_rate_sd']:.3f}")
+          f"+- {canonical['child_survival_rate_sd']:.3f}")
     print(f"  mean_energy   = {canonical['mean_mother_energy_mean']:.3f} "
-          f"± {canonical['mean_mother_energy_sd']:.3f}")
+          f"+- {canonical['mean_mother_energy_sd']:.3f}")
     print(f"  care_rate     = {canonical['care_rate_mean']:.3f} "
-          f"± {canonical['care_rate_sd']:.3f}")
+          f"+- {canonical['care_rate_sd']:.3f}")
     print(f"\nOutputs: {out_dir}")
     print("=" * 70)
 

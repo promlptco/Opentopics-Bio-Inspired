@@ -52,7 +52,7 @@ PHASE3_BASELINE = {
     "hunger_rate": 0.005,
     "move_cost": 0.001,
     "eat_gain": 0.07,
-    "init_food": 48,
+    "init_food": 55,
     "rest_recovery": 0.11,
     "fatigue_rate": 0.01,
 
