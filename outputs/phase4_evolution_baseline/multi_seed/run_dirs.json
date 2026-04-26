@@ -1,0 +1,26 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "run_dirs": {
+    "42": "outputs\\phase4_evolution_baseline\\run_20260426_114338_seed42",
+    "43": "outputs\\phase4_evolution_baseline\\run_20260426_114439_seed43",
+    "44": "outputs\\phase4_evolution_baseline\\run_20260426_114529_seed44",
+    "45": "outputs\\phase4_evolution_baseline\\run_20260426_114621_seed45",
+    "46": "outputs\\phase4_evolution_baseline\\run_20260426_114723_seed46",
+    "47": "outputs\\phase4_evolution_baseline\\run_20260426_114806_seed47",
+    "48": "outputs\\phase4_evolution_baseline\\run_20260426_114854_seed48",
+    "49": "outputs\\phase4_evolution_baseline\\run_20260426_114949_seed49",
+    "50": "outputs\\phase4_evolution_baseline\\run_20260426_115030_seed50",
+    "51": "outputs\\phase4_evolution_baseline\\run_20260426_115108_seed51"
+  }
+}

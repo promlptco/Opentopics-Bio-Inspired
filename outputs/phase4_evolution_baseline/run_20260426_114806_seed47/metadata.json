@@ -1,0 +1,10 @@
+{
+  "phase": "phase4_evolution_baseline",
+  "timestamp": "20260426_114806",
+  "seed": 47,
+  "num_agents": 24,
+  "infant_starvation_multiplier": 1.0,
+  "birth_scatter_radius": 5,
+  "plasticity_enabled": false,
+  "note": "Phase 4: Evolution Baseline. Standard ecology: mult=1.0, scatter=5. care_weight init U(0,1), mean=0.50. Open question: does care erode, persist, or build?"
+}

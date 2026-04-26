@@ -1,0 +1,11 @@
+{
+  "n_seeds": 10,
+  "mean_r": 0.059254,
+  "sd_r": 0.054994,
+  "n_negative_seeds": 2,
+  "n_positive_seeds": 8,
+  "binom_p_negative": 0.989258,
+  "binom_p_positive": 0.054688,
+  "predicted_direction": "r < 0 (care erodes)",
+  "interpretation": "UNEXPECTED POSITIVE (STOP)"
+}

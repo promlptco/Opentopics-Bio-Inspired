@@ -202,7 +202,7 @@ and which we must the the care relate code in these 4 files run.py, plot.py, sen
 **Protocol:**
 - Run selected canonical genome from Phase 3a for 500 ticks.
 - Log every action taken by every mother agent at every tick.
-- Each motivation maps to a sub-action sequence, e.g.:
+- E3ach motivation maps to a sub-action sequence, e.g.:
   - Care → scan for distressed infant → move toward infant → feed / keep food nearby
   - Forage → search grid → harvest → return
   - Self → eat stored food → rest
