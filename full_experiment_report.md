@@ -1416,49 +1416,179 @@ The population range (26–37 mothers) is stable and consistent with the max_pop
 
 ---
 
-## 11. Phase 4 Conclusions
+## 11. Phase 4 Conclusions (Original Run — Artefact)
 
-### Primary Findings
+> ⚠️ **The original Phase 4 conclusion was invalidated by the ceiling-drop recheck (Section 12). Do not use these findings as the final result. Retained for reproducibility.**
 
-1. **Care does not erode under standard ecology.** The predicted selection gradient (r < 0) was not observed. Mean r = +0.0593 across 10 seeds, with 8/10 seeds positive. This is the opposite of the expected erosion pattern.
+### Original Findings (Artefact — Floor-Bounce Effect)
 
-2. **The signal is weak and near-neutral.** Mean r = +0.0593 (SD = 0.0550). The binomial p for 8/10 positive (p = 0.0547) is just above the significance threshold. The system is near Hamilton's threshold (rB ≈ C), where small stochastic fluctuations determine gradient direction per seed.
-
-3. **The mechanism is lineage persistence, not direct selection.** Low-care mothers reproduce earlier but their lineages are fragile (poorly-nourished children become weaker new mothers). Caring lineages compound a small advantage across 100 generations, resulting in slow drift toward care_weight ~0.42–0.45 — the lineage-stable equilibrium under mult=1.0.
-
-4. **No hitchhiking.** Forage_weight rises (0.50→0.56) consistently — genuine foraging selection. Care_weight is directionally independent of forage_weight. Self_weight is neutral.
-
-5. **Population is stable throughout.** All 10 seeds survive 100 generations. Phase 4 ecology is not a survival bottleneck.
-
-### Assessment Against Interpretation Gates
-
-| Gate | Criterion | Observed | Assessment |
-|---|---|---|---|
-| Gate 1 | r < 0, ≥ 9/10 seeds negative | 2/10 negative | **NOT MET** |
-| Gate 2 | r > 0 (unexpected — STOP) | 8/10 positive, p=0.0547 | **MARGINAL — flag but borderline** |
-| Gate 3 | r ≈ 0 (neutral — note and proceed) | Mean r = +0.0593 | **CLOSEST MATCH** |
-
-The result is closest to Gate 3: **near-neutral selection, slightly positive, treated as a weak unexpected positive signal**. The formal STOP criterion (Gate 2) is not triggered at significance level p=0.05 (p=0.0547 > 0.05). However, per the design's 8/10 marginal rule, this finding is **flagged and must be discussed**.
-
-### Implication for the Thesis Argument
-
-The original thesis premise was: *care erodes under standard ecology (Phase 4), and ecological pressure is required to reverse this gradient (Phase 5)*. Phase 4 shows instead: *care is near-neutral under standard ecology, weakly positive due to lineage persistence effects*.
-
-This modifies — but does not undermine — the thesis argument. The revised framing is:
-
-- Phase 4: Near-neutral selection (rB ≈ C). Care persists at an equilibrium level (~0.42) but does not build strongly. Selection is weak and stochastic.
-- Phase 5+: Strong ecological pressure (mult=1.15 + scatter=2) should produce strong directional selection (r >> 0), providing a clear contrast.
-
-The contrast between Phase 4 and Phase 5 remains scientifically valid — the claim shifts from *care erodes without pressure* to *care is selectively weak without pressure and strong with it*. Both are empirically defensible positions, and the Phase 4 result enriches rather than contradicts the Hamilton's rule interpretation.
+The original run (care ~ U(0,1), N=12, 30×30) reported mean r = +0.0593 (8/10 seeds positive, p=0.055), interpreted as near-neutral selection. This was subsequently identified as a **floor-bounce artefact**: Phase 3 demonstrates that care_weight < 0.10 is lethal and care < 0.30 is near-lethal (~2.7% child survival). In a U(0,1) initialisation, roughly 30% of starting genomes fall below the viability floor. These agents and their children die before reproducing, removing low-care genomes from the birth_log. This censors the lower tail of the care distribution at every generation, preventing r from going negative even when care is genuinely costly. The surviving mean drifts upward not because high care is selected *for*, but because low care is eliminated by the floor.
 
 ---
 
-## 12. Updated Overall Experiment Summary
+## 12. Phase 4 Recheck — Ceiling Drop (Corrected Result)
+
+**Date:** 2026-04-26 | **Script:** `experiments/phase4_evolution_baseline/run_ceiling_drop.py`
+
+### Motivation
+
+Three methodological critiques of the original run:
+
+| Critique | Problem | Fix Applied |
+|---|---|---|
+| Floor effect | U(0,1) init; care<0.3 non-viable; mean bounces up spuriously | Init all mothers at care=0.8; erosion can only go DOWN |
+| Genetic drift | N=12 too small; early generations dominated by drift | N=40, 50×50 grid, food=120 (same density) |
+| Hitchhiking | Seed-level r insufficient; need per-lineage fitness test | Lineage r: founder care vs total descendant count |
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| care_weight init | 0.80 (all mothers identical) |
+| forage_weight init | 1.0 (all mothers identical) |
+| self_weight init | U(0, 1) |
+| Grid | 50 × 50 |
+| init_mothers | 40 |
+| init_food | 120 |
+| infant_starvation_multiplier | 1.0 |
+| birth_scatter_radius | 5 |
+| Duration | 10,000 ticks |
+| Seeds | 42–51 (10 seeds) |
+
+### Results
+
+**Pearson r per seed (care_weight vs generation):**
+
+| Seed | r | Direction |
+|---|---|---|
+| 42 | −0.455 | Eroding |
+| 43 | −0.449 | Eroding |
+| 44 | −0.387 | Eroding |
+| 45 | −0.336 | Eroding |
+| 46 | −0.354 | Eroding |
+| 47 | −0.253 | Eroding |
+| 48 | −0.100 | Eroding |
+| 49 | −0.334 | Eroding |
+| 50 | −0.399 | Eroding |
+| 51 | −0.369 | Eroding |
+| **Mean** | **−0.3435** | **10/10 negative** |
+| **SD** | **0.1038** | **p = 0.0010** |
+
+**Trajectory:** Care erodes 0.80 → ~0.50 within the first 2,000 ticks (~20 generations) then stabilises. The initial selection sweep compresses intra-population variance from a peak of ~0.021 to near-zero by tick 2,000 — a textbook selective sweep signature.
+
+**Lineage analysis:** Pooled r(mean lineage care, descendant count) = **−0.678**. Lineages maintaining high care (0.7–0.9) produced near-zero descendants; lineages that mutated to care ~0.45–0.50 produced 100–300 descendants. Low care is a direct fitness advantage.
+
+**Equilibrium:** Care stabilises at ~0.50, not at the Phase 3 floor of 0.30. This reflects a **mutation–selection balance**: selection pushes care down while mutation (rate=0.1, σ=0.05) continuously re-introduces higher values.
+
+### Output Artifacts
+
+| File | Description |
+|---|---|
+| `outputs/phase4_ceiling_drop/multi_seed/ceiling_drop_trajectory.png` | care_weight trajectory from 0.8 + variance subplot |
+| `outputs/phase4_ceiling_drop/multi_seed/ceiling_drop_pearson_r.png` | Pearson r dot plot (all green, all negative) |
+| `outputs/phase4_ceiling_drop/multi_seed/ceiling_drop_lineage.png` | Lineage scatter: care vs descendants (r=−0.678) |
+| `outputs/phase4_ceiling_drop/multi_seed/statistical_results.json` | Full statistics |
+| `outputs/phase4_ceiling_drop/multi_seed/checkpoint.json` | Per-seed results |
+
+### Corrected Phase 4 Conclusions
+
+1. **Care IS costly and erodes under natural selection without ecological pressure.** 10/10 seeds show r < 0 (p=0.001). Original r=+0.0593 was a floor-bounce artefact.
+2. **Erosion is rapid and consistent.** Care drops from 0.8 to ~0.5 within ~20 generations across all seeds. Signal is large (mean r=−0.34) and low-variance (SD=0.10).
+3. **Low-care lineages outcompete high-care lineages directly.** Lineage r=−0.678 confirms this is genuine fitness selection, not drift or hitchhiking.
+4. **Equilibrium at care ~0.50, not the floor.** Mutation–selection balance prevents full erosion to the Phase 3 viability floor (~0.30).
+5. **Phase 5 hypothesis is strengthened.** Ecological pressure (high infant starvation multiplier + kin clustering) must overcome the selection gradient of −0.34 and push care upward past the ~0.50 equilibrium.
+
+> ⚠️ **Further analysis in Section 14 (Recheck v2) raises a regression-to-mean concern. The ceiling-drop erosion may reflect bounded mutation drift, not care-specific selection. See Section 14 for revised interpretation.**
+
+---
+
+## 14. Phase 4 Recheck v2 — Weight Compression vs Genuine Selection
+
+**Date:** 2026-04-26 | **Script:** `experiments/phase4_evolution_baseline/run_recheck_v2.py`
+**Purpose:** Address three additional critiques raised against the ceiling-drop result.
+
+### Three Critiques and Fixes Applied
+
+| Critique | Fix | Result |
+|----------|-----|--------|
+| **Softmax/missing weights:** erosion might be all-weight compression, not care-specific | Plot all 3 weights + normalized softmax fractions | Forage drops MORE (Δ=−0.49) than care (Δ=−0.30); normalized care fraction barely changes (0.352→0.333) |
+| **Regression-to-mean:** bounded walk on [0,1] converges to 0.5 under neutral selection | Neutral control: children=OFF, no fitness effect | FAILED by design: children=OFF prevents reproduction → population extinct in ~400 ticks |
+| **Zero initial variance:** all mothers identical at t=0, founder-effect bias | Varied init: care~U(0.7,0.9), forage~U(0.8,1.0) | Mean r=−0.2783 (10/10 negative, p=0.001); care still erodes to 0.50 |
+
+### Varied Init Results (Critique 3 — Resolved)
+
+| Seed | Init care | Final care | Pearson r |
+|------|-----------|------------|-----------|
+| 42 | 0.799 | 0.511 | −0.293 |
+| 43 | 0.796 | 0.525 | −0.115 |
+| 44 | 0.774 | 0.509 | −0.266 |
+| 45 | 0.779 | 0.497 | −0.265 |
+| 46 | 0.787 | 0.503 | −0.273 |
+| 47 | 0.770 | 0.475 | −0.347 |
+| 48 | 0.783 | 0.505 | −0.267 |
+| 49 | 0.789 | 0.486 | −0.338 |
+| 50 | 0.794 | 0.483 | −0.343 |
+| 51 | 0.804 | 0.487 | −0.275 |
+| **Mean** | **~0.788** | **0.498** | **−0.2783** |
+
+Founder-effect (Critique 3) is **ruled out**: erosion persists with varied initial genetic variance.
+
+### All-Weights Analysis (Critique 1 — Unresolved concern)
+
+From ceiling-drop snapshots (same run, 10 seeds):
+
+| Weight | Init | Final | Δ |
+|--------|------|-------|---|
+| care_weight | 0.80 | 0.50 | −0.30 |
+| forage_weight | 1.00 | 0.51 | **−0.49** (larger) |
+| self_weight | ~0.47 | 0.50 | +0.03 (barely moved) |
+| care / total (normalized) | 0.352 | 0.333 | −0.019 |
+
+**Key diagnostic:** `forage` starts at 1.0 and drops MORE than `care` starts at 0.8. In a food-sparse environment (food=120, 50×50 grid), foraging should be under POSITIVE selection — yet it drops the most. `self` (initialized near the midpoint 0.5) barely changes. This is the **bounded random walk signature**: any weight initialized far from 0.5 converges toward 0.5 at a rate proportional to its distance from the midpoint, regardless of selection.
+
+### Revised Interpretation
+
+The weight convergence pattern is **consistent with regression-to-mean (bounded mutation drift)**, not care-specific selection:
+
+- All weights initialized above 0.5 converge downward toward 0.5
+- The weight initialized closest to 0.5 (self) barely moves — confirming 0.5 is the drift attractor
+- The weight initialized furthest from 0.5 (forage=1.0) drops the most — proportional to distance
+- Normalized care fraction changes only 0.019 — the softmax distribution barely shifts
+
+The Pearson r (−0.28 to −0.34) is consistent with a confound: high-care mothers at any tick are statistically older (from earlier generations, having inherited the high-init value), while late-generation mothers have mutated toward 0.5 — producing a negative r without any selection pressure.
+
+The lineage r (−0.678 from ceiling-drop) remains the strongest evidence for genuine selection, but cannot be separated from drift without a proper neutral control.
+
+### Neutral Control Design Failure
+
+`children_enabled=False` was intended as the neutral control (care has no fitness effect). However, this also removes ALL reproduction, causing population extinction within ~400 ticks. Without generational turnover, genetic drift over generations cannot be measured. A corrected neutral control (Phase 5 setup: reproduce with neutral infant survival, feed_cost=0) is needed if this question must be resolved.
+
+### Output Artifacts
+
+| File | Description |
+|------|-------------|
+| `outputs/phase4_recheck_v2/all_weights_trajectory.png` | 4-panel: care/forage/self raw weights + normalized fractions (ceiling drop, 10 seeds) |
+| `outputs/phase4_recheck_v2/neutral_vs_selection.png` | Neutral (extinct) vs ceiling-drop trajectory |
+| `outputs/phase4_recheck_v2/varied_init_trajectory.png` | Varied init care~U(0.7,0.9), forage~U(0.8,1.0) |
+| `outputs/phase4_recheck_v2/action_fraction_early_vs_late.png` | CARE-dominant fraction early vs late (varied init) |
+
+### Revised Phase 4 Conclusion
+
+> *The equilibrium at care~0.50 reflects bounded mutation drift rather than care-specific natural selection. Both care and forage converge to the midpoint of [0,1] at rates proportional to their initial distance from 0.5. The Pearson r (−0.28 to −0.34) is significant (p<0.01) but may partially reflect a generation-age confound rather than pure selection. The normalized softmax fraction of care barely changes (Δ=0.019 over 10k ticks), indicating the genome's softmax-relevant care emphasis is near-stable. **Phase 5 must demonstrate that ecological pressure pushes care ABOVE 0.50 — not merely that care starts high and converges to 0.50.***
+
+---
+
+## 13. Updated Overall Experiment Summary
 
 | Phase | Question | Status | Key Result |
 |---|---|---|---|
 | Phase 1 | Do mechanics work? | ✅ Complete | 31/31 sub-tests passed |
 | Phase 2 | What ecological regime supports stable solo survival? | ✅ Complete | Balanced baseline: food=48, 94.3% survival |
-| Phase 3a | Can mothers support a child? What is the minimum care needed? | ✅ Complete | MVE=food=50; min care=0.3 with forage=1.0; care trap identified |
-| Phase 3b | What does the canonical genome actually do? | ✅ Complete | 70% foraging / 21% care / 7% rest; child hunger=0.31; mother surv=100% |
-| Phase 4 | Does care erode under standard ecology? | ✅ Complete — ⚠️ Unexpected | Mean r=+0.0593, 8/10 positive (p=0.055). Near-neutral, slightly positive. Flagged. |
+| Phase 3a | Can mothers support a child? What is the minimum care needed? | ✅ Complete | MVE=food=50; lethal floor care≤0.10; canonical care=0.3/forage=1.0/self=0.7 |
+| Phase 3b | What does the canonical genome actually do? | ✅ Complete | 70% foraging / 21% care / 7% rest; child surv=93.3% |
+| Phase 4 (original) | Does care erode under standard ecology? | ⚠️ Artefact | r=+0.0593 — floor-bounce artefact from U(0,1) init. Invalidated. |
+| Phase 4 (recheck) | Ceiling drop: does care erode from 0.8? | ✅ Complete — see caveat | r=−0.3435 (10/10 seeds, p=0.001). Equilibrium ~0.50. Lineage r=−0.678. |
+| Phase 4 (recheck v2) | Is erosion selection or regression-to-mean? | ✅ Complete — caveat confirmed | Forage drops MORE than care; normalized fraction barely changes. Drift-to-midpoint pattern. Phase 5 must push care ABOVE 0.50. |
+| Phase 5 | Does ecological pressure reverse the gradient? | NOT YET RUN | — |
+| Phase 6 | Plasticity test | NOT YET RUN | — |
+| Phase 7 | Baldwin instinct test | NOT YET RUN | — |
