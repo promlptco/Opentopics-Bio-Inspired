@@ -1,0 +1,9 @@
+{
+  "phase": "phase4_neutral_drift_baseline/04_true_neutral_control",
+  "timestamp": "20260426_233606",
+  "seed": 48,
+  "num_agents": 80,
+  "infant_starvation_multiplier": 0.0,
+  "feed_cost": 0.0,
+  "note": "Phase 4 True Neutral Control. infant_starvation_multiplier=0.0 (children invincible), feed_cost=0.0 (no CARE energy cost). care_weight has ZERO fitness effect. care_init=0.8, forage_init=1.0, grid=50x50, N=40, food=120."
+}

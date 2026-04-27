@@ -1,0 +1,7 @@
+{
+  "phase": "phase4_neutral_drift_baseline/05_ceiling_drop_FIXED",
+  "timestamp": "20260427_022244",
+  "seed": 48,
+  "num_agents": 80,
+  "note": "Bug-fixed ceiling-drop baseline."
+}

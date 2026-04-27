@@ -1,0 +1,502 @@
+[
+  {
+    "tick": 200,
+    "avg_care_weight": 0.7992238886179805,
+    "var_care_weight": 0.0002500887906231522,
+    "avg_forage_weight": 0.9983317310741313,
+    "avg_self_weight": 0.4844446301544805,
+    "avg_generation": 0.547945205479452,
+    "max_generation": 1,
+    "n_mothers": 73
+  },
+  {
+    "tick": 400,
+    "avg_care_weight": 0.7722017495674794,
+    "var_care_weight": 0.006950222123804054,
+    "avg_forage_weight": 0.9575610820456228,
+    "avg_self_weight": 0.4642781503592828,
+    "avg_generation": 1.5396825396825398,
+    "max_generation": 3,
+    "n_mothers": 63
+  },
+  {
+    "tick": 600,
+    "avg_care_weight": 0.7094246887154285,
+    "var_care_weight": 0.01877219654586913,
+    "avg_forage_weight": 0.8499011976011847,
+    "avg_self_weight": 0.49720632086857924,
+    "avg_generation": 3.775,
+    "max_generation": 5,
+    "n_mothers": 40
+  },
+  {
+    "tick": 800,
+    "avg_care_weight": 0.6824665262902136,
+    "var_care_weight": 0.025811795033936914,
+    "avg_forage_weight": 0.8043086527099712,
+    "avg_self_weight": 0.467127136563407,
+    "avg_generation": 5.857142857142857,
+    "max_generation": 7,
+    "n_mothers": 35
+  },
+  {
+    "tick": 1000,
+    "avg_care_weight": 0.6553045489528905,
+    "var_care_weight": 0.024650075196481925,
+    "avg_forage_weight": 0.7574021932370643,
+    "avg_self_weight": 0.4556446255243645,
+    "avg_generation": 7.897435897435898,
+    "max_generation": 9,
+    "n_mothers": 39
+  },
+  {
+    "tick": 1200,
+    "avg_care_weight": 0.6469331883838423,
+    "var_care_weight": 0.023944099879430428,
+    "avg_forage_weight": 0.7462468316520322,
+    "avg_self_weight": 0.4429769300126662,
+    "avg_generation": 9.885714285714286,
+    "max_generation": 11,
+    "n_mothers": 35
+  },
+  {
+    "tick": 1400,
+    "avg_care_weight": 0.6175241351419367,
+    "var_care_weight": 0.023150650032753826,
+    "avg_forage_weight": 0.7153801779842199,
+    "avg_self_weight": 0.44171404915476575,
+    "avg_generation": 12.03125,
+    "max_generation": 13,
+    "n_mothers": 32
+  },
+  {
+    "tick": 1600,
+    "avg_care_weight": 0.6049281271926616,
+    "var_care_weight": 0.02129432103393566,
+    "avg_forage_weight": 0.6903370537459438,
+    "avg_self_weight": 0.45377898268205213,
+    "avg_generation": 14.03225806451613,
+    "max_generation": 15,
+    "n_mothers": 31
+  },
+  {
+    "tick": 1800,
+    "avg_care_weight": 0.5882615188218017,
+    "var_care_weight": 0.023493291991479502,
+    "avg_forage_weight": 0.6819231287161984,
+    "avg_self_weight": 0.456248286124032,
+    "avg_generation": 16.060606060606062,
+    "max_generation": 17,
+    "n_mothers": 33
+  },
+  {
+    "tick": 2000,
+    "avg_care_weight": 0.5703015513249211,
+    "var_care_weight": 0.0216142627710681,
+    "avg_forage_weight": 0.6636272470744948,
+    "avg_self_weight": 0.4670374097780683,
+    "avg_generation": 17.852941176470587,
+    "max_generation": 19,
+    "n_mothers": 34
+  },
+  {
+    "tick": 2200,
+    "avg_care_weight": 0.5619326913202571,
+    "var_care_weight": 0.020941639042816675,
+    "avg_forage_weight": 0.6414427498052002,
+    "avg_self_weight": 0.47924480935155755,
+    "avg_generation": 19.77777777777778,
+    "max_generation": 21,
+    "n_mothers": 36
+  },
+  {
+    "tick": 2400,
+    "avg_care_weight": 0.5788227722154257,
+    "var_care_weight": 0.02174319516605745,
+    "avg_forage_weight": 0.6498004066993971,
+    "avg_self_weight": 0.4779216669044375,
+    "avg_generation": 21.91176470588235,
+    "max_generation": 23,
+    "n_mothers": 34
+  },
+  {
+    "tick": 2600,
+    "avg_care_weight": 0.5819507392623997,
+    "var_care_weight": 0.02328318535600103,
+    "avg_forage_weight": 0.6513966772744444,
+    "avg_self_weight": 0.47796681328371415,
+    "avg_generation": 23.852941176470587,
+    "max_generation": 25,
+    "n_mothers": 34
+  },
+  {
+    "tick": 2800,
+    "avg_care_weight": 0.5885929577214803,
+    "var_care_weight": 0.020522393446147105,
+    "avg_forage_weight": 0.634508170167889,
+    "avg_self_weight": 0.48145372918116375,
+    "avg_generation": 26.0,
+    "max_generation": 27,
+    "n_mothers": 33
+  },
+  {
+    "tick": 3000,
+    "avg_care_weight": 0.5715631788360541,
+    "var_care_weight": 0.01793520151684681,
+    "avg_forage_weight": 0.6272659012032199,
+    "avg_self_weight": 0.4944385906130409,
+    "avg_generation": 27.818181818181817,
+    "max_generation": 29,
+    "n_mothers": 33
+  },
+  {
+    "tick": 3200,
+    "avg_care_weight": 0.5628608995635357,
+    "var_care_weight": 0.016389321655103466,
+    "avg_forage_weight": 0.6257452600966776,
+    "avg_self_weight": 0.4943462295007537,
+    "avg_generation": 29.885714285714286,
+    "max_generation": 31,
+    "n_mothers": 35
+  },
+  {
+    "tick": 3400,
+    "avg_care_weight": 0.5573072169263723,
+    "var_care_weight": 0.015562375453127428,
+    "avg_forage_weight": 0.6289918824759604,
+    "avg_self_weight": 0.4955237187712206,
+    "avg_generation": 31.885714285714286,
+    "max_generation": 33,
+    "n_mothers": 35
+  },
+  {
+    "tick": 3600,
+    "avg_care_weight": 0.565367423653988,
+    "var_care_weight": 0.01332477961877275,
+    "avg_forage_weight": 0.6275514699088719,
+    "avg_self_weight": 0.49557288801783234,
+    "avg_generation": 33.885714285714286,
+    "max_generation": 35,
+    "n_mothers": 35
+  },
+  {
+    "tick": 3800,
+    "avg_care_weight": 0.5661166990699554,
+    "var_care_weight": 0.013349534499003205,
+    "avg_forage_weight": 0.6272982496168451,
+    "avg_self_weight": 0.4938715946819469,
+    "avg_generation": 35.885714285714286,
+    "max_generation": 37,
+    "n_mothers": 35
+  },
+  {
+    "tick": 4000,
+    "avg_care_weight": 0.5623680467096613,
+    "var_care_weight": 0.013473386550266312,
+    "avg_forage_weight": 0.627144739163832,
+    "avg_self_weight": 0.5000875609551161,
+    "avg_generation": 37.861111111111114,
+    "max_generation": 39,
+    "n_mothers": 36
+  },
+  {
+    "tick": 4200,
+    "avg_care_weight": 0.5637709435828004,
+    "var_care_weight": 0.013760848633940876,
+    "avg_forage_weight": 0.6179281976590671,
+    "avg_self_weight": 0.4967069056581777,
+    "avg_generation": 39.885714285714286,
+    "max_generation": 41,
+    "n_mothers": 35
+  },
+  {
+    "tick": 4400,
+    "avg_care_weight": 0.5573507674026617,
+    "var_care_weight": 0.013903289494560139,
+    "avg_forage_weight": 0.6166741358414171,
+    "avg_self_weight": 0.49277517516571173,
+    "avg_generation": 41.885714285714286,
+    "max_generation": 43,
+    "n_mothers": 35
+  },
+  {
+    "tick": 4600,
+    "avg_care_weight": 0.5538344713594121,
+    "var_care_weight": 0.01443935138534132,
+    "avg_forage_weight": 0.6154437180892696,
+    "avg_self_weight": 0.4987326844555542,
+    "avg_generation": 43.885714285714286,
+    "max_generation": 45,
+    "n_mothers": 35
+  },
+  {
+    "tick": 4800,
+    "avg_care_weight": 0.5512718369173086,
+    "var_care_weight": 0.014501193677818647,
+    "avg_forage_weight": 0.617302020268483,
+    "avg_self_weight": 0.49943576666109357,
+    "avg_generation": 45.885714285714286,
+    "max_generation": 47,
+    "n_mothers": 35
+  },
+  {
+    "tick": 5000,
+    "avg_care_weight": 0.5516804103155295,
+    "var_care_weight": 0.015182690551121921,
+    "avg_forage_weight": 0.6138353784339851,
+    "avg_self_weight": 0.5020263848713356,
+    "avg_generation": 47.885714285714286,
+    "max_generation": 49,
+    "n_mothers": 35
+  },
+  {
+    "tick": 5200,
+    "avg_care_weight": 0.5555000316734942,
+    "var_care_weight": 0.015825530357852047,
+    "avg_forage_weight": 0.6029495776935448,
+    "avg_self_weight": 0.501772722606673,
+    "avg_generation": 49.885714285714286,
+    "max_generation": 51,
+    "n_mothers": 35
+  },
+  {
+    "tick": 5400,
+    "avg_care_weight": 0.5554646078544153,
+    "var_care_weight": 0.018175462124525404,
+    "avg_forage_weight": 0.5995958626022225,
+    "avg_self_weight": 0.5063049643710883,
+    "avg_generation": 51.885714285714286,
+    "max_generation": 53,
+    "n_mothers": 35
+  },
+  {
+    "tick": 5600,
+    "avg_care_weight": 0.549367771533361,
+    "var_care_weight": 0.019894333105852452,
+    "avg_forage_weight": 0.6006426565597037,
+    "avg_self_weight": 0.5054782887801919,
+    "avg_generation": 53.885714285714286,
+    "max_generation": 55,
+    "n_mothers": 35
+  },
+  {
+    "tick": 5800,
+    "avg_care_weight": 0.5520851238883419,
+    "var_care_weight": 0.021904832093852696,
+    "avg_forage_weight": 0.5977881557172336,
+    "avg_self_weight": 0.5126443155046294,
+    "avg_generation": 55.885714285714286,
+    "max_generation": 57,
+    "n_mothers": 35
+  },
+  {
+    "tick": 6000,
+    "avg_care_weight": 0.5532210493633564,
+    "var_care_weight": 0.022502939179062906,
+    "avg_forage_weight": 0.5919917381656445,
+    "avg_self_weight": 0.5106537019604563,
+    "avg_generation": 57.885714285714286,
+    "max_generation": 59,
+    "n_mothers": 35
+  },
+  {
+    "tick": 6200,
+    "avg_care_weight": 0.5476229488299336,
+    "var_care_weight": 0.023781964786343472,
+    "avg_forage_weight": 0.5909468232526737,
+    "avg_self_weight": 0.5115974083187835,
+    "avg_generation": 59.885714285714286,
+    "max_generation": 61,
+    "n_mothers": 35
+  },
+  {
+    "tick": 6400,
+    "avg_care_weight": 0.5468778210116647,
+    "var_care_weight": 0.024871041918597726,
+    "avg_forage_weight": 0.5898528592401153,
+    "avg_self_weight": 0.5072998435471378,
+    "avg_generation": 61.885714285714286,
+    "max_generation": 63,
+    "n_mothers": 35
+  },
+  {
+    "tick": 6600,
+    "avg_care_weight": 0.5460246517642128,
+    "var_care_weight": 0.02706745744687295,
+    "avg_forage_weight": 0.5871481696205709,
+    "avg_self_weight": 0.507520105398463,
+    "avg_generation": 63.885714285714286,
+    "max_generation": 65,
+    "n_mothers": 35
+  },
+  {
+    "tick": 6800,
+    "avg_care_weight": 0.5489259721829082,
+    "var_care_weight": 0.027039237835229168,
+    "avg_forage_weight": 0.5856356178993298,
+    "avg_self_weight": 0.510830221720451,
+    "avg_generation": 65.88571428571429,
+    "max_generation": 67,
+    "n_mothers": 35
+  },
+  {
+    "tick": 7000,
+    "avg_care_weight": 0.5502052272250088,
+    "var_care_weight": 0.027892785974334814,
+    "avg_forage_weight": 0.5859553809305392,
+    "avg_self_weight": 0.5128072696771749,
+    "avg_generation": 67.88571428571429,
+    "max_generation": 69,
+    "n_mothers": 35
+  },
+  {
+    "tick": 7200,
+    "avg_care_weight": 0.5500890273085177,
+    "var_care_weight": 0.0315245170538963,
+    "avg_forage_weight": 0.5844674573219869,
+    "avg_self_weight": 0.5161287312552156,
+    "avg_generation": 69.88571428571429,
+    "max_generation": 71,
+    "n_mothers": 35
+  },
+  {
+    "tick": 7400,
+    "avg_care_weight": 0.5498708055410403,
+    "var_care_weight": 0.031272442853100636,
+    "avg_forage_weight": 0.5862887846102296,
+    "avg_self_weight": 0.5182400249759432,
+    "avg_generation": 71.88571428571429,
+    "max_generation": 73,
+    "n_mothers": 35
+  },
+  {
+    "tick": 7600,
+    "avg_care_weight": 0.5452740517022929,
+    "var_care_weight": 0.031542332392076725,
+    "avg_forage_weight": 0.5905962333255678,
+    "avg_self_weight": 0.5108413029812523,
+    "avg_generation": 73.88571428571429,
+    "max_generation": 75,
+    "n_mothers": 35
+  },
+  {
+    "tick": 7800,
+    "avg_care_weight": 0.5454095043349619,
+    "var_care_weight": 0.031888523017428845,
+    "avg_forage_weight": 0.5907809731593218,
+    "avg_self_weight": 0.5131342197537544,
+    "avg_generation": 75.88571428571429,
+    "max_generation": 77,
+    "n_mothers": 35
+  },
+  {
+    "tick": 8000,
+    "avg_care_weight": 0.5464760091124902,
+    "var_care_weight": 0.030843431834089396,
+    "avg_forage_weight": 0.5887854175834195,
+    "avg_self_weight": 0.5122606474104644,
+    "avg_generation": 77.88571428571429,
+    "max_generation": 79,
+    "n_mothers": 35
+  },
+  {
+    "tick": 8200,
+    "avg_care_weight": 0.5436537139200522,
+    "var_care_weight": 0.02892587731595313,
+    "avg_forage_weight": 0.5882205004050197,
+    "avg_self_weight": 0.5140233541391871,
+    "avg_generation": 79.88571428571429,
+    "max_generation": 81,
+    "n_mothers": 35
+  },
+  {
+    "tick": 8400,
+    "avg_care_weight": 0.5456287541765936,
+    "var_care_weight": 0.02811199771562066,
+    "avg_forage_weight": 0.5870035773045958,
+    "avg_self_weight": 0.5132187669917514,
+    "avg_generation": 81.88571428571429,
+    "max_generation": 83,
+    "n_mothers": 35
+  },
+  {
+    "tick": 8600,
+    "avg_care_weight": 0.5419310320076778,
+    "var_care_weight": 0.028044036271881068,
+    "avg_forage_weight": 0.5871928173289845,
+    "avg_self_weight": 0.5093927124230415,
+    "avg_generation": 83.88571428571429,
+    "max_generation": 85,
+    "n_mothers": 35
+  },
+  {
+    "tick": 8800,
+    "avg_care_weight": 0.5421440698928803,
+    "var_care_weight": 0.030617334547199424,
+    "avg_forage_weight": 0.5877156045671602,
+    "avg_self_weight": 0.5025987298913198,
+    "avg_generation": 85.88571428571429,
+    "max_generation": 87,
+    "n_mothers": 35
+  },
+  {
+    "tick": 9000,
+    "avg_care_weight": 0.5480006951643603,
+    "var_care_weight": 0.031208593374292624,
+    "avg_forage_weight": 0.5923706345438906,
+    "avg_self_weight": 0.5072978206635804,
+    "avg_generation": 87.88571428571429,
+    "max_generation": 89,
+    "n_mothers": 35
+  },
+  {
+    "tick": 9200,
+    "avg_care_weight": 0.5479612535488563,
+    "var_care_weight": 0.030521710220107634,
+    "avg_forage_weight": 0.5901179339994469,
+    "avg_self_weight": 0.5131679373604715,
+    "avg_generation": 89.88571428571429,
+    "max_generation": 91,
+    "n_mothers": 35
+  },
+  {
+    "tick": 9400,
+    "avg_care_weight": 0.5479445480787525,
+    "var_care_weight": 0.03053526061534686,
+    "avg_forage_weight": 0.5871287135681893,
+    "avg_self_weight": 0.5119288651355111,
+    "avg_generation": 91.88571428571429,
+    "max_generation": 93,
+    "n_mothers": 35
+  },
+  {
+    "tick": 9600,
+    "avg_care_weight": 0.548947208563996,
+    "var_care_weight": 0.031306037521139744,
+    "avg_forage_weight": 0.5847054471002492,
+    "avg_self_weight": 0.5028615068818088,
+    "avg_generation": 93.88571428571429,
+    "max_generation": 95,
+    "n_mothers": 35
+  },
+  {
+    "tick": 9800,
+    "avg_care_weight": 0.5523618620061898,
+    "var_care_weight": 0.03015019438480179,
+    "avg_forage_weight": 0.5868248893487065,
+    "avg_self_weight": 0.5071137381395769,
+    "avg_generation": 95.88571428571429,
+    "max_generation": 97,
+    "n_mothers": 35
+  },
+  {
+    "tick": 10000,
+    "avg_care_weight": 0.5510981263331151,
+    "var_care_weight": 0.03125216008766002,
+    "avg_forage_weight": 0.5885588645225425,
+    "avg_self_weight": 0.5017036587379371,
+    "avg_generation": 97.88571428571429,
+    "max_generation": 99,
+    "n_mothers": 35
+  }
+]

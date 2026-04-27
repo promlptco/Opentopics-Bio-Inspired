@@ -1,0 +1,9 @@
+{
+  "phase": "phase4_neutral_drift_baseline/06_true_neutral_FIXED",
+  "timestamp": "20260427_032711",
+  "seed": 46,
+  "num_agents": 80,
+  "infant_starvation_multiplier": 0.0,
+  "feed_cost": 0.0,
+  "note": "Bug-fixed true neutral control (no infant starvation, no feed cost)."
+}

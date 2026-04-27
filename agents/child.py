@@ -1,10 +1,15 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
 from agents.agent import Agent
+
+if TYPE_CHECKING:
+    from evolution.genome import Genome
 
 class ChildAgent(Agent):
     def __init__(self, x: int, y: int, lineage_id: int, generation: int, mother_id: int):
         super().__init__(x, y, lineage_id, generation)
         self.mother_id: int = mother_id
+        self.genome: Genome | None = None  # assigned at birth by Simulation._check_reproduction
         self.hunger: float = 0.0
         self.separation: float = 0.0
         self.distress: float = 0.0

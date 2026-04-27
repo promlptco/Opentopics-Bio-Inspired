@@ -20,7 +20,8 @@ class Simulation:
         
         self.mothers: list[MotherAgent] = []
         self.children: list[ChildAgent] = []
-        
+        self.genome_fallback_count: int = 0  # defensive counter; must stay 0 after birth-fix
+
         random.seed(config.seed)
         np.random.seed(config.seed)
     
@@ -40,6 +41,7 @@ class Simulation:
             if self.config.children_enabled:
                 cx, cy = self._nearby_pos(x, y)
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
+                child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
                 self.children.append(child)
                 self.world.place_entity(child)
                 self.lineage.register_birth(child.id, mother.id, i, 1)
@@ -314,14 +316,16 @@ class Simulation:
     def _check_maturation(self) -> None:
         for child in self.children[:]:
             if child.check_maturity(self.config.maturity_age):
-                # Inherit genome from mother with mutation
-                birth_mother = self._get_mother_by_id(child.mother_id)
-                if self.config.mutation_enabled:
-                    genome = birth_mother.genome.mutate() if birth_mother and birth_mother.alive else Genome()
+                # Genome was assigned at birth — never depends on mother being alive at maturation
+                if child.genome is not None:
+                    genome = child.genome
                 else:
-                    genome = birth_mother.genome.copy() if birth_mother and birth_mother.alive else Genome()
+                    # Defensive fallback only — should never trigger after birth-fix
+                    genome = Genome()
+                    self.genome_fallback_count += 1
 
-                # Bug #19 fix: clear own_child_id so birth mother can reproduce again
+                # Still need mother reference to clear own_child_id (Bug #19)
+                birth_mother = self._get_mother_by_id(child.mother_id)
                 if birth_mother:
                     birth_mother.own_child_id = None
 
@@ -355,6 +359,7 @@ class Simulation:
             cx, cy = self._birth_pos(mother.x, mother.y)
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
+            child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
             self.children.append(child)
             self.world.place_entity(child)
             self.lineage.register_birth(child.id, mother.id, mother.lineage_id, new_gen)

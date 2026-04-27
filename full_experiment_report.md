@@ -1578,6 +1578,83 @@ The lineage r (−0.678 from ceiling-drop) remains the strongest evidence for ge
 
 ---
 
+---
+
+## 15. Phase 4 True Neutral Control — Two-Component Erosion (Script 04)
+
+**Date:** 2026-04-26 | **Script:** `experiments/phase4_neutral_drift_baseline/04_run_true_neutral_control.py`
+**Purpose:** Resolve the open question from Script 03 — separate bounded mutation drift from genuine selection.
+
+### Design
+
+Previous neutral control (`children_enabled=False`) caused extinction in ~400 ticks, making generational drift unmeasurable. This run fixes the design:
+
+| Parameter | Baseline (Script 02) | True Neutral (Script 04) |
+|-----------|---------------------|--------------------------|
+| `infant_starvation_multiplier` | 1.0 | **0.0** (children never starve) |
+| `feed_cost` | default | **0.0** (no CARE energy cost) |
+| `children_enabled` | True | True |
+| Grid / N / food | 50×50, N=40, 120 | same |
+| Init care | 0.80 | same |
+| Seeds / ticks | 42–51, 10,000 | same |
+
+In this configuration care_weight has **zero fitness effect** — it can neither help nor harm survival or reproduction.
+
+### Results
+
+```
+TRUE NEUTRAL CONTROL -- Phase 4
+infant_mult=0.0  feed_cost=0.0
+Mean r = -0.2046  (SD=0.0600)
+Negative seeds: 10/10  (p=0.0010)
+Final care_weight: 0.570, 0.640, 0.540, 0.564, 0.586, 0.551, 0.668, 0.620, 0.569, 0.611
+Verdict: DRIFT CONFIRMED -- care erodes even with zero fitness effect
+```
+
+**True Neutral equilibrium: ~0.59** (mean of the 10 final values above).
+
+### Two-Component Decomposition
+
+| Component | Trajectory | Δ | Share |
+|-----------|-----------|---|-------|
+| Bounded mutation drift (Script 04) | 0.80 → 0.59 | −0.21 | **~70%** |
+| Genuine selection (Script 02 − Script 04) | 0.59 → 0.50 | −0.09 | **~30%** |
+| **Total erosion (Script 02)** | **0.80 → 0.50** | **−0.30** | **100%** |
+
+Mean Pearson r comparison:
+
+| Run | Mean r | Interpretation |
+|-----|--------|----------------|
+| True Neutral (Script 04) | −0.205 | pure drift signal |
+| Ceiling-Drop Baseline (Script 02) | −0.344 | drift + selection |
+| Gap | **+0.139** | selection amplification |
+
+The weaker r in the neutral run (−0.205 vs −0.344) confirms that selection in the baseline was amplifying the drift signal. Both runs are 10/10 negative, but the magnitude gap is the selection fingerprint.
+
+### Hypothesis Resolution
+
+The original hypothesis was: *"If erosion is purely drift, neutral equilibrium will match baseline equilibrium (~0.50)."*
+
+- Hypothesis **partially confirmed**: drift IS real and sufficient to produce a negative r (10/10 seeds)
+- Hypothesis **refuted at the equilibrium level**: neutral settles at ~0.59, NOT at ~0.50
+
+This refutation is the key finding: care has a real, measurable, adverse fitness consequence in the standard ecology. Mothers who invest energy in feeding (at `feed_cost > 0`) while their infants cannot starve anyway are penalised relative to mothers who forage more.
+
+### Output Artifacts
+
+| File | Description |
+|------|-------------|
+| `outputs/phase4_neutral_drift_baseline/04_true_neutral_control/trajectory_all_weights.png` | 3-panel care/forage/self trajectories (10 seeds, neutral condition) |
+| `outputs/phase4_neutral_drift_baseline/04_true_neutral_control/comparison_vs_baseline.png` | Red (neutral ~0.59) vs Blue (ceiling-drop ~0.50) — two distinct, non-overlapping bands |
+| `outputs/phase4_neutral_drift_baseline/04_true_neutral_control/statistical_results.json` | Mean r, SD, seed-level r values, final care values |
+| `outputs/phase4_neutral_drift_baseline/04_true_neutral_control/checkpoint.json` | Completed seeds (resumable) |
+
+### Definitive Phase 4 Conclusion
+
+> *Care erosion from 0.80 to 0.50 is a two-component process. Bounded mutation drift (regression-to-mean on [0,1]) accounts for ~70% of the drop, converging care toward the drift attractor at ~0.59 regardless of ecology. Genuine selection pressure from infant starvation costs accounts for the remaining ~30%, pushing care from ~0.59 to ~0.50. Phase 5 must demonstrate that ecological pressure (increased `infant_starvation_multiplier`, reduced `birth_scatter_radius`) can push care ABOVE the neutral drift attractor of ~0.59 — not merely above 0.50.*
+
+---
+
 ## 13. Updated Overall Experiment Summary
 
 | Phase | Question | Status | Key Result |
@@ -1587,8 +1664,174 @@ The lineage r (−0.678 from ceiling-drop) remains the strongest evidence for ge
 | Phase 3a | Can mothers support a child? What is the minimum care needed? | ✅ Complete | MVE=food=50; lethal floor care≤0.10; canonical care=0.3/forage=1.0/self=0.7 |
 | Phase 3b | What does the canonical genome actually do? | ✅ Complete | 70% foraging / 21% care / 7% rest; child surv=93.3% |
 | Phase 4 (original) | Does care erode under standard ecology? | ⚠️ Artefact | r=+0.0593 — floor-bounce artefact from U(0,1) init. Invalidated. |
-| Phase 4 (recheck) | Ceiling drop: does care erode from 0.8? | ✅ Complete — see caveat | r=−0.3435 (10/10 seeds, p=0.001). Equilibrium ~0.50. Lineage r=−0.678. |
-| Phase 4 (recheck v2) | Is erosion selection or regression-to-mean? | ✅ Complete — caveat confirmed | Forage drops MORE than care; normalized fraction barely changes. Drift-to-midpoint pattern. Phase 5 must push care ABOVE 0.50. |
-| Phase 5 | Does ecological pressure reverse the gradient? | NOT YET RUN | — |
+| Phase 4 (recheck) | Ceiling drop: does care erode from 0.8? | ✅ Complete | r=−0.3435 (10/10 seeds, p=0.001). Equilibrium ~0.50. Lineage r=−0.678. |
+| Phase 4 (recheck v2) | Is erosion selection or regression-to-mean? | ✅ Complete | Forage drops MORE; normalized fraction barely changes. Drift-to-midpoint pattern. |
+| Phase 4 (Script 04) | True neutral control — separate drift from selection | ✅ **DEFINITIVE** | Neutral eq=0.59, baseline eq=0.50. 70% drift + 30% selection. Two-component confirmed. |
+| Phase 5 | Does ecological pressure push care ABOVE neutral eq (~0.59)? | NOT YET RUN | — |
+| Phase 6 | Plasticity test | NOT YET RUN | — |
+| Phase 7 | Baldwin instinct test | NOT YET RUN | — |
+
+---
+
+---
+
+## 16. Phase 4 Bug Discovery and Fixed Baselines (Scripts 05 & 06)
+
+**Date:** 2026-04-27 | **Scripts:** `experiments/phase4_neutral_drift_baseline/05_run_ceiling_drop_FIXED.py`, `06_run_true_neutral_FIXED.py`
+
+> ⚠️ **This section supersedes all prior Phase 4 conclusions (Sections 12, 14, 15). Scripts 02 and 04 are both invalid. The two-component decomposition (70% drift + 30% selection) is void. All Phase 4 erosion findings were a bug artefact.**
+
+---
+
+### 16.1 Bug Discovery: Orphan Injection Artefact
+
+During investigation of why care converged to ~0.59 (Script 04) rather than ~0.80, a critical bug was identified in `simulation.py:_check_maturation()`.
+
+**The bug:** When a child reached maturity (`age >= maturity_age = 100 ticks`), the original code looked up the birth mother by `child.mother_id` at maturation time. If the mother had died in the interval between birth and maturation, she was no longer in `self.mothers`, and the lookup returned `None`. The code then silently instantiated `Genome()` — the default constructor with all weights at 0.5 — as the child's inherited genome.
+
+**The mechanism:** During the initial population establishment (ticks 0–2000), the 40 founding mothers (care=0.80) gave birth, then many died within the 100-tick maturation window due to reproduction_cost=0.35 energy depletion. Orphan rate peaked at ~11.3% of births in ticks 1000–2000. Each orphan maturated with a Genome() fallback genome (care=0.50), silently injecting low-care genomes into the population precisely when population size was smallest and genetic drift was strongest.
+
+**The trajectory match:** The care crash from 0.80 to ~0.60 occurred entirely within the first 3,000 ticks — exactly matching the orphan injection window. After tick 3,000, the orphan rate dropped to near zero (surviving mothers were stable), and care plateaued — not because selection reached equilibrium, but because the injection had stopped.
+
+**The same bug affected Script 04 (true neutral control):** Even with `infant_mult=0.0` and `feed_cost=0.0`, orphan injection still occurred. The neutral "equilibrium" at ~0.59 was not a drift attractor — it was the arithmetic consequence of mixing care=0.80 genomes with care=0.50 orphan-fallback genomes in the first 2,000 ticks.
+
+---
+
+### 16.2 Bug Fix
+
+Three code locations were modified to assign genome **at birth** and store it on the child:
+
+**`agents/child.py`:** Added `genome: Genome | None = None` field to `ChildAgent.__init__`.
+
+**`simulation.py` — `initialize()`:** Assign genome to initial children at birth:
+```python
+child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
+```
+
+**`simulation.py` — `_check_reproduction()`:** Assign genome to all subsequently born children at birth (same pattern).
+
+**`simulation.py` — `_check_maturation()`:** Read stored genome; never look up the mother for genome inheritance:
+```python
+if child.genome is not None:
+    genome = child.genome
+else:
+    genome = Genome()
+    self.genome_fallback_count += 1  # defensive counter — must stay 0
+```
+
+**`simulation.py` — `__init__()`:** Added `self.genome_fallback_count: int = 0` as a verification counter.
+
+---
+
+### 16.3 Verification: genome_fallback_count = 0
+
+Both fixed scripts tracked `genome_fallback_count` per seed across all 10,000 ticks.
+
+| Run | Total fallbacks across all 10 seeds |
+|-----|-------------------------------------|
+| Script 05 (ceiling-drop FIXED) | **0** |
+| Script 06 (true neutral FIXED) | **0** |
+
+`[OK] All Genome() fallbacks = 0 in both runs — bug confirmed fixed.`
+
+---
+
+### 16.4 Script 05 Results — Ceiling-Drop FIXED
+
+**Protocol:** Identical to Script 02 (ceiling-drop). care_weight init=0.80, forage_weight init=1.0, self_weight init~U(0,1). Standard costs: `infant_starvation_multiplier=1.0`, `feed_cost=0.03`. Grid=50×50, N=40, food=120. 10,000 ticks, seeds 42–51.
+
+| Seed | Init care | Final care | Pearson r | Fallbacks |
+|------|-----------|------------|-----------|-----------|
+| 42 | 0.800 | 0.799 | −0.0376 | 0 |
+| 43 | 0.800 | 0.750 | −0.1056 | 0 |
+| 44 | 0.800 | 0.783 | −0.0571 | 0 |
+| 45 | 0.800 | 0.793 | −0.0086 | 0 |
+| 46 | 0.800 | 0.819 | +0.0843 | 0 |
+| 47 | 0.800 | 0.787 | −0.0077 | 0 |
+| 48 | 0.800 | 0.828 | +0.1237 | 0 |
+| 49 | 0.800 | 0.782 | −0.1414 | 0 |
+| 50 | 0.800 | 0.801 | −0.0360 | 0 |
+| 51 | 0.800 | 0.745 | −0.1431 | 0 |
+| **MEAN** | **0.800** | **0.789** | **−0.0329** | **0** |
+
+**Negative seeds: 8/10.** One-tailed binomial p(k≥8, n=10, p=0.5) = 0.055 — **NOT significant** (p > 0.05). One-tailed t-test on mean r: t = −1.18, p ≈ 0.13 — **NOT significant**.
+
+**Finding:** With the bug fixed, care stays at **0.789 mean** — a drop of only 0.011 from init=0.800. This is indistinguishable from noise. The massive erosion seen in Script 02 (0.80 → 0.50) was entirely a bug artefact.
+
+---
+
+### 16.5 Script 06 Results — True Neutral FIXED
+
+**Protocol:** Identical to Script 04 (true neutral control). Same grid/N/init as Script 05, but `infant_starvation_multiplier=0.0` (children cannot starve) and `feed_cost=0.0` (CARE has zero energy cost). Care_weight has zero fitness effect.
+
+| Seed | Init care | Final care | Pearson r | Fallbacks |
+|------|-----------|------------|-----------|-----------|
+| 42 | 0.800 | 0.826 | +0.1953 | 0 |
+| 43 | 0.800 | 0.803 | +0.0188 | 0 |
+| 44 | 0.800 | 0.790 | −0.0528 | 0 |
+| 45 | 0.800 | 0.794 | −0.0168 | 0 |
+| 46 | 0.800 | 0.778 | −0.0736 | 0 |
+| 47 | 0.800 | 0.805 | +0.0180 | 0 |
+| 48 | 0.800 | 0.746 | −0.1301 | 0 |
+| 49 | 0.800 | 0.729 | −0.0819 | 0 |
+| 50 | 0.800 | 0.818 | −0.0104 | 0 |
+| 51 | 0.800 | 0.753 | −0.0065 | 0 |
+| **MEAN** | **0.800** | **0.784** | **−0.0140** | **0** |
+
+**Negative seeds: 7/10.** One-tailed binomial p(k≥7, n=10, p=0.5) = 0.172 — **NOT significant**. Mean r = −0.0140 — effectively zero.
+
+**Finding:** With the bug fixed, the true neutral control shows care staying at **0.784 mean** — near-identical to Script 05 (0.789). There is no meaningful "drift attractor" at 0.59. The previous Script 04 result (0.59 equilibrium) was the orphan injection bug operating under neutral conditions.
+
+---
+
+### 16.6 Fixed Baseline Comparison
+
+| Metric | Script 05 (ceiling-drop FIXED) | Script 06 (true neutral FIXED) | Gap |
+|--------|-------------------------------|-------------------------------|-----|
+| Init care | 0.800 | 0.800 | 0 |
+| Mean final care | **0.789** | **0.784** | 0.005 |
+| Mean Pearson r | −0.0329 | −0.0140 | 0.019 |
+| Negative seeds | 8/10 (p=0.055) | 7/10 (p=0.172) | — |
+| genome fallbacks | 0 | 0 | — |
+
+**The gap between the two scripts (0.005 in final care, 0.019 in mean r) is not statistically distinguishable from zero.** Under the fixed simulation, standard ecology with real fitness costs (Script 05) behaves identically to zero-fitness-effect neutral evolution (Script 06). Care is genuinely near-neutral in this ecology.
+
+**Plots saved:**
+- `outputs/phase4_neutral_drift_baseline/05_ceiling_drop_FIXED/trajectory.png` — Script 05 care_weight trajectories (10 seeds, mean ± SD)
+- `outputs/phase4_neutral_drift_baseline/06_true_neutral_FIXED/comparison_fixed_vs_neutral.png` — Script 05 (blue) vs Script 06 (red) overlay
+
+---
+
+### 16.7 Invalidation of All Prior Phase 4 Conclusions
+
+| Prior finding | Status | Reason |
+|--------------|--------|--------|
+| Script 02: care erodes 0.80 → 0.50, mean r=−0.344, 10/10 negative, p=0.001 | **INVALID — bug artefact** | Orphan injection reduced care from 0.80 to ~0.50 in ticks 0–3000; selection signal was the bug |
+| Script 04: neutral equilibrium at ~0.59, mean r=−0.205, 10/10 negative | **INVALID — bug artefact** | Same orphan injection; "neutral attractor" at 0.59 was mean(0.80, 0.50) after injection |
+| Two-component decomposition (70% drift + 30% selection) | **VOID** | Both components were the same bug operating at different magnitudes |
+| Lineage r=−0.678 (Script 02) | **LIKELY ARTEFACT** | Lineages founded by early-dying mothers had orphan-fallback children (care=0.50); lineage r reflected inheritance of bug, not genuine fitness selection |
+| Phase 5 target: push care ABOVE 0.59 | **NEEDS REDESIGN** | Baseline is now ~0.79, not 0.59; the Phase 5 rationale must be reformulated |
+
+---
+
+### 16.8 Revised Phase 4 Conclusion
+
+> *Under the fixed simulation, care_weight is **genuinely near-neutral** in standard ecology. With the orphan injection bug corrected, care remains at ~0.789 (ceiling-drop) and ~0.784 (true neutral) after 10,000 ticks — a drop of ~1% from the init value of 0.800, not statistically significant (p=0.055 and p=0.172 respectively). The gap between standard-cost and zero-cost conditions is 0.005 — indistinguishable from noise. Bounded mutation alone does not drive care below ~0.75–0.80 under this configuration. The massive erosion previously reported (0.80→0.50 in Scripts 02 and 04) was entirely produced by Genome() fallback injection during the initial population die-off. Phase 5 must now be redesigned: the baseline is care~0.79 (near-neutral), not the bug-artefact attractor of care~0.50. Phase 5 must demonstrate that kin-clustering and infant dependency can maintain or elevate care above the neutral baseline, not merely overcome an artefactual erosion.*
+
+---
+
+### 16.9 Updated Overall Experiment Summary
+
+| Phase | Question | Status | Key Result |
+|---|---|---|---|
+| Phase 1 | Do mechanics work? | ✅ Complete | 31/31 sub-tests passed |
+| Phase 2 | What ecological regime supports stable solo survival? | ✅ Complete | Balanced baseline: food=48, 94.3% survival |
+| Phase 3a | Can mothers support a child? What is the minimum care needed? | ✅ Complete | MVE=food=50; care trap identified; canonical care=0.3/forage=1.0/self=0.7 |
+| Phase 3b | What does the canonical genome actually do? | ✅ Complete | 70% foraging / 21% care / 7% rest; child surv=93.3% |
+| Phase 4 (Script 02 / recheck) | Ceiling-drop baseline | ⚠️ **INVALID — bug artefact** | care 0.80→0.50 was orphan injection, not selection |
+| Phase 4 (Script 04) | True neutral control | ⚠️ **INVALID — bug artefact** | Neutral "attractor" at 0.59 was orphan injection under neutral conditions |
+| Phase 4 (Script 05 — **FIXED**) | Ceiling-drop, bug fixed | ✅ **DEFINITIVE** | care stays at 0.789 mean; r=−0.033, p=0.055 (NOT significant). 0 fallbacks. |
+| Phase 4 (Script 06 — **FIXED**) | True neutral, bug fixed | ✅ **DEFINITIVE** | care stays at 0.784 mean; r=−0.014 (NOT significant). Scripts 05 and 06 indistinguishable. Care is near-neutral. |
+| Phase 5 | Does ecological pressure maintain/elevate care above neutral baseline (~0.79)? | **NEEDS REDESIGN** | — |
 | Phase 6 | Plasticity test | NOT YET RUN | — |
 | Phase 7 | Baldwin instinct test | NOT YET RUN | — |
