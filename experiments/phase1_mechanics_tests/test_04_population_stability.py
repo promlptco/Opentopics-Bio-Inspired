@@ -206,7 +206,14 @@ def test_no_food_causes_extinction_or_strong_decline():
     )
 
 def test_children_do_not_remain_alive_after_maturation():
-    """Children should not be counted as alive children after becoming mothers."""
+    """No child should remain alive as a child after reaching maturity age.
+
+    Previous assertion (final_children <= initial_children) was fragile: it
+    falsely failed when newly matured mothers reproduced within the test window,
+    raising the alive-child count above the initial value even though maturation
+    itself was working correctly. The correct check is that zero children have
+    age >= maturity_age while still counted as alive children.
+    """
     config = Config()
     config.init_mothers = 10
     config.max_ticks = 120
@@ -214,20 +221,24 @@ def test_children_do_not_remain_alive_after_maturation():
 
     sim, history = _run_sim(config, 120, record=True)
 
-    # If children mature around tick 100, alive children should decrease or change.
+    maturity_age = getattr(config, "maturity_age", 100)
+    matured_but_alive = [c for c in sim.children if c.alive and c.age >= maturity_age]
+
     initial_children = history["alive_children"][0]
-    final_children = history["alive_children"][-1]
+    final_children   = history["alive_children"][-1]
 
     print(f"Alive children: initial={initial_children}, final={final_children}")
+    print(f"Children alive AND age>={maturity_age} (must be 0): {len(matured_but_alive)}")
 
-    assert final_children <= initial_children, (
-        "Alive children should not stay constant/increase after maturation. "
-        "Possible bug: matured children are still counted as alive children."
+    assert len(matured_but_alive) == 0, (
+        f"{len(matured_but_alive)} child(ren) are alive with age >= {maturity_age}. "
+        "Matured children must be removed from the child pool on maturation."
     )
 
     _log(
         "test_children_do_not_remain_alive_after_maturation",
-        f"initial_children={initial_children};final_children={final_children}",
+        f"initial_children={initial_children};final_children={final_children};"
+        f"matured_but_still_child={len(matured_but_alive)}",
     )
 
 def plot_population_trajectory(out_dir: str, ticks: int = 200) -> str:
