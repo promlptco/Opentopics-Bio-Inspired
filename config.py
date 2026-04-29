@@ -31,6 +31,11 @@ class Config:
     maturity_age: int = 100
     starvation_threshold: float = 1.0
 
+    # Mother lifetime cap (optional).
+    # None = disabled; mothers die from energy depletion only (default, all phases safe).
+    # Set to an integer to enforce age-based death on top of starvation.
+    mother_max_age: int | None = None
+
     # Fatigue
     fatigue_rate: float = 0.01
 

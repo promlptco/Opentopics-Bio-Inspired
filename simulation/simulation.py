@@ -150,6 +150,8 @@ class Simulation:
         for mother in alive_mothers:
             mother.update_state(self.config.hunger_rate)
             mother.tick_age()
+            if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
+                mother.die()
             mother.tick_commit()
             
             # Perceive (empty if care disabled)

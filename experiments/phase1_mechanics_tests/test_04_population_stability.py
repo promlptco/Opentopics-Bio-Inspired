@@ -41,7 +41,7 @@ _results = []
 
 def _log(name: str, detail: str = "") -> None:
     _results.append({"test_name": name, "status": "PASS", "detail": detail})
-    print(f"✓ {name} PASSED")
+    print(f"[PASS] {name}")
 
 
 def _count_alive_mothers(sim: Simulation) -> int:
@@ -478,8 +478,8 @@ def _print_starvation_report(mother_init_energies, mother_death_ticks, child_fin
     print()
 
 
-def plot_population_trajectory(out_dir: str, ticks: int = 200) -> str:
-    """Save polished population stability trajectory plot."""
+def plot_population_trajectory(out_dir: str, ticks: int = 300) -> str:
+    """Save mother population lifecycle plot — mothers only, starvation-plot style."""
     config = Config()
     config.init_mothers = 10
     config.max_ticks = ticks
@@ -487,123 +487,71 @@ def plot_population_trajectory(out_dir: str, ticks: int = 200) -> str:
 
     _, history = _run_sim(config, ticks, record=True)
 
-    # Colors matched to Test01-style palette
-    COLORS = {
-        "alive_mothers": "#2166AC",   # blue
-        "alive_children": "#1A9850",  # green
-        "total_alive": "#D6604D",     # red/orange
-    }
+    BLUE   = "#2166AC"
+    MEAN   = "#D6604D"
+    VLINE  = "#555555"
 
-    plt.style.use("default")
     fig, ax = plt.subplots(figsize=(11, 6), facecolor="#FFFFFF")
     fig.patch.set_facecolor("#FFFFFF")
-
     ax.set_facecolor("#FAFAFA")
-
-    ax.plot(
-        history["tick"],
-        history["alive_mothers"],
-        color=COLORS["alive_mothers"],
-        linewidth=2.6,
-        label="Alive mothers",
-    )
-
-    ax.plot(
-        history["tick"],
-        history["alive_children"],
-        color=COLORS["alive_children"],
-        linewidth=2.6,
-        label="Alive children",
-    )
-
-    ax.plot(
-        history["tick"],
-        history["total_alive"],
-        color=COLORS["total_alive"],
-        linewidth=3.0,
-        linestyle="-",
-        label="Total alive",
-    )
-
-    # Highlight maturation / transition-looking jumps if visible
-    ax.axvspan(95, 105, color="#2166AC", alpha=0.06)
-    ax.axvspan(195, 205, color="#2166AC", alpha=0.06)
-
-    ax.set_title(
-        f"Population Stability — Phase 1 Test 04  |  seed={DEFAULT_SEED}",
-        fontsize=14,
-        fontweight="bold",
-        color="#1A1A1A",
-        pad=12,
-    )
-
-    ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Population count", fontsize=10, color="#444444")
-
-    ax.tick_params(colors="#333333", labelsize=9)
-
+    ax.set_axisbelow(True)
+    ax.grid(axis="both", color="#E0E0E0", linewidth=0.7, linestyle="--", alpha=0.9)
     for spine in ax.spines.values():
         spine.set_edgecolor("#CCCCCC")
         spine.set_linewidth(0.9)
+    ax.tick_params(colors="#333333", labelsize=9)
 
-    ax.grid(
-        axis="both",
-        color="#E0E0E0",
-        linewidth=0.7,
-        linestyle="--",
-        alpha=0.9,
+    tick_axis = history["tick"]
+
+    # ── Mother population line ────────────────────────────────────
+    ax.plot(tick_axis, history["alive_mothers"],
+            color=BLUE, linewidth=2.6, label="Alive mothers", zorder=5)
+
+    # ── Generation boundary lines ─────────────────────────────────
+    maturity = config.maturity_age   # 100
+    gen_boundaries = [t for t in range(maturity, ticks, maturity)]
+    gen_labels = [
+        "Gen 1 graduates\n-> new mothers\n-> Gen 2 born",
+        "Gen 2 graduates\n-> new mothers\n-> Gen 3 born",
+    ]
+    y_positions = [0.65, 0.42]
+
+    for i, t in enumerate(gen_boundaries):
+        ax.axvline(t, color=VLINE, linestyle="--", linewidth=1.3, alpha=0.5, zorder=4)
+        label = gen_labels[i] if i < len(gen_labels) else f"Gen {i+1} graduates"
+        ypos  = y_positions[i] if i < len(y_positions) else 0.30
+        ax.text(t + 4, ypos, label,
+                transform=ax.get_xaxis_transform(),
+                fontsize=7.5, color="#444444", va="top",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="#FFFFFF",
+                          edgecolor="#AAAAAA", alpha=0.90))
+
+    ax.set_title(
+        f"Agent Population Count — Phase 1 Test 04  |  seed={DEFAULT_SEED}",
+        fontsize=14, fontweight="bold", color="#1A1A1A", pad=12,
     )
-    ax.set_axisbelow(True)
+    ax.set_xlabel("Tick", fontsize=10, color="#444444")
+    ax.set_ylabel("Agent population count", fontsize=10, color="#444444")
+    ax.set_xlim(0, ticks)
 
-    ax.legend(
-        fontsize=9,
-        loc="upper right",
-        facecolor="#FFFFFF",
-        edgecolor="#CCCCCC",
-        labelcolor="#333333",
-        framealpha=0.95,
-    )
+    ax.legend(fontsize=9, loc="upper right", facecolor="#FFFFFF",
+              edgecolor="#CCCCCC", labelcolor="#333333", framealpha=0.95)
 
-    # Small summary box
     final_mothers = history["alive_mothers"][-1]
-    final_children = history["alive_children"][-1]
-    final_total = history["total_alive"][-1]
-
-    summary = (
-        f"Final @ t={ticks}\n"
-        f"Mothers: {final_mothers}\n"
-        f"Children: {final_children}\n"
-        f"Total: {final_total}"
-    )
-
     ax.text(
-        0.02,
-        0.96,
-        summary,
-        transform=ax.transAxes,
-        fontsize=8.5,
-        verticalalignment="top",
-        horizontalalignment="left",
+        0.02, 0.96,
+        f"Final @ t={ticks}\nMothers: {final_mothers}\nseed={DEFAULT_SEED}",
+        transform=ax.transAxes, fontsize=8.5, va="top",
         color="#1A1A1A",
-        bbox=dict(
-            boxstyle="round,pad=0.45",
-            facecolor="#FFFFFF",
-            edgecolor="#CCCCCC",
-            alpha=0.95,
-        ),
+        bbox=dict(boxstyle="round,pad=0.45", facecolor="#FFFFFF",
+                  edgecolor="#CCCCCC", alpha=0.95),
     )
 
     plt.tight_layout()
-
     save_path = os.path.join(out_dir, "population_stability.png")
-    fig.savefig(
-        save_path,
-        dpi=150,
-        bbox_inches="tight",
-        facecolor=fig.get_facecolor(),
-    )
+    fig.savefig(save_path, dpi=150, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
     plt.close(fig)
-
     return save_path
 
 
@@ -616,6 +564,9 @@ if __name__ == "__main__":
     test_no_food_causes_extinction_or_strong_decline()
     test_children_do_not_remain_alive_after_maturation()
 
+    m_energy_hist, m_death_ticks, m_init_e = test_mother_energy_drops_to_zero()
+    c_vitality_hist, c_final_h = test_child_hunger_critical_before_maturity()
+
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -624,8 +575,18 @@ if __name__ == "__main__":
         writer.writeheader()
         writer.writerows(_results)
 
-    plot_path = plot_population_trajectory(out_dir, ticks=200)
+    plot_path = plot_population_trajectory(out_dir, ticks=300)
+
+    config = Config()
+    starv_plot_path = plot_starvation_individual(
+        m_energy_hist, m_death_ticks, m_init_e,
+        c_vitality_hist, c_final_h,
+        out_dir, config,
+    )
+
+    _print_starvation_report(m_init_e, m_death_ticks, c_final_h, config)
 
     print(f"\n=== All population stability tests PASSED ===")
-    print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
-    print(f"Plot saved  → {plot_path}")
+    print(f"Logs saved         -> outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Population plot    -> {plot_path}")
+    print(f"Starvation plot    -> {starv_plot_path}")

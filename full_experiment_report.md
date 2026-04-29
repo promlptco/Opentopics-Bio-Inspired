@@ -288,6 +288,45 @@ The key conclusion is:
 
 For Phase 2, this means the simulation is stable enough to begin survival-regime tuning.
 
+### Agent Lifetime Assumption — Why `mother_max_age = None`
+
+During Test 04 development, a gap was identified: `mother.tick_age()` is called every tick and the age accumulates, but the age value was never used to enforce a death boundary. Children have a clear lifetime cap (`maturity_age = 100` — they graduate at that age). Mothers had no equivalent, meaning a well-fed mother could live for the entire simulation without any age-based turnover.
+
+The fix added `mother_max_age` to `config.py` and enforced it in `simulation.py`:
+
+```python
+if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
+    mother.die()
+```
+
+**Why the default is `None` (disabled):**
+
+Phase 1 runs for `max_ticks = 300`. Phase 2 and Phase 3 run for `duration = 1000` ticks. If `mother_max_age` were set to a fixed number (e.g., 300), founding mothers in Phase 2/3 would die of age at t=300 — in the middle of a 1000-tick run — regardless of how much food they have. This would introduce artificial forced death that was never part of the ecological model and would invalidate all Phase 2/3 survival results.
+
+Setting the default to `None` preserves the original behaviour for all existing phases: **mothers die from energy depletion only**, which is the ecologically grounded death mechanism.
+
+**What we observe without a cap:**
+
+In a food-rich environment, a founding mother can survive the entire simulation run. Generational turnover happens only when food becomes scarce enough to starve her out, or when the simulation ends. This means:
+
+- In Phase 1 (max_ticks=300, no food in starvation test): all mothers die by t=157 — age cap is irrelevant.
+- In Phase 2/3 (1000 ticks, food present): mothers survive long-term, and turnover is driven by resource competition, not a hard age boundary.
+- In Phase 4+ (evolution/drift): the founding generation can persist if food is abundant. This is biologically valid — selection pressure comes from survival and reproduction success, not enforced death.
+
+**Why this matters — baseline environment and non-plastic agents:**
+
+The most critical consequence of `mother_max_age` is its effect on **finding the ecological baseline** used by Phase 4 and beyond.
+
+Phase 2 establishes what food level produces a stable, long-running population. That baseline is then inherited by Phase 4+ as the environment in which evolution and plasticity are tested. Phase 4+ always includes a **non-plastic control group** — agents with `plasticity_enabled = False` and fixed genomes — whose survival depends entirely on ecological fitness (foraging, energy management). Their only death trigger is starvation.
+
+If `mother_max_age = 300` were enforced:
+- Non-plastic agents in a 1000-tick Phase 4 run would hit the age cap at t=300 and die even in a well-resourced environment.
+- Their survival curve would be cut short by a mechanism that has nothing to do with ecological fitness.
+- The Phase 2 baseline (calibrated for starvation-only death) would no longer apply — the environment that was "stable" in Phase 2 would appear "lethal" in Phase 4 because agents die early from age, not food scarcity.
+- This would force the baseline search to be repeated from scratch under the new death model, making it significantly harder to isolate whether differences between plastic and non-plastic agents come from **plasticity** or from the **age cap artifact**.
+
+With `mother_max_age = None`, non-plastic agents die only when their energy reaches zero. The Phase 2 ecological baseline transfers cleanly into Phase 4+, and any survival difference between the plastic and non-plastic groups is attributable to plasticity alone — not to an imposed lifetime boundary.
+
 ### Multi-Seed Validation — Test 04 across 50 Seeds (42–91)
 
 **Date:** 2026-04-29 | **Runtime:** 11.1 seconds
