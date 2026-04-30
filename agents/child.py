@@ -16,24 +16,24 @@ class ChildAgent(Agent):
     
     def update_hunger(self, hunger_rate: float) -> None:
         self.hunger = min(1.0, self.hunger + hunger_rate)
-    
+
     def update_separation(self, steps_to_mother: int, perception_radius: int) -> None:
         self.separation = min(1.0, steps_to_mother / perception_radius)
-    
+
     def update_distress(self) -> None:
         self.distress = (self.hunger + self.separation) / 2.0
-    
+
     def receive_food(self, amount: float) -> float:
         """Return actual hunger reduced"""
         old_hunger = self.hunger
         self.hunger = max(0.0, self.hunger - amount)
         return old_hunger - self.hunger
-    
+
     def check_death(self) -> str | None:
         if self.hunger >= 1.0:
             self.die()
             return "starvation"
         return None
-    
+
     def check_maturity(self, maturity_age: int) -> bool:
         return self.age >= maturity_age and self.alive

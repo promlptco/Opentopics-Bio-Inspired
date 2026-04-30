@@ -1,45 +1,55 @@
-# experiments/p5_enhanced_ecology/run.py
+# experiments/phase5_ecology_sweep/run_joint.py
 """Phase 5: Ecological Emergence — selection gradient reversal via infant dependency.
 
-Scientific question:
-  Phases 3–4 established the EROSION mechanism: without strong ecological pressure,
-  natural selection erodes care (r=−0.178, Phase 3). Hamilton's rule is violated because
-  r~0.1 (spatial mixing) and B is marginal (infants survive fine without care).
+Continues directly from Phase 4 FIXED baseline (Scripts 05 & 06):
+  Phase 4 result: care_weight is near-neutral at ~0.784 (r≈−0.033, p=0.055, NOT significant).
+  Care is neutral because infant B≈0: children survive to maturity (tick 100) without any
+  feeding (hunger_rate=0.008, threshold=1.0, death at tick ~125 > maturity_age=100).
 
-  Phase 5 tests whether infant dependency can REVERSE this gradient:
+Phase 5 scientific question:
+  Does ecological pressure — making infant survival contingent on maternal care — cause
+  care_weight to evolve ABOVE the Phase 4 neutral baseline of ~0.784?
 
-    1. Infant Dependency (elevating B):
-         infant_starvation_multiplier=1.15 — infants hunger 15% faster.
-         Without sustained care, infants die BEFORE maturing (hungry at tick ~108 < maturity 100).
-         B transitions from marginal (hunger reduction) to near-existential (survival threshold).
-         This shifts the cost-benefit ratio so that rB − C > 0 at lower r.
+Ecological pressure applied:
+  1. Infant Dependency (elevating B to existential):
+       infant_starvation_multiplier=1.65 — infants hunger 1.65x faster (rate=0.0132/tick).
+       Without care, infant dies at tick ~75 (before maturity_age=100).
+       Child needs ~3 feedings to survive to maturity; 0 feedings = death.
+       B transitions from zero (Phase 4) to existential: care determines whether child
+       reaches maturity at all. Hamilton's rule rB − C > 0 can now be satisfied.
+       Calibrated: 1.65 is the maximum multiplier where population does not collapse
+       (empirical sweep 2026-04-30; 1.75 collapses at seed=42).
 
-         Note: multipliers ≥1.25 create an evolutionary trap — selection works but the
-         population crashes before it can stabilize. 1.15 is the calibrated working point.
+  2. Natal Philopatry (amplifying effective r):
+       Phase 5a: birth_scatter_radius=2 — newborns placed within 2 Chebyshev cells of mother.
+       Keeps kin spatially clustered → effective r rises from near-zero toward ~0.2.
+       No kin recognition required — spatial proximity does the work.
+       Phase 5b: birth_scatter_radius=5 (Phase 4 standard) — dispersal control.
+       Tests whether natal philopatry is required or if infant dependency alone suffices.
 
-    2. Tighter Natal Philopatry (amplifying effective r):
-         birth_scatter_radius=2 — newborns placed within 2 Chebyshev cells of mother.
-         Keeps kin spatially clustered → effective r rises from ~0.1 toward ~0.20.
-         No kin recognition required — spatial proximity does the work.
+Starting conditions (Phase 4 baseline — direct continuation):
+  care_weight   = 0.80       (Phase 4 Scripts 05/06 initial value)
+  forage_weight = 1.0        (Phase 4 Scripts 05/06 initial value)
+  self_weight   ~ U(0, 1)    (Phase 4 Scripts 05/06 initial value)
+  Grid = 50×50, N=40, food=120 (Phase 4 ecology — unchanged)
+  10,000 ticks, seeds 42–51  (Phase 4 duration — unchanged)
 
-  Initial care level: U(0, 0.50), mean=0.25 — half of Phase 3's starting level and
-  well below Phase 3's eroded equilibrium (0.42). This represents a "depleted" population.
+Primary measurements:
+  - selection_gradient r: Pearson r of care_weight vs generation from birth_log.
+    Phase 4 baseline: r≈−0.033 (near-neutral, not significant).
+    Phase 5 prediction: r > 0 (care builds — selection now favours caring mothers).
+  - final care_weight at tick 10,000: target > 0.784 (Phase 4 neutral baseline).
 
 Stages:
-  'survival_gate' — 10-gen test (~1000 ticks). Population must survive ≥10 gens with
-                    ≥5 mothers at end. Gates the full 50-gen run.
-  'evolution'     — 5a: full 50-gen evolution (5000 ticks), no plasticity.
-                    Clean genetic signal: any care rise is from pure natural selection.
-  'control'       — 5b: same as evolution but birth_scatter_radius=8 (dispersal control).
-                    Tests whether natal philopatry is required or if dependency alone suffices.
-  'zeroshot'      — 5c: load evolved genomes, run 1 generation (no reproduction, no mutation).
-                    Measures care_window rate vs Phase 05 baseline (0.09069).
-                    Genetic assimilation confirmed if rate is significantly higher.
-
-Key measurement:
-  - selection_gradient: care_weight vs generation (r). Phase 3 = −0.178. Phase 5 target: POSITIVE.
-  - trajectory: Phase 3 declines 0.50→0.42. Phase 5 target: rises from 0.25 toward 0.35+.
-  - zero-shot care_window rate: vs Phase 3 baseline 0.09069. Phase 5 target: significantly higher.
+  'survival_gate' — 1000-tick viability check (≈10 generations).
+                    Population must reach ≥10 mothers. Verifies ecological pressure
+                    does not immediately collapse the population.
+  'evolution'     — Phase 5a: 10,000-tick evolution with natal philopatry (scatter=2).
+                    Plasticity OFF — any care rise is from pure natural selection.
+  'control'       — Phase 5b: same as evolution but scatter=5 (Phase 4 standard).
+                    Tests whether natal philopatry is necessary for care to rise.
+  'zeroshot'      — Load evolved genomes; run 1000 ticks, no reproduction/mutation/plasticity.
+                    Records care behavior encoded in the evolved genome (Phase 6 precursor).
 """
 import sys
 import os
@@ -55,53 +65,50 @@ from evolution.genome import Genome
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
 from utils.plotting import generate_all_plots
 
-PHASE_NAME = "phase07_ecological_emergence"
+PHASE_NAME = "phase5_ecology_sweep"
 
-# Phase 5 ecological parameters
-# mult=1.15: infants die at tick ~108 without care (maturity_age=100) → B near-existential.
-# Calibration note: mult ≥ 1.25 creates an evolutionary trap (selection works but population
-# crashes during the bottleneck). 1.15 is the maximum that allows stable evolutionary dynamics.
-INFANT_STARVATION_MULT = 1.15
-BIRTH_SCATTER_RADIUS   = 2      # Phase 5a (tight natal philopatry)
-CONTROL_SCATTER_RADIUS = 8      # Phase 5b control (standard/dispersed)
+# Phase 5 ecological parameters.
+# mult=1.65: hunger_rate=0.0132/tick → death at tick ~75 without care (maturity_age=100).
+# Child needs ~3 feedings (each reduces hunger by 0.2) to survive to maturity.
+# Calibrated via survival gate sweep: 1.65 passes 3/3 seeds; 1.75 collapses at seed=42.
+INFANT_STARVATION_MULT = 1.65
+BIRTH_SCATTER_RADIUS   = 2    # Phase 5a: tight natal philopatry (effective r ↑)
+CONTROL_SCATTER_RADIUS = 5    # Phase 5b: Phase 4 standard scatter (isolates philopatry variable)
 
-# Selection gradient window for early gens (Phase 3 comparison baseline)
-PHASE3_SELECTION_R = -0.178
-PHASE3_ZS_BASELINE = 0.09069   # care/mother-tick in ticks 0–100
+# Phase 4 FIXED baselines (Scripts 05 & 06, definitive — 2026-04-27)
+PHASE4_NEUTRAL_R          = -0.033  # Script 05 mean Pearson r (near-neutral, p=0.055)
+PHASE4_NEUTRAL_CARE_WEIGHT = 0.784  # Script 06 final mean care_weight (true neutral)
+PHASE4_SELECT_CARE_WEIGHT  = 0.789  # Script 05 final mean care_weight (standard costs)
 
 
 # =============================================================================
-# Near-zero genome initialisation
+# Phase 4 baseline genome initialisation
 # =============================================================================
 
-def _make_emergence_genomes(n: int) -> list[Genome]:
-    """Generate n genomes at a DEPLETED care baseline — the Phase 5 starting point.
+def _make_phase4_baseline_genomes(n: int) -> list[Genome]:
+    """Generate n genomes matching Phase 4 Scripts 05/06 starting conditions.
 
-    care_weight  ~ Uniform(0.00, 0.50)  mean=0.25 — half of Phase 3's start (0.50)
-                                         and below Phase 3's eroded equilibrium (0.42).
-    forage/self  ~ Uniform(0.00, 1.00)  [unconstrained]
+    Direct continuation from Phase 4:
+      care_weight   = 0.80         (Phase 4 ceiling-drop init — fixed)
+      forage_weight = 1.0          (Phase 4 standard — fixed)
+      self_weight   ~ U(0, 1)      (Phase 4 standard — random)
 
-    This represents a population where care exists but is below the level that Phase 3
-    stabilised at. Without ecological pressure (control), selection would continue to
-    erode it. With infant dependency (Phase 5a), selection reverses direction.
-
-    Calibration note: starting at true near-zero (0.00–0.05) creates an evolutionary
-    trap with INFANT_STARVATION_MULT=1.15: selection gradient is immediately positive but
-    the initial bottleneck (first 400 ticks without viable care) kills the population.
-    Starting at 0.00–0.50 gives enough initial care capacity to survive the first generation.
+    Phase 5 null result: care stays at ~0.784 (same outcome as Phase 4, mult=1.0).
+    Phase 5 prediction: care rises above 0.784 because caring mothers' children survive
+    to maturity (fed repeatedly before tick 42) while non-caring mothers' children die.
     """
     genomes = []
     for _ in range(n):
         genomes.append(Genome(
-            care_weight=_random.uniform(0.0, 0.50),
-            forage_weight=_random.uniform(0.0, 1.0),
+            care_weight=0.80,
+            forage_weight=1.0,
             self_weight=_random.uniform(0.0, 1.0),
         ))
     return genomes
 
 
 # =============================================================================
-# Helpers (shared with multi-seed runner)
+# Helpers
 # =============================================================================
 
 def _save_top_genomes(sim: Simulation, output_dir: str) -> None:
@@ -127,7 +134,7 @@ def _load_genomes(source_dir: str) -> list[Genome]:
     if not os.path.exists(genome_path):
         raise FileNotFoundError(
             f"top_genomes.json not found in {source_dir}. "
-            "Run phase07_ecological_emergence evolution stage first."
+            "Run phase5_ecology_sweep evolution stage first."
         )
     with open(genome_path) as f:
         data = json.load(f)
@@ -145,7 +152,7 @@ def _load_genomes(source_dir: str) -> list[Genome]:
 
 def _compute_selection_gradient(birth_log_path: str) -> float | None:
     """Pearson r of care_weight vs generation from birth_log.csv.
-    Phase 3 reference: r=−0.178 (eroding). Phase 5 target: positive r.
+    Phase 4 reference: r≈−0.033 (near-neutral). Phase 5 target: positive r.
     """
     import csv
     if not os.path.exists(birth_log_path):
@@ -168,32 +175,35 @@ def _compute_selection_gradient(birth_log_path: str) -> float | None:
 
 
 def _care_window_metrics(care_records, population_history: list[int], window_end: int) -> dict:
-    window_care   = [r for r in care_records if r.success and r.tick <= window_end]
+    window_care    = [r for r in care_records if r.success and r.tick <= window_end]
     window_m_ticks = sum(p for t, p in enumerate(population_history) if t < window_end)
-    window_rate   = len(window_care) / window_m_ticks if window_m_ticks > 0 else 0.0
+    window_rate    = len(window_care) / window_m_ticks if window_m_ticks > 0 else 0.0
     return {
         "care_window_end_tick":           window_end,
         "care_events_in_window":          len(window_care),
         "mother_ticks_in_window":         window_m_ticks,
         "care_per_mother_tick_in_window": window_rate,
-        "phase05_zeroshot_baseline":       PHASE3_ZS_BASELINE,
-        "note": "Compare to phase05 zero-shot window rate 0.09069 for assimilation test.",
+        "phase4_neutral_care_weight":     PHASE4_NEUTRAL_CARE_WEIGHT,
+        "note": "Zero-shot care rate for Phase 6 (Baldwin assimilation) precursor.",
     }
 
 
 # =============================================================================
-# Phase 5 base config
+# Phase 5 base config (matches Phase 4 ecology + ecological pressure)
 # =============================================================================
 
 def _make_config(seed: int, scatter_radius: int = BIRTH_SCATTER_RADIUS) -> Config:
     config = Config()
     config.seed = seed
-    config.init_mothers = 12
-    config.init_food    = 45
-    # Ecological pressure
+    # Match Phase 4 Scripts 05/06 ecology exactly (direct comparison)
+    config.width        = 50
+    config.height       = 50
+    config.init_mothers = 40
+    config.init_food    = 120
+    # Ecological pressure (Phase 5 addition over Phase 4)
     config.infant_starvation_multiplier = INFANT_STARVATION_MULT
     config.birth_scatter_radius         = scatter_radius
-    # Pure genetic selection — no plasticity (clean signal)
+    # Pure genetic selection — no plasticity (clean signal, Phase 6 adds this)
     config.plasticity_enabled          = False
     config.plasticity_kin_conditional  = False
     config.children_enabled            = True
@@ -204,15 +214,14 @@ def _make_config(seed: int, scatter_radius: int = BIRTH_SCATTER_RADIUS) -> Confi
 
 
 # =============================================================================
-# Stage: survival_gate (10 generations ~ 1000 ticks)
+# Stage: survival_gate (~10 generations)
 # =============================================================================
 
 def _run_survival_gate(seed: int) -> dict:
-    """Quick viability check before committing to a full 50-gen run.
+    """Viability check: 1000 ticks with Phase 5 ecological pressure.
 
-    Returns: {"survived": bool, "final_pop": int, "ticks_survived": int, "output_dir": str}
-    Failure criteria: fewer than 5 mothers at tick 1000.
-    If failed, caller should reduce infant_starvation_multiplier (try 2.0).
+    Population must reach ≥10 mothers at tick 1000.
+    If it fails, the full run will also fail — skip it and log.
     """
     config = _make_config(seed)
     config.max_ticks = 1000
@@ -227,10 +236,13 @@ def _run_survival_gate(seed: int) -> dict:
         seed=config.seed,
         infant_starvation_multiplier=config.infant_starvation_multiplier,
         birth_scatter_radius=config.birth_scatter_radius,
-        note="10-gen viability check. Population must reach ≥5 mothers at tick 1000.",
+        note=(
+            "Phase 5 viability check (10 gens). Requires ≥10 mothers at tick 1000. "
+            "infant_starvation_multiplier=1.65: child dies at tick ~75 without care (~3 feedings needed)."
+        ),
     )
 
-    genomes = _make_emergence_genomes(config.init_mothers)
+    genomes = _make_phase4_baseline_genomes(config.init_mothers)
     sim = Simulation(config)
     sim.initialize(genomes)
 
@@ -240,17 +252,17 @@ def _run_survival_gate(seed: int) -> dict:
         sim.tick += 1
         population_history.append(len([m for m in sim.mothers if m.alive]))
         if population_history[-1] == 0:
-            break  # extinct — no point continuing
+            break
 
     final_pop = population_history[-1] if population_history else 0
-    survived  = final_pop >= 5
+    survived  = final_pop >= 10
 
     with open(os.path.join(output_dir, "population_history.json"), "w") as f:
         json.dump({"population": population_history}, f)
 
-    print(f"\n[phase07 | survival_gate] Output: {output_dir}")
-    print(f"  Final population : {final_pop} mothers")
-    print(f"  Result           : {'PASSED' if survived else 'FAILED — reduce infant_starvation_multiplier'}")
+    print(f"\n[phase5 | survival_gate] Output: {output_dir}")
+    print(f"  Final population : {final_pop} mothers (threshold: >=10)")
+    print(f"  Result           : {'PASSED' if survived else 'FAILED — population collapsed under ecological pressure'}")
 
     return {
         "survived":       survived,
@@ -261,13 +273,13 @@ def _run_survival_gate(seed: int) -> dict:
 
 
 # =============================================================================
-# Stage: evolution (5a — full 50 generations)
+# Stage: evolution (Phase 5a — 10,000 ticks, matches Phase 4 duration)
 # =============================================================================
 
 def _run_evolution(seed: int, stage: str = "evolution",
                    scatter_radius: int = BIRTH_SCATTER_RADIUS) -> str:
     config = _make_config(seed, scatter_radius=scatter_radius)
-    config.max_ticks = 5000
+    config.max_ticks = 10000  # ~98 generations; matches Phase 4 Scripts 05/06
 
     set_seed(config.seed)
     output_dir = create_run_dir(PHASE_NAME, config.seed)
@@ -282,25 +294,26 @@ def _run_evolution(seed: int, stage: str = "evolution",
         infant_starvation_multiplier=config.infant_starvation_multiplier,
         birth_scatter_radius=scatter_radius,
         plasticity_enabled=False,
+        phase4_neutral_baseline=PHASE4_NEUTRAL_CARE_WEIGHT,
         note=(
-            "Phase 5a — Ecological Emergence. Near-zero care init (0–0.05). "
-            "infant_starvation_multiplier=1.15 makes B existential. "
-            "birth_scatter_radius=2 increases effective r via natal philopatry. "
-            "Plasticity OFF — any care rise is pure genetic selection."
+            "Phase 5a — Ecological Emergence. Phase 4 baseline init (care=0.80, forage=1.0, self~U). "
+            "infant_starvation_multiplier=1.65: child dies at tick ~75 without care (~3 feedings needed). "
+            "birth_scatter_radius=2: natal philopatry amplifies effective r. "
+            "Plasticity OFF — any care rise above 0.784 is pure natural selection."
             if stage == "evolution" else
-            "Phase 5b — Dispersal control. Same as 5a but birth_scatter_radius=8 (standard). "
-            "Tests whether natal philopatry is necessary or if dependency alone suffices."
+            "Phase 5b — Dispersal control. Same as 5a but birth_scatter_radius=5 (Phase 4 standard). "
+            "Tests whether natal philopatry is necessary or if infant dependency alone suffices."
         ),
     )
 
-    genomes = _make_emergence_genomes(config.init_mothers)
+    genomes = _make_phase4_baseline_genomes(config.init_mothers)
     sim = Simulation(config)
     sim.initialize(genomes)
 
     population_history   = []
     energy_history       = []
     generation_snapshots = []
-    SNAPSHOT_INTERVAL    = 100
+    SNAPSHOT_INTERVAL    = 200  # matches Phase 4 Script 05
 
     while sim.tick < config.max_ticks:
         sim.step()
@@ -318,7 +331,6 @@ def _run_evolution(seed: int, stage: str = "evolution",
                 "max_care_weight":   max(m.genome.care_weight   for m in alive_m),
                 "avg_forage_weight": sum(m.genome.forage_weight for m in alive_m) / len(alive_m),
                 "avg_self_weight":   sum(m.genome.self_weight   for m in alive_m) / len(alive_m),
-                "avg_learning_rate": sum(m.genome.learning_rate for m in alive_m) / len(alive_m),
                 "avg_generation":    sum(m.generation           for m in alive_m) / len(alive_m),
                 "max_generation":    max(m.generation           for m in alive_m),
                 "n_mothers":         len(alive_m),
@@ -331,7 +343,6 @@ def _run_evolution(seed: int, stage: str = "evolution",
     with open(os.path.join(output_dir, "generation_snapshots.json"), "w") as f:
         json.dump(generation_snapshots, f, indent=2)
 
-    # Selection gradient (key Phase 5 measurement)
     grad = _compute_selection_gradient(os.path.join(output_dir, "birth_log.csv"))
 
     generate_all_plots(output_dir)
@@ -340,37 +351,37 @@ def _run_evolution(seed: int, stage: str = "evolution",
     n = len(alive_m_final)
     final_cw = sum(m.genome.care_weight for m in alive_m_final) / n if n else 0.0
 
-    print(f"\n[phase07 | {stage}] Output: {output_dir}")
+    print(f"\n[phase5 | {stage}] Output: {output_dir}")
     print(f"  Surviving mothers     : {n}")
-    print(f"  Final avg care_weight : {final_cw:.4f}  (Phase 3 start was 0.500, final was 0.420)")
-    print(f"  Selection gradient r  : {grad:.4f}  (Phase 04 baseline: {PHASE3_SELECTION_R})"
+    print(f"  Final avg care_weight : {final_cw:.4f}  (Phase 4 neutral baseline: {PHASE4_NEUTRAL_CARE_WEIGHT})")
+    print(f"  Selection gradient r  : {grad:.4f}  (Phase 4 baseline: {PHASE4_NEUTRAL_R})"
           if grad is not None else "  Selection gradient r  : N/A (insufficient birth data)")
-    print(f"  Initial care_weight   : 0.000–0.500 (mean=0.250, Phase 3 start: 0.500)")
+    print(f"  genome_fallback_count : {sim.genome_fallback_count}  (must be 0)")
     return output_dir
 
 
 # =============================================================================
-# Stage: zeroshot (5c — genetic assimilation test)
+# Stage: zeroshot (Phase 5c — genome assimilation precursor for Phase 6)
 # =============================================================================
 
 def _run_zeroshot(seed: int, source_dir: str) -> str:
-    """Load evolved Phase 5 genomes and run 1 gen without reproduction/mutation/plasticity.
+    """Load evolved Phase 5 genomes; run 1000 ticks without reproduction/mutation/plasticity.
 
-    Measures care_window rate vs Phase 05 baseline (0.09069).
-    Genetic assimilation confirmed if rate is significantly higher.
+    Records care behavior encoded purely in the evolved genome.
+    This is a Phase 6 precursor — the assimilation test proper is in Phase 6.
     """
     genomes   = _load_genomes(source_dir)
     n_mothers = len(genomes)
 
     config = Config()
-    config.seed        = seed
+    config.seed         = seed
     config.init_mothers = n_mothers
-    config.init_food   = n_mothers * 4
-    config.max_ticks   = 1000
-    # Ecological pressure still active (same conditions evolved under)
+    config.init_food    = n_mothers * 4
+    config.width        = 50
+    config.height       = 50
+    config.max_ticks    = 1000
     config.infant_starvation_multiplier = INFANT_STARVATION_MULT
     config.birth_scatter_radius         = BIRTH_SCATTER_RADIUS
-    # Freeze genome — pure assimilation test
     config.plasticity_enabled    = False
     config.reproduction_enabled  = False
     config.mutation_enabled      = False
@@ -389,9 +400,9 @@ def _run_zeroshot(seed: int, source_dir: str) -> str:
         source_dir=source_dir,
         infant_starvation_multiplier=config.infant_starvation_multiplier,
         note=(
-            "Phase 5c genetic assimilation test. Evolved genomes, no plasticity/reproduction. "
-            "Compare care_window rate to Phase 3 baseline 0.09069. "
-            "Higher rate = care encoded in genome (assimilation confirmed)."
+            "Phase 5c: zero-shot genome test (Phase 6 precursor). "
+            "Evolved genomes, no plasticity/reproduction/mutation. "
+            "care_window rate measures care encoded in genome vs Phase 6 plasticity baseline."
         ),
     )
 
@@ -412,13 +423,11 @@ def _run_zeroshot(seed: int, source_dir: str) -> str:
     successful_care  = len([r for r in sim.logger.care_records if r.success])
     total_m_ticks    = sum(population_history)
     care_per_m_tick  = successful_care / total_m_ticks if total_m_ticks > 0 else 0.0
-    last_alive_tick  = max((t for t, p in enumerate(population_history) if p > 0), default=0)
 
     window = _care_window_metrics(
         sim.logger.care_records, population_history, config.maturity_age
     )
     window_rate = window["care_per_mother_tick_in_window"]
-    assimilated = window_rate > PHASE3_ZS_BASELINE
 
     metrics = {
         "stage":                    "zeroshot",
@@ -427,13 +436,10 @@ def _run_zeroshot(seed: int, source_dir: str) -> str:
         "surviving_mothers":        len([m for m in sim.mothers if m.alive]),
         "care_per_mother_tick_all": care_per_m_tick,
         "total_mother_ticks":       total_m_ticks,
-        "last_alive_tick":          last_alive_tick,
         "care_window":              window,
-        "phase05_zeroshot_baseline":          PHASE3_ZS_BASELINE,
-        "assimilation_signal":      assimilated,
         "note": (
-            "assimilation_signal=True means window rate > Phase 3 baseline — "
-            "care encoded in genome, not just learned in-lifetime."
+            "Zero-shot care rate for Phase 6 comparison. "
+            "Phase 6 will add plasticity to these evolved genomes and test Baldwin assimilation."
         ),
     }
     with open(os.path.join(output_dir, "zeroshot_metrics.json"), "w") as f:
@@ -441,11 +447,10 @@ def _run_zeroshot(seed: int, source_dir: str) -> str:
 
     generate_all_plots(output_dir)
 
-    print(f"\n[phase07 | zeroshot] Output: {output_dir}")
+    print(f"\n[phase5 | zeroshot] Output: {output_dir}")
     print(f"  Source genomes       : {source_dir}")
     print(f"  Surviving mothers    : {metrics['surviving_mothers']} / {n_mothers}")
-    print(f"  Care/m-tick (window) : {window_rate:.5f}  (Phase 3 baseline: {PHASE3_ZS_BASELINE:.5f})")
-    print(f"  Assimilation signal  : {'YES — care in genome' if assimilated else 'NO — not above baseline'}")
+    print(f"  Care/m-tick (window) : {window_rate:.5f}  (Phase 6 will compare with plasticity-enabled)")
     return output_dir
 
 
@@ -456,10 +461,10 @@ def _run_zeroshot(seed: int, source_dir: str) -> str:
 def run(seed: int = 42, stage: str = "evolution", source_dir: str = None) -> str | dict:
     """
     stage:
-      'survival_gate'  — quick 10-gen viability check (returns dict, not str)
-      'evolution'      — 5a: full 50-gen, birth_scatter_radius=2
-      'control'        — 5b: full 50-gen, birth_scatter_radius=8 (dispersal control)
-      'zeroshot'       — 5c: genetic assimilation test (requires source_dir)
+      'survival_gate'  — 1000-tick viability check (returns dict, not str)
+      'evolution'      — Phase 5a: 10,000 ticks, birth_scatter_radius=2
+      'control'        — Phase 5b: 10,000 ticks, birth_scatter_radius=5 (Phase 4 standard)
+      'zeroshot'       — Phase 5c: genome assimilation precursor (requires source_dir)
     """
     if stage == "survival_gate":
         return _run_survival_gate(seed)
@@ -479,18 +484,18 @@ def run(seed: int = 42, stage: str = "evolution", source_dir: str = None) -> str
 
 
 if __name__ == "__main__":
-    # Step 1: Survival gate — must pass before full run
+    # Step 1: Survival gate — must pass before committing to full run
     gate = run(seed=42, stage="survival_gate")
     if not gate["survived"]:
-        print("\nSurvival gate FAILED. Tune infant_starvation_multiplier in run.py and retry.")
+        print("\nSurvival gate FAILED. Population collapsed under mult=3.0 pressure.")
         import sys
         sys.exit(1)
 
-    # Step 2: Full evolution (5a)
+    # Step 2: Phase 5a — full evolution with natal philopatry (scatter=2)
     evo_dir = run(seed=42, stage="evolution")
 
-    # Step 3: Dispersal control (5b)
+    # Step 3: Phase 5b — dispersal control (scatter=5, Phase 4 standard)
     run(seed=42, stage="control")
 
-    # Step 4: Genetic assimilation test (5c)
+    # Step 4: Zero-shot genome test (Phase 6 precursor)
     run(seed=42, stage="zeroshot", source_dir=evo_dir)

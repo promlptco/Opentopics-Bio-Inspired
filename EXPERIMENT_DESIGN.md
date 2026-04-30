@@ -25,13 +25,13 @@ Unless explicitly overridden by a phase, all runs use the following defaults:
 | Grid type | 2D discrete grid-world | Spatial proximity is a key variable |
 | Decision architecture | Softmax (Gibbs) Sampling over utility scores {Care, Forage, Self} | Stochastic selection proportional to utility — enables exploration and naturalistic errors |
 | Softmax Temperature (τ) | 0.1 | Controls sharpness of selection; low τ approximates Argmax, high τ approaches random |
-| Reproduction gate | Sigmoid Probability (midpoint = 0.95) | Replaces hard-threshold 0.95 — probabilistic reproduction proportional to energy level |
-| Kin recognition noise | Gaussian N(0, σ=0.1) | Adds perceptual noise to infant distress signal — allows occasional misidentification |
-| Foraging variance | ±20% Noise | Energy gained from foraging varies stochastically — models unstable environment |
+| Reproduction gate | Hard threshold (energy ≥ 0.95) | Planned as sigmoid probability but not implemented — code uses hard-threshold in `can_reproduce()`. Effective fitness-proportionality still holds: mothers accumulate energy at different rates. |
+| Kin recognition noise | Not implemented | Planned as Gaussian N(0, σ=0.1) on distress signal — omitted; mothers read `child.distress` directly with no perceptual noise. |
+| Foraging variance | Not implemented | Planned as ±20% on eat_gain — omitted; `eat()` applies `eat_gain` as a fixed constant. |
 | Mutation rate | Stochastic P(mutate) | Mutation probability is stochastic per gene per reproduction event |
 | Mutation magnitude | Gaussian N(0, σ=0.05) per parameter, bounded | Small-step mutation; prevents drift explosion |
 | Kin recognition | None — targets chosen by max visible distress (+ noise) | Ensures any kin bias emerges structurally, not by explicit recognition |
-| Evolution duration | 5,000 ticks (~50 generations) | Sufficient for selection signal; computationally feasible |
+| Evolution duration | 10,000 ticks (Phase 4 onward) | Extended from original 5,000 — stochastic system requires more ticks for selection signal to emerge under neutral conditions |
 | Replication | 10 seeds (42–51) | Minimum for mean ± SD and sign-test |
 | Primary metric | Pearson's r (care_weight vs. reproductive fitness) | Direct measure of selection gradient direction and magnitude |
 
@@ -160,8 +160,7 @@ This phase defines the "functioning care" reference state used to interpret all 
 
 ---
 
-ฺBefore doing the phase3 we must use the phase 2 to find the baseline and looking through the dynamic of the first generation of mother + child (no reproduce)
-and which we must the the care relate code in these 4 files run.py, plot.py, sensitvity_sweep.py, config.py
+Before doing Phase 3, use Phase 2 to find the baseline and observe the dynamic of the first generation of mother + child (no reproduction). Care-related code spans these 4 files: run.py, plot.py, sensitivity_sweep.py, config.py.
 
 #### Phase 3a · Motivation Sweep
 
@@ -253,7 +252,7 @@ and which we must the the care relate code in these 4 files run.py, plot.py, sen
 **Interpretation gates:**
 - **r < 0, ≥ 9/10 seeds negative:** Care erodes. Proceed to Phase 5.
 - **r > 0 (unexpected):** Stop. Re-examine parameters. This undermines the thesis premise. Do not proceed without understanding why.
-- **r ≈ 0 (neutral):** Selectively invisible. Treat as weak erosion. Note and proceed.
+- **r ≈ 0 (neutral):** Care is genuinely near-neutral — selection pressure is insufficient to move care_weight in either direction at this ecology. Do NOT treat as weak erosion. This is a clean null result and the correct Phase 4 outcome. Proceed to Phase 5 to find the ecological threshold that breaks neutrality.
 
 ---
 
@@ -272,7 +271,7 @@ Each condition is tested with a **parameter sweep**, not a single value. A singl
 | Infant only | sweep: {1.05, 1.10, 1.15, 1.20} | sweep: {5, 8} | High dispersal tests dependency alone |
 | Spatial + Infant | sweep: {1.05, 1.10, 1.15} × {2, 3, 4} | Joint factorial |
 
-> **Existing data point:** Spatial only at scatter=2, mult=1.0 returned mean r=+0.0656, 9/10 seeds positive. This slots directly into the Spatial only sweep row — no rerun needed.
+> **Existing data point:** Spatial only at scatter=2, mult=1.0 returned mean r=+0.0656, 9/10 seeds positive. ⚠️ This was collected before the Phase 4 bug fix. The true neutral baseline is now ~0.784 (not ~0.50). This data point must be re-validated against the fixed baseline before being treated as final — the direction (positive r) may still hold but magnitude comparison requires a clean rerun.
 
 For each configuration: 5,000 ticks, 10 seeds (42–51), care_weight init = Uniform(0.0, 0.50).
 
@@ -461,6 +460,41 @@ For each ecology condition, report qualitative rB − C balance:
 
 Connect each experimental result back to the theoretical prediction: care evolves when rB > C.
 
+### 3.5 Epigenetic Analysis (Closing Post-Hoc Analysis)
+
+**Not in main experimental scope — conducted after Phase 7 completes.**
+
+**Conceptual grounding:**
+
+The current plasticity mechanism constitutes a form of transgenerational epigenetic-like inheritance. In `plastic_update()`, the Hebbian rule writes directly into `self.genome.care_weight`. At reproduction, `mother.genome.mutate()` is called on the already-modified genome — meaning the child inherits the mother's *experience-adjusted* `care_weight`, not the original genetic baseline. This is structurally analogous to epigenetic marks: an environmental experience (successful feeding event) leaves a heritable molecular-level change (shifted `care_weight`) that influences offspring behavior before any further selection acts.
+
+| Epigenetic concept | Analogue in this simulation |
+|---|---|
+| Epigenetic mark | Plasticity-adjusted `care_weight` value |
+| Environmental trigger | Successful feeding event (hunger reduction = reward) |
+| Transgenerational transmission | Modified genome passed to child at reproduction |
+| Genetic assimilation | Baldwin Effect — mark becomes fixed across generations |
+| Epigenetic reset | Not implemented — a natural future extension |
+
+**Analysis protocol:**
+
+Using Phase 7 Stage 1 output (evolution with plasticity ON, 10,000 ticks, 10 seeds):
+
+1. **Transmission fidelity:** For each mother-child pair, compute the difference between the mother's `care_weight` at time of reproduction and the child's initial `care_weight` (before any plastic update). The gap = mutation noise only. Plot mean gap ± SD across all reproduction events per generation.
+
+2. **Regression to mean:** Track whether the plasticity-elevated `care_weight` drifts back toward the population mean across successive generations without additional reinforcement, or whether it is stable. Stable persistence = epigenetic fixation; regression = incomplete assimilation.
+
+3. **Assimilation rate:** Compare the generation at which `care_weight` crosses a threshold (e.g., 0.85) in Stage 1 (plasticity ON) vs. Stage 2 (plasticity OFF). If Stage 2 maintains the threshold without learning, the elevated value has been encoded genetically — the epigenetic mark has been assimilated.
+
+**Interpretation:**
+
+This analysis reframes the Baldwin Effect result in epigenetic language. If Stage 2 care_weight remains elevated without plasticity, the simulation has demonstrated a complete epigenetic assimilation cycle: environmental experience → heritable mark → genetic fixation. This connects the computational result to a broader biological framework and provides an additional lens for the thesis discussion section.
+
+**Output:**
+- Transmission fidelity plot: mean parent-child `care_weight` gap per generation (Stage 1).
+- Regression plot: mean `care_weight` trajectory across generations in Stage 2 (plasticity OFF).
+- Single summary table: generation of threshold crossing in Stage 1 vs. Stage 2.
+
 ---
 
 ## 4. File & Code Standards
@@ -548,6 +582,9 @@ No phase may hardcode a value measured in another phase. All cross-phase constan
 
 **2026-04-14** — Reproduction mechanism audit (Phase 1 restart):
 The global parameters table originally listed "Roulette wheel on accumulated energy" as the reproduction mechanism. Code audit of `simulation/simulation.py:_check_reproduction()` found this to be inaccurate. Actual mechanism: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick — energy-threshold, not probability sampling. The mechanism is still effectively fitness-proportional (higher-energy mothers reproduce sooner/more often) but there is no probability vector to normalize. Roulette wheel normalization test was removed from Phase 1 protocol and the global parameters table was corrected. No code change required.
+
+**2026-04-30** — Design document audit and epigenetic analysis added:
+Five errors corrected: (1) Sigmoid reproduction gate and perceptual/foraging noise were listed as implemented but were never added to the simulation code — global params table corrected to reflect actual implementation. (2) Phase 4 r≈0 interpretation gate "treat as weak erosion" corrected — r≈0 is the confirmed definitive result, not a marginal case. (3) Evolution duration corrected from 5,000 to 10,000 ticks in global table. (4) Thai character artifact removed from Phase 3 note. (5) Phase 5 pre-collected data point (r=+0.0656) flagged as pre-bug-fix and requiring re-validation. Section 3.5 (Epigenetic Analysis) added as a post-hoc closing analysis — no new code required, uses Phase 7 output. Epigenetic framing connects the Baldwin Effect result to transgenerational inheritance literature.
 
 **2026-04-14** — Stochastic mechanics update (Global Parameters amended):
 Decision architecture updated from Argmax to Softmax (Gibbs) Sampling with τ=0.1. Reproduction gate updated from hard-threshold to sigmoid probability (midpoint=0.95). Kin recognition noise Gaussian N(0, σ=0.1) added. Foraging variance ±20% added. Mutation rate made stochastic per gene. Implementation notes:

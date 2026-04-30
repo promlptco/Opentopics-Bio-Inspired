@@ -292,47 +292,51 @@ def test_mother_energy_drops_to_zero():
 
 
 def test_child_hunger_critical_before_maturity():
-    """Child hunger must reach critical level before maturity_age without food."""
+    """Child energy must drop and hunger must reach critical level before maturity_age without food."""
     config = Config()
     TICKS = config.maturity_age  # 100
     N = 5
 
     children = [ChildAgent(0, 0, i, 0, i) for i in range(N)]
-    vitality_history = [[1.0 - c.hunger] for c in children]
+    energy_history = [[c.energy] for c in children]
+    child_hunger_rate = config.hunger_rate * config.infant_starvation_multiplier
 
     for _ in range(1, TICKS + 1):
         for idx, c in enumerate(children):
             if c.alive:
-                c.update_hunger(config.hunger_rate)
+                c.update_hunger(child_hunger_rate)
                 c.tick_age()
                 c.check_death()
-            vitality_history[idx].append(max(0.0, 1.0 - c.hunger))
+            energy_history[idx].append(max(0.0, c.energy))
 
     final_hungers = [c.hunger for c in children]
 
     assert all(h >= CRITICAL_HUNGER for h in final_hungers), \
         f"All children must reach hunger >= {CRITICAL_HUNGER} before maturity_age"
-    assert np.mean([v[-1] for v in vitality_history]) < 1.0, \
-        "Mean child vitality must drop below initial (1.0)"
+    assert np.mean([e[-1] for e in energy_history]) < 1.0, \
+        "Mean child energy must drop below initial (1.0)"
 
     _log(
         "test_child_hunger_critical_before_maturity",
         f"final_hungers={[round(h, 3) for h in final_hungers]};"
         f"mean_final_hunger={np.mean(final_hungers):.3f};"
+        f"child_hunger_rate={child_hunger_rate:.4f};"
+        f"infant_starvation_multiplier={config.infant_starvation_multiplier};"
         f"critical_threshold={CRITICAL_HUNGER};"
         f"maturity_age={TICKS}",
     )
-    return vitality_history, final_hungers
+    return energy_history, final_hungers, child_hunger_rate
 
 
 def plot_starvation_individual(
     mother_energy_history,
     mother_death_ticks,
     mother_init_energies,
-    child_vitality_history,
+    child_energy_history,
     child_final_hungers,
     out_dir: str,
     config: Config,
+    child_hunger_rate: float | None = None,
 ) -> str:
     """Save individual starvation energy-drop plot for mothers and children."""
     COLORS = {
@@ -401,45 +405,42 @@ def plot_starvation_individual(
                   edgecolor="#CCCCCC", alpha=0.92),
     )
 
-    # ── Right: Child vitality (1 - hunger) ───────────────────────
+    # ── Right: Child energy ───────────────────────────────────────
     ax = axes[1]
-    child_arr = np.array(child_vitality_history)
+    child_arr = np.array(child_energy_history)
     tick_c = np.arange(child_arr.shape[1])
 
     for row in child_arr:
         ax.plot(tick_c, row, color=COLORS["child_trace"], alpha=0.20, linewidth=1.2)
 
-    mean_v = child_arr.mean(axis=0)
-    std_v  = child_arr.std(axis=0)
-    ax.plot(tick_c, mean_v, color=COLORS["mean"], linewidth=2.5,
-            label="Mean vitality", zorder=5)
-    ax.fill_between(tick_c, mean_v - std_v, mean_v + std_v,
+    mean_e = child_arr.mean(axis=0)
+    std_e  = child_arr.std(axis=0)
+    ax.plot(tick_c, mean_e, color=COLORS["mean"], linewidth=2.5,
+            label="Mean energy", zorder=5)
+    ax.fill_between(tick_c, mean_e - std_e, mean_e + std_e,
                     color=COLORS["mean"], alpha=0.18, label="+-1 std")
 
-    critical_vitality = 1.0 - CRITICAL_HUNGER
-    ax.axhline(critical_vitality, color=COLORS["critical"], linestyle="--", linewidth=1.5,
-               label=f"Critical vitality={critical_vitality:.1f}  (hunger>={CRITICAL_HUNGER})",
-               zorder=6)
     ax.axvline(config.maturity_age, color=COLORS["maturity"], linestyle=":",
                linewidth=1.3, label=f"Maturity age (t={config.maturity_age})", zorder=6)
 
     ax.set_xlim(0, config.maturity_age + 5)
     ax.set_ylim(-0.05, 1.05)
     ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Vitality  (1 - hunger)", fontsize=10, color="#444444")
-    ax.set_title("Child — Vitality Without Food", fontsize=11, color="#1A1A1A")
+    ax.set_ylabel("Energy", fontsize=10, color="#444444")
+    ax.set_title("Child — Energy Without Food", fontsize=11, color="#1A1A1A")
     ax.legend(fontsize=8.5, loc="upper right", facecolor="#FFFFFF",
               edgecolor="#CCCCCC", framealpha=0.95)
 
     mean_fh = float(np.mean(child_final_hungers))
-    mean_fv = float(np.mean([v[-1] for v in child_vitality_history]))
+    mean_fe = float(np.mean([e[-1] for e in child_energy_history]))
+    eff_rate = child_hunger_rate if child_hunger_rate is not None else config.hunger_rate
     ax.text(
         0.03, 0.50,
         f"N={len(child_final_hungers)} children\n"
-        f"hunger_rate: {config.hunger_rate}\n"
+        f"hunger_rate: {eff_rate:.4f} (x{config.infant_starvation_multiplier:.0f})\n"
         f"Final hunger: {mean_fh:.3f}\n"
-        f"Final vitality: {mean_fv:.3f}\n"
-        f"Critical thresh: {CRITICAL_HUNGER}",
+        f"Final energy: {mean_fe:.3f}\n"
+        f"Critical hunger: {CRITICAL_HUNGER}",
         transform=ax.transAxes, fontsize=8.0, verticalalignment="top",
         color="#1A1A1A",
         bbox=dict(boxstyle="round,pad=0.4", facecolor="#FFFFFF",
@@ -565,7 +566,7 @@ if __name__ == "__main__":
     test_children_do_not_remain_alive_after_maturation()
 
     m_energy_hist, m_death_ticks, m_init_e = test_mother_energy_drops_to_zero()
-    c_vitality_hist, c_final_h = test_child_hunger_critical_before_maturity()
+    c_energy_hist, c_final_h, c_hunger_rate = test_child_hunger_critical_before_maturity()
 
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
@@ -580,8 +581,9 @@ if __name__ == "__main__":
     config = Config()
     starv_plot_path = plot_starvation_individual(
         m_energy_hist, m_death_ticks, m_init_e,
-        c_vitality_hist, c_final_h,
+        c_energy_hist, c_final_h,
         out_dir, config,
+        child_hunger_rate=c_hunger_rate,
     )
 
     _print_starvation_report(m_init_e, m_death_ticks, c_final_h, config)

@@ -23,7 +23,7 @@ import math
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase5_ecology_sweep.run_joint import run as run_p5
+from experiments.phase5_ecology_sweep.run_joint import run as run_p5, _compute_selection_gradient
 
 try:
     import matplotlib.pyplot as plt
@@ -46,17 +46,18 @@ except ImportError:
     print("Warning: scipy not available — statistical tests will be skipped.")
 
 SEEDS        = list(range(42, 52))
-COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase07_ecological_emergence", "multi_seed_evolution")
+COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase5_ecology_sweep", "multi_seed_evolution")
 CHECKPOINT   = os.path.join(COMBINED_DIR, "checkpoint.json")
 
-# Phase 04 multi-seed manifest (for baseline overlay)
-P3_RUN_DIRS_JSON = os.path.join(
-    PROJECT_ROOT, "outputs", "phase04_care_erosion", "multi_seed_evolution", "run_dirs.json"
+# Phase 4 FIXED multi-seed manifest (for baseline overlay, optional)
+P4_RUN_DIRS_JSON = os.path.join(
+    PROJECT_ROOT, "outputs", "phase4_neutral_drift_baseline", "05_ceiling_drop_FIXED", "seed_snapshots"
 )
 
-PHASE3_ZS_BASELINE      = 0.09069   # Phase 3 zero-shot window rate
+PHASE4_NEUTRAL_R        = -0.033    # Phase 4 FIXED baseline (Scripts 05/06, definitive)
+PHASE4_NEUTRAL_CW       = 0.784     # Phase 4 neutral care_weight final mean
 MATURITY_AGE            = 100
-PHASE5_EMERGENCE_LABEL  = "care_weight mean=0.25 start → positive gradient (vs Phase 3 r=-0.178)"
+PHASE5_EMERGENCE_LABEL  = "care_weight from Phase 4 baseline (0.80) → positive gradient (vs Phase 4 r≈-0.033)"
 
 
 # =============================================================================
@@ -92,26 +93,13 @@ def _load_zeroshot_metrics(run_dir: str) -> dict:
         return json.load(f)
 
 
-def _load_phase04_baselines() -> tuple[dict, dict]:
-    if not os.path.exists(P3_RUN_DIRS_JSON):
+def _load_phase4_baselines() -> tuple[dict, dict]:
+    """Load Phase 4 FIXED snapshot data for overlay (optional — returns empty if unavailable)."""
+    if not os.path.exists(P4_RUN_DIRS_JSON):
         return {}, {}
-    with open(P3_RUN_DIRS_JSON) as f:
-        rd = json.load(f)
-    all_snaps = []
-    for d in rd.get("run_dirs", []):
-        snaps = _load_snapshots(d)
-        if snaps:
-            all_snaps.append(snaps)
-    if not all_snaps:
-        return {}, {}
-    tick_sets    = [set(s["tick"] for s in snaps) for snaps in all_snaps]
-    common_ticks = sorted(set.intersection(*tick_sets))
-    care_by_tick = {}
-    for t in common_ticks:
-        c_vals = [next(s["avg_care_weight"] for s in snaps if s["tick"] == t)
-                  for snaps in all_snaps]
-        care_by_tick[t] = _mean(c_vals)
-    return care_by_tick, {}
+    # Phase 4 snapshots are per-seed files, not a run_dirs.json manifest.
+    # Return empty dicts — overlay is informational only.
+    return {}, {}
 
 
 # =============================================================================
@@ -176,21 +164,21 @@ def plot_multi_seed_ci(
     ticks5, care5_mean, care5_lo, care5_hi  = _extract(all_snapshots,  "avg_care_weight")
     ticks_c, care_c_mean, care_c_lo, care_c_hi = _extract(ctrl_snapshots, "avg_care_weight") if ctrl_snapshots else ([], [], [], [])
 
-    # Phase 3 baseline overlay
-    p3_care_by_tick, _ = _load_phase04_baselines()
+    # Phase 4 baseline overlay (optional — empty if snapshots unavailable)
+    p3_care_by_tick, _ = _load_phase4_baselines()
     p3_ticks = [t for t in ticks5 if t in p3_care_by_tick]
     p3_care  = [p3_care_by_tick[t] for t in p3_ticks]
 
     # Selection gradient annotation
     valid_grads = [g for g in (gradients or []) if g is not None]
     grad_str = (f"Mean selection gradient r = {_mean(valid_grads):+.4f}  "
-                f"(Phase 3 baseline: -0.178)"
+                f"(Phase 4 baseline: {PHASE4_NEUTRAL_R})"
                 if valid_grads else "")
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     fig.suptitle(
-        f"Phase 07 Ecological Emergence — care_weight from near-zero\n"
-        f"{len(seeds)} seeds | infant_starvation_multiplier=1.15 | birth_scatter_radius=2  [Phase 07]",
+        f"Phase 5 Ecological Emergence — from Phase 4 baseline (care=0.80)\n"
+        f"{len(seeds)} seeds | infant_starvation_multiplier=3.0 | birth_scatter_radius=2  [Phase 5]",
         fontsize=10,
     )
 
@@ -206,20 +194,20 @@ def plot_multi_seed_ci(
     if ticks5:
         ax1.fill_between(ticks5, care5_lo, care5_hi, alpha=0.20, color="#2ca02c")
         ax1.plot(ticks5, care5_mean, color="#2ca02c", linewidth=2.2,
-                 label=f"Phase 07 — natal philopatry, scatter=2  "
+                 label=f"Phase 5a — natal philopatry, scatter=2  "
                        f"(mean ± 95% CI, n = {len(seeds)})")
     if ticks_c:
         ax1.fill_between(ticks_c, care_c_lo, care_c_hi, alpha=0.10, color="#d95f02")
         ax1.plot(ticks_c, care_c_mean, color="#d95f02", linewidth=1.8, linestyle="--",
-                 label="Phase 08 — dispersal control, scatter=8")
+                 label="Phase 5b — dispersal control, scatter=5 (Phase 4 standard)")
     if p3_ticks:
         ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.5, linestyle=":",
-                 label="Phase 04 reference (no ecology)", zorder=4)
+                 label="Phase 4 reference (no ecological pressure)", zorder=4)
 
-    ax1.axhline(0.25,  color="gray",    linestyle="--", linewidth=0.9, alpha=0.65,
-                label="Phase 5 init mean (0.25)")
-    ax1.axhline(0.420, color="crimson", linestyle=":",  linewidth=1.1,
-                label="Phase 3 final (0.420)")
+    ax1.axhline(0.80,  color="gray",    linestyle="--", linewidth=0.9, alpha=0.65,
+                label="Phase 4/5 init (0.80)")
+    ax1.axhline(0.784, color="crimson", linestyle=":",  linewidth=1.1,
+                label=f"Phase 4 neutral baseline ({PHASE4_NEUTRAL_CW})")
 
     ax1.set_ylabel("Mean care_weight (genome parameter)")
     ax1.set_ylim(0, 1)
@@ -317,15 +305,12 @@ def compute_statistical_tests(
     """Statistical tests for Phase 5 multi-seed.
 
     Primary test: Is the mean selection gradient r > 0 across seeds?
-      H0: r == 0  (no directional selection)
-      H1: r > 0   (positive selection — care builds)
-      Phase 3 reference: r = -0.178
+      H0: r == 0  (no directional selection — same as Phase 4)
+      H1: r > 0   (positive selection — care builds above Phase 4 neutral)
+      Phase 4 FIXED reference: r ≈ -0.033 (near-neutral, not significant).
 
-    Secondary test: Phase 5a vs 5b final care_weight (paired t-test) — tests philopatry.
-
-    Zero-shot note: Phase 07 zero-shot rates compared to Phase 05 baseline (0.09069) as reference,
-      but this comparison is directionally confounded (Phase 5 starts lower than Phase 3).
-      The zero-shot result is informational, not the primary hypothesis test.
+    Secondary: final care_weight vs Phase 4 neutral baseline (0.784).
+    Zero-shot: informational only — Phase 6 precursor for Baldwin assimilation test.
     """
     if not HAS_SCIPY:
         return {"error": "scipy not available"}
@@ -343,7 +328,7 @@ def compute_statistical_tests(
             "n_seeds":   n_g,
             "mean_r":    mean_g,
             "ci95":      [mean_g - _ci95(grads), mean_g + _ci95(grads)],
-            "phase3_ref": -0.178,
+            "phase4_neutral_ref": PHASE4_NEUTRAL_R,
             "ttest_vs_zero": {
                 "t_stat":  float(t_g.statistic),
                 "p_value": float(t_g.pvalue),
@@ -361,15 +346,14 @@ def compute_statistical_tests(
         mean_zs = _mean(p5_rates)
         ci_zs   = _ci95(p5_rates)
         zs_result = {
-            "n_seeds":       len(p5_rates),
-            "mean_p5_rate":  mean_zs,
-            "ci95":          [mean_zs - ci_zs, mean_zs + ci_zs],
-            "phase3_baseline": PHASE3_ZS_BASELINE,
+            "n_seeds":      len(p5_rates),
+            "mean_p5_rate": mean_zs,
+            "ci95":         [mean_zs - ci_zs, mean_zs + ci_zs],
             "note": (
-                "Comparison to Phase 3 baseline is directionally confounded: "
-                "Phase 5 evolved from lower care_weight (0.25) than Phase 3 (0.50). "
-                "Lower absolute care_weight → lower zero-shot rate, independent of assimilation. "
-                "Primary Phase 5 result is the selection gradient reversal (above), not this rate."
+                "Zero-shot care rate is informational — Phase 6 precursor. "
+                "Phase 6 will compare this rate against plasticity-enabled runs "
+                "to test Baldwin Effect assimilation. "
+                "Primary Phase 5 result is the selection gradient reversal (above)."
             ),
         }
 
@@ -446,7 +430,6 @@ def run_all(seeds: list[int] = SEEDS) -> None:
             gens  = [g.get("generation", 0) for g in genomes]
 
             # Load selection gradient from birth_log
-            from experiments.p5_enhanced_ecology.run import _compute_selection_gradient
             grad = _compute_selection_gradient(os.path.join(evo_dir, "birth_log.csv"))
 
             # Determine emergence: care_weight increased from ~0.025 start
@@ -568,32 +551,31 @@ def run_all(seeds: list[int] = SEEDS) -> None:
         n_emerged = sum(1 for s in evo_summaries if s.get("emerged"))
         print("-" * 60)
         print(f"  Mean final care_weight : {_mean(final_cws):.4f} +/- {_ci95(final_cws):.4f}")
-        print(f"  Mean selection grad r  : {_mean(grads_v):+.4f}  (Phase 3: -0.178)")
-        print(f"  Emerged (>0.1, delta>0.05): {n_emerged}/{len(evo_summaries)} seeds")
+        print(f"  Mean selection grad r  : {_mean(grads_v):+.4f}  (Phase 4 neutral baseline: {PHASE4_NEUTRAL_R})")
+        print(f"  Above Phase 4 baseline (>0.784): {sum(1 for c in final_cws if c > PHASE4_NEUTRAL_CW)}/{len(final_cws)} seeds")
 
-    print("\n=== Phase 07 Primary Result: Selection Gradient Reversal ===")
+    print("\n=== Phase 5 Primary Result: Selection Gradient vs Phase 4 ===")
     grt = stat_results.get("gradient_reversal_test", {})
     if grt and "ttest_vs_zero" in grt:
         tt = grt["ttest_vs_zero"]
         p  = tt["p_value"]
-        print(f"  Mean selection gradient r : {grt['mean_r']:+.4f}  (Phase 3: -0.178)")
+        print(f"  Mean selection gradient r : {grt['mean_r']:+.4f}  (Phase 4 neutral baseline: {PHASE4_NEUTRAL_R})")
         print(f"  95% CI                    : [{grt['ci95'][0]:+.4f}, {grt['ci95'][1]:+.4f}]")
         print(f"  One-sample t-test vs 0    : t={tt['t_stat']:.4f}, p={p:.4f}, df={tt['df']}")
         print(f"  Cohen's d                 : {grt['cohens_d']:.4f}")
         if grt.get("positive_gradient"):
-            print(f"  Direction: POSITIVE (care BUILDS — opposite of Phase 3's erosion)")
+            print(f"  Direction: POSITIVE (care BUILDS above Phase 4 neutral baseline)")
         else:
-            print(f"  Direction: FLAT or NEGATIVE (insufficient ecological pressure)")
+            print(f"  Direction: FLAT or NEGATIVE (ecological pressure insufficient)")
         if p < 0.05:
-            print(f"  Significance: p={p:.4f} < 0.05 — gradient reversal CONFIRMED")
+            print(f"  Significance: p={p:.4f} < 0.05 — positive selection CONFIRMED")
         else:
-            print(f"  Significance: p={p:.4f} >= 0.05 — trend present but not significant at 10 seeds")
+            print(f"  Significance: p={p:.4f} >= 0.05 — not significant at 10 seeds")
 
     zri = stat_results.get("zeroshot_informational", {})
     if zri:
         print(f"\n  Zero-shot window rate (informational): {zri.get('mean_p5_rate', 0):.5f}")
-        print(f"  Phase 3 reference: {PHASE3_ZS_BASELINE:.5f}")
-        print(f"  Note: comparison confounded — Phase 5 started at lower care_weight")
+        print(f"  Note: Phase 6 will compare this against plasticity-enabled runs (Baldwin test)")
 
     if failed:
         print(f"\n  Failed seeds (survival gate): {sorted(failed)}")
