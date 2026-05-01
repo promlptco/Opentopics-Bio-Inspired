@@ -272,11 +272,20 @@ class Simulation:
                         child_lineage_id=target.lineage_id,
                         is_own_child=(target.mother_id == mother.id),
                     ))
-                    if success and self.config.plasticity_enabled:
+                    if success:
                         is_own = (target.mother_id == mother.id)
-                        if not self.config.plasticity_kin_conditional or is_own:
-                            mother.plastic_update(benefit, self.config.plastic_gain,
-                                                  energy_cost=self.config.plasticity_energy_cost)
+                        # Option D — care_recovery: prolactin-analog energy reward for
+                        # successfully feeding own infant. Offsets feed_cost, making care
+                        # energetically viable at high care frequency.
+                        if is_own and mother.genome.care_recovery > 0:
+                            mother.energy = min(
+                                1.0,
+                                mother.energy + mother.genome.care_recovery * benefit,
+                            )
+                        if self.config.plasticity_enabled:
+                            if not self.config.plasticity_kin_conditional or is_own:
+                                mother.plastic_update(benefit, self.config.plastic_gain,
+                                                      energy_cost=self.config.plasticity_energy_cost)
                     mother.commit_ticks = 0  # done
                 else:
                     # Move toward

@@ -97,7 +97,12 @@ class MotherAgent(Agent):
     # New Phase 2 / Phase 3 code should prefer compute_motivation_scores().
 
     def calc_care_score(self, child: ChildAgent) -> float:
-        return self.expressed_care_weight * child.distress
+        # care_recovery (prolactin analog) boosts care motivation for own infant only —
+        # consistent with kin-selective neuroendocrine drive in real mammals.
+        effective_weight = self.expressed_care_weight
+        if self.own_child_id is not None and child.id == self.own_child_id:
+            effective_weight = min(1.0, effective_weight + self.genome.care_recovery)
+        return effective_weight * child.distress
 
     def calc_forage_motivation(self) -> float:
         return self.genome.forage_weight * (1.0 - self.energy)

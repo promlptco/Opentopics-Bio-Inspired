@@ -1,0 +1,102 @@
+[
+  {
+    "seed": 42,
+    "survived": true,
+    "final_pop": 11,
+    "entry_cw": 0.3799067317701247,
+    "entry_ecw": 0.4432915563572873,
+    "final_cw": 0.4080306504578653,
+    "final_lr": 0.1872249421000973,
+    "instinct_confirmed": true
+  },
+  {
+    "seed": 43,
+    "survived": true,
+    "final_pop": 13,
+    "entry_cw": 0.27014725574823645,
+    "entry_ecw": 0.7227182712792327,
+    "final_cw": 0.4429960909389919,
+    "final_lr": 0.21404931058376178,
+    "instinct_confirmed": true
+  },
+  {
+    "seed": 44,
+    "survived": true,
+    "final_pop": 13,
+    "entry_cw": 0.33993176097971145,
+    "entry_ecw": 0.48411788676696466,
+    "final_cw": 0.3816997187189034,
+    "final_lr": 0.15353943087558938,
+    "instinct_confirmed": true
+  },
+  {
+    "seed": 45,
+    "survived": false,
+    "final_pop": 8,
+    "entry_cw": 0.2713285180128881,
+    "entry_ecw": 0.34530527909291525,
+    "final_cw": 0.2681543800396311,
+    "final_lr": 0.17996616118038114,
+    "instinct_confirmed": false
+  },
+  {
+    "seed": 46,
+    "survived": true,
+    "final_pop": 15,
+    "entry_cw": 0.2958321967516569,
+    "entry_ecw": 0.30027256569406047,
+    "final_cw": 0.3192865809966266,
+    "final_lr": 0.19973589764161095,
+    "instinct_confirmed": false
+  },
+  {
+    "seed": 47,
+    "survived": true,
+    "final_pop": 18,
+    "entry_cw": 0.33959601506568404,
+    "entry_ecw": 0.3866054793950366,
+    "final_cw": 0.31436888927307594,
+    "final_lr": 0.11009568266039717,
+    "instinct_confirmed": false
+  },
+  {
+    "seed": 48,
+    "survived": true,
+    "final_pop": 24,
+    "entry_cw": 0.3221018473801125,
+    "entry_ecw": 0.34055575978135744,
+    "final_cw": 0.3548473533779221,
+    "final_lr": 0.18342242462701275,
+    "instinct_confirmed": true
+  },
+  {
+    "seed": 49,
+    "survived": true,
+    "final_pop": 18,
+    "entry_cw": 0.2429040742144568,
+    "entry_ecw": 0.3173368321596987,
+    "final_cw": 0.3189723806401367,
+    "final_lr": 0.192873017900861,
+    "instinct_confirmed": false
+  },
+  {
+    "seed": 50,
+    "survived": true,
+    "final_pop": 13,
+    "entry_cw": 0.44509087029608163,
+    "entry_ecw": 0.4791383732463144,
+    "final_cw": 0.3717910971245559,
+    "final_lr": 0.11083936332127876,
+    "instinct_confirmed": true
+  },
+  {
+    "seed": 51,
+    "survived": true,
+    "final_pop": 18,
+    "entry_cw": 0.34625488561676854,
+    "entry_ecw": 0.3881608311460994,
+    "final_cw": 0.3160539203326389,
+    "final_lr": 0.12324674009056408,
+    "instinct_confirmed": false
+  }
+]
