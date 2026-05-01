@@ -1,0 +1,9 @@
+{
+  "phase": "phase5_ecology_sweep",
+  "timestamp": "20260430_185806",
+  "seed": 47,
+  "stage": "survival_gate",
+  "infant_starvation_multiplier": 1.65,
+  "birth_scatter_radius": 2,
+  "note": "Phase 5 viability check (10 gens). Requires \u226510 mothers at tick 1000. infant_starvation_multiplier=1.65: child dies at tick ~75 without care (~3 feedings needed)."
+}

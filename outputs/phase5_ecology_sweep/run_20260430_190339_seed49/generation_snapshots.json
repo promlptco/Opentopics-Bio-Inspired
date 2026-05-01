@@ -1,0 +1,79 @@
+[
+  {
+    "tick": 200,
+    "avg_care_weight": 0.2980211532310058,
+    "min_care_weight": 0.22588613705471539,
+    "max_care_weight": 0.3326334052826531,
+    "avg_forage_weight": 0.998325687819225,
+    "avg_self_weight": 0.7004414824614987,
+    "avg_generation": 0.5441176470588235,
+    "max_generation": 1,
+    "n_mothers": 68
+  },
+  {
+    "tick": 400,
+    "avg_care_weight": 0.29530473753728576,
+    "min_care_weight": 0.22588613705471539,
+    "max_care_weight": 0.3326334052826531,
+    "avg_forage_weight": 0.9982799544535175,
+    "avg_self_weight": 0.7020222694993274,
+    "avg_generation": 1.4102564102564104,
+    "max_generation": 3,
+    "n_mothers": 78
+  },
+  {
+    "tick": 600,
+    "avg_care_weight": 0.2964585609636134,
+    "min_care_weight": 0.23498609280192537,
+    "max_care_weight": 0.3700521916263291,
+    "avg_forage_weight": 0.9993229891889021,
+    "avg_self_weight": 0.6994600575639913,
+    "avg_generation": 2.566666666666667,
+    "max_generation": 5,
+    "n_mothers": 60
+  },
+  {
+    "tick": 800,
+    "avg_care_weight": 0.3048819171367211,
+    "min_care_weight": 0.23498609280192537,
+    "max_care_weight": 0.37790221067211993,
+    "avg_forage_weight": 0.9977948021802558,
+    "avg_self_weight": 0.6908644361249824,
+    "avg_generation": 4.2439024390243905,
+    "max_generation": 7,
+    "n_mothers": 41
+  },
+  {
+    "tick": 1000,
+    "avg_care_weight": 0.3004443488978986,
+    "min_care_weight": 0.23498609280192537,
+    "max_care_weight": 0.3700521916263291,
+    "avg_forage_weight": 0.9963477772275752,
+    "avg_self_weight": 0.689751306380589,
+    "avg_generation": 6.571428571428571,
+    "max_generation": 9,
+    "n_mothers": 14
+  },
+  {
+    "tick": 1200,
+    "avg_care_weight": 0.27115666005814293,
+    "min_care_weight": 0.23498609280192537,
+    "max_care_weight": 0.3,
+    "avg_forage_weight": 1.0,
+    "avg_self_weight": 0.6890990643626352,
+    "avg_generation": 9.0,
+    "max_generation": 11,
+    "n_mothers": 6
+  },
+  {
+    "tick": 1400,
+    "avg_care_weight": 0.23498609280192537,
+    "min_care_weight": 0.23498609280192537,
+    "max_care_weight": 0.23498609280192537,
+    "avg_forage_weight": 1.0,
+    "avg_self_weight": 0.6960962651098374,
+    "avg_generation": 11.0,
+    "max_generation": 11,
+    "n_mothers": 1
+  }
+]

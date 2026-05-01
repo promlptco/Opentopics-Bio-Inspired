@@ -47,6 +47,7 @@ class MotherAgent(Agent):
         super().__init__(x, y, lineage_id, generation)
 
         self.genome: Genome = genome
+        self.expressed_care_weight: float = genome.care_weight  # phenotypic; genome.care_weight is heritable
 
         self.stress: float = 0.0
         self.fatigue: float = 0.0
@@ -96,7 +97,7 @@ class MotherAgent(Agent):
     # New Phase 2 / Phase 3 code should prefer compute_motivation_scores().
 
     def calc_care_score(self, child: ChildAgent) -> float:
-        return self.genome.care_weight * child.distress
+        return self.expressed_care_weight * child.distress
 
     def calc_forage_motivation(self) -> float:
         return self.genome.forage_weight * (1.0 - self.energy)
@@ -291,7 +292,7 @@ class MotherAgent(Agent):
                 world=world,
                 perception_radius=perception_radius,
             )
-            scores["CARE"] = max(0.0, self.genome.care_weight * care_cue)
+            scores["CARE"] = max(0.0, self.expressed_care_weight * care_cue)
 
         return scores
 
@@ -405,7 +406,7 @@ class MotherAgent(Agent):
         energy_cost: float = 0.0,
     ) -> None:
         delta = self.genome.learning_rate * reward * plastic_gain
-        self.genome.care_weight = max(0.0, min(1.0, self.genome.care_weight + delta))
+        self.expressed_care_weight = max(0.0, min(1.0, self.expressed_care_weight + delta))
         self.energy -= self.genome.learning_cost * abs(delta) + energy_cost
 
     # ============================================================

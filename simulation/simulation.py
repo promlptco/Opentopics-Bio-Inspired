@@ -21,6 +21,8 @@ class Simulation:
         self.mothers: list[MotherAgent] = []
         self.children: list[ChildAgent] = []
         self.genome_fallback_count: int = 0  # defensive counter; must stay 0 after birth-fix
+        self._mother_by_id: dict[int, MotherAgent] = {}
+        self._child_by_id:  dict[int, ChildAgent]  = {}
 
         random.seed(config.seed)
         np.random.seed(config.seed)
@@ -34,6 +36,7 @@ class Simulation:
             genome = genomes[i % len(genomes)].copy() if genomes else Genome()
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
             self.mothers.append(mother)
+            self._mother_by_id[mother.id] = mother
             self.world.place_entity(mother)
             self.lineage.register_mother(mother.id, i, 0)
             
@@ -43,6 +46,7 @@ class Simulation:
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
                 child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
                 self.children.append(child)
+                self._child_by_id[child.id] = child
                 self.world.place_entity(child)
                 self.lineage.register_birth(child.id, mother.id, i, 1)
                 mother.own_child_id = child.id
@@ -163,6 +167,21 @@ class Simulation:
             else:
                 domain = mother.choose_domain(visible_children)
 
+            # Option A — distress_sensitivity: cortisol-analog penalty for ignoring own
+            # distressed infant. Fires whenever mother is NOT caring and her own child is
+            # alive, nearby, and distressed. Makes non-care energetically costly so that
+            # selection favours both care_weight and distress_sensitivity rising together.
+            if (domain != "care" and self.config.care_enabled
+                    and mother.own_child_id is not None):
+                own_child = self._get_child_by_id(mother.own_child_id)
+                if own_child and own_child.alive and mother.genome.distress_sensitivity > 0:
+                    dist_to_own = self.world.get_distance(mother.pos, own_child.pos)
+                    if dist_to_own <= self.config.perception_radius:
+                        mother.energy = max(
+                            0.0,
+                            mother.energy - mother.genome.distress_sensitivity * own_child.distress,
+                        )
+
             # Log choice if distressed child exists
             if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
                 self._log_choice(mother, visible_children, domain)
@@ -197,21 +216,21 @@ class Simulation:
                     tick=self.tick, agent_id=c.id, agent_type="child",
                     lineage_id=c.lineage_id, generation=c.generation, cause="hunger",
                 ))
+        for m in self.mothers:
+            if not m.alive:
+                self._mother_by_id.pop(m.id, None)
+        for c in self.children:
+            if not c.alive:
+                self._child_by_id.pop(c.id, None)
         self.mothers = [m for m in self.mothers if m.alive]
         if self.config.children_enabled:
             self.children = [c for c in self.children if c.alive]
     
     def _get_mother_by_id(self, mother_id: int) -> MotherAgent | None:
-        for m in self.mothers:
-            if m.id == mother_id:
-                return m
-        return None
-    
+        return self._mother_by_id.get(mother_id)
+
     def _get_child_by_id(self, child_id: int) -> ChildAgent | None:
-        for c in self.children:
-            if c.id == child_id:
-                return c
-        return None
+        return self._child_by_id.get(child_id)
     
     def _get_visible_children(self, mother: MotherAgent) -> list[ChildAgent]:
         visible = []
@@ -335,6 +354,7 @@ class Simulation:
 
                 # Remove child FIRST to free its position in occupied
                 child.die()
+                self._child_by_id.pop(child.id, None)
                 self.world.remove_entity(child.id)
 
                 # Then place new mother at same position
@@ -345,8 +365,10 @@ class Simulation:
                     genome=genome
                 )
                 self.mothers.append(new_mother)
+                self._mother_by_id[new_mother.id] = new_mother
                 self.world.place_entity(new_mother)
                 self.lineage.register_mother(new_mother.id, child.lineage_id, child.generation)
+                self.lineage.parents[new_mother.id] = child.mother_id  # preserve pedigree chain through maturation
     
     def _check_reproduction(self) -> None:
         for mother in self.mothers:
@@ -363,6 +385,7 @@ class Simulation:
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
             child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
             self.children.append(child)
+            self._child_by_id[child.id] = child
             self.world.place_entity(child)
             self.lineage.register_birth(child.id, mother.id, mother.lineage_id, new_gen)
             

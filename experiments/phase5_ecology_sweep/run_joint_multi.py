@@ -56,8 +56,10 @@ P4_RUN_DIRS_JSON = os.path.join(
 
 PHASE4_NEUTRAL_R        = -0.033    # Phase 4 FIXED baseline (Scripts 05/06, definitive)
 PHASE4_NEUTRAL_CW       = 0.784     # Phase 4 neutral care_weight final mean
+PHASE3_CANONICAL_CW     = 0.30      # Phase 3a canonical starting point (no infant pressure)
+PHASE3_ZS_BASELINE      = 0.0       # Phase 3 zero-shot window rate (placeholder — informational only)
 MATURITY_AGE            = 100
-PHASE5_EMERGENCE_LABEL  = "care_weight from Phase 4 baseline (0.80) → positive gradient (vs Phase 4 r≈-0.033)"
+PHASE5_EMERGENCE_LABEL  = "care_weight from Phase 3 canonical (0.30) → positive gradient (vs Phase 4 r≈-0.033)"
 
 
 # =============================================================================
@@ -177,8 +179,8 @@ def plot_multi_seed_ci(
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     fig.suptitle(
-        f"Phase 5 Ecological Emergence — from Phase 4 baseline (care=0.80)\n"
-        f"{len(seeds)} seeds | infant_starvation_multiplier=3.0 | birth_scatter_radius=2  [Phase 5]",
+        f"Phase 5 Ecological Emergence — from Phase 3 canonical (care=0.30)\n"
+        f"{len(seeds)} seeds | infant_starvation_multiplier=1.65 | birth_scatter_radius=2  [Phase 5]",
         fontsize=10,
     )
 
@@ -204,9 +206,9 @@ def plot_multi_seed_ci(
         ax1.plot(p3_ticks, p3_care, color="steelblue", linewidth=1.5, linestyle=":",
                  label="Phase 4 reference (no ecological pressure)", zorder=4)
 
-    ax1.axhline(0.80,  color="gray",    linestyle="--", linewidth=0.9, alpha=0.65,
-                label="Phase 4/5 init (0.80)")
-    ax1.axhline(0.784, color="crimson", linestyle=":",  linewidth=1.1,
+    ax1.axhline(PHASE3_CANONICAL_CW, color="gray", linestyle="--", linewidth=0.9, alpha=0.65,
+                label=f"Phase 3 canonical init ({PHASE3_CANONICAL_CW})")
+    ax1.axhline(PHASE4_NEUTRAL_CW,  color="crimson", linestyle=":", linewidth=1.1,
                 label=f"Phase 4 neutral baseline ({PHASE4_NEUTRAL_CW})")
 
     ax1.set_ylabel("Mean care_weight (genome parameter)")
@@ -234,8 +236,8 @@ def plot_multi_seed_ci(
         ax2.fill_between(ticks5, forage5_lo, forage5_hi, alpha=0.18, color="#d95f02")
         ax2.plot(ticks5, forage5_mean, color="#d95f02", linewidth=2.2,
                  label="Phase 5a mean forage_weight ± 95% CI")
-    ax2.axhline(0.5, color="gray", linestyle="--", linewidth=0.9, alpha=0.65,
-                label="Init mean (0.5)")
+    ax2.axhline(1.0, color="gray", linestyle="--", linewidth=0.9, alpha=0.65,
+                label="Phase 3 canonical init (1.0)")
     ax2.set_xlabel("Simulation tick  (\u2248 100 ticks per generation)")
     ax2.set_ylabel("Mean forage_weight (genome parameter)")
     ax2.set_ylim(0, 1)
@@ -270,14 +272,13 @@ def plot_zeroshot_multiseed(zs_summaries: list[dict], output_dir: str) -> None:
     ax.bar([xi - width/2 for xi in x], baseline,  width, label=f"Phase 3 baseline ({PHASE3_ZS_BASELINE:.5f})",
            color="steelblue", alpha=0.8, edgecolor="white")
     b2 = ax.bar([xi + width/2 for xi in x], p5_rates, width,
-                label="Phase 07 zero-shot (evolved genomes)", color=colors, alpha=0.9, edgecolor="white")
+                label="Phase 5 zero-shot (evolved genomes)", color=colors, alpha=0.9, edgecolor="white")
     ax.set_xticks(x)
     ax.set_xticklabels([f"s{s}" for s in seeds], fontsize=8)
     ax.set_ylabel("Care events / alive-mother-tick  (ticks 0\u2013100)")
     ax.set_title(
-        "Phase 07 zero-shot window rate vs. Phase 3 baseline\n"
-        "Green = above Phase 3 baseline | Red = below  "
-        "(directionally confounded by lower init care_weight)",
+        "Phase 5 zero-shot window rate vs. Phase 3 canonical baseline\n"
+        "Green = above Phase 3 baseline | Red = below",
     )
     # Upper right: bars are short (< 0.12), upper right is clear
     ax.legend(loc="upper right", frameon=True)
@@ -432,10 +433,10 @@ def run_all(seeds: list[int] = SEEDS) -> None:
             # Load selection gradient from birth_log
             grad = _compute_selection_gradient(os.path.join(evo_dir, "birth_log.csv"))
 
-            # Determine emergence: care_weight increased from ~0.025 start
-            start_care = snaps[0]["avg_care_weight"] if snaps else 0.025
+            # Determine emergence: care_weight rose above Phase 3 canonical start (0.30)
+            start_care = snaps[0]["avg_care_weight"] if snaps else PHASE3_CANONICAL_CW
             final_care = snaps[-1]["avg_care_weight"] if snaps else _mean(cw)
-            emerged    = final_care > 0.1 and (final_care - start_care) > 0.05
+            emerged    = (final_care - start_care) > 0.05
 
             evo_summaries.append({
                 "seed":              seed,
@@ -456,7 +457,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
 
     # ── Control pass (5b) ─────────────────────────────────────────────────────
     print("=" * 55)
-    print("Phase 5b: Dispersal control (scatter=8)...")
+    print("Phase 5b: Dispersal control (scatter=5)...")
     print("=" * 55 + "\n")
 
     for seed in seeds:
@@ -472,7 +473,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
 
     # ── Zero-shot pass (5c) ────────────────────────────────────────────────────
     print("=" * 55)
-    print("Phase 07: Zero-shot assimilation test...")
+    print("Phase 5c: Zero-shot assimilation test...")
     print("=" * 55 + "\n")
 
     for seed in seeds:
@@ -533,7 +534,7 @@ def run_all(seeds: list[int] = SEEDS) -> None:
         plot_zeroshot_multiseed(zs_summaries, COMBINED_DIR)
 
     # ── Summary table ──────────────────────────────────────────────────────────
-    print("\n=== Phase 07 Multi-Seed Evolution Summary ===")
+    print("\n=== Phase 5 Multi-Seed Evolution Summary ===")
     print(f"{'Seed':>5}  {'Surv':>5}  {'Start_cw':>8}  {'Final_cw':>8}  "
           f"{'Grad_r':>8}  {'Emerged?':>9}")
     print("-" * 60)

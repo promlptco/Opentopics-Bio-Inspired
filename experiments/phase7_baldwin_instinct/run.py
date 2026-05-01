@@ -1,5 +1,5 @@
-# experiments/p6_controls_and_baldwin/p6d_baldwin_instinct/run.py
-"""Phase 11: Baldwin Effect — Instinct Assimilation
+# experiments/phase7_baldwin_instinct/run.py
+"""Phase 7: Baldwin Effect — Instinct Assimilation
 
 Scientific question:
   After 10 000 ticks of evolution WITH kin-conditional plasticity (mult=1.15,
@@ -49,7 +49,7 @@ from evolution.genome import Genome
 from utils.experiment import set_seed, create_run_dir, save_config, save_metadata
 from utils.plotting import generate_all_plots
 
-PHASE_NAME = "phase11_instinct_assimilation"
+PHASE_NAME = "phase7_baldwin_instinct"
 
 # Ecological parameters — matched to P5 (Phase 07) full ecology
 INFANT_STARVATION_MULT  = 1.15   # infant pressure (P5 calibrated)
@@ -156,14 +156,20 @@ def _run_snapshots(sim: Simulation, n_ticks: int, tick_offset: int = 0) -> tuple
         )
         t_abs = sim.tick + tick_offset
         if sim.tick % SNAPSHOT_INTERVAL == 0 and alive_m:
+            alive_c = [c for c in sim.children if c.alive]
             snapshots.append({
-                "tick":              t_abs,
-                "avg_care_weight":   sum(m.genome.care_weight   for m in alive_m) / len(alive_m),
-                "min_care_weight":   min(m.genome.care_weight   for m in alive_m),
-                "max_care_weight":   max(m.genome.care_weight   for m in alive_m),
-                "avg_forage_weight": sum(m.genome.forage_weight for m in alive_m) / len(alive_m),
-                "avg_generation":    sum(m.generation           for m in alive_m) / len(alive_m),
-                "n_mothers":         len(alive_m),
+                "tick":                      t_abs,
+                "avg_care_weight":           sum(m.genome.care_weight           for m in alive_m) / len(alive_m),
+                "min_care_weight":           min(m.genome.care_weight           for m in alive_m),
+                "max_care_weight":           max(m.genome.care_weight           for m in alive_m),
+                "avg_expressed_care_weight": sum(m.expressed_care_weight        for m in alive_m) / len(alive_m),
+                "avg_forage_weight":         sum(m.genome.forage_weight         for m in alive_m) / len(alive_m),
+                "avg_learning_rate":         sum(m.genome.learning_rate         for m in alive_m) / len(alive_m),
+                "avg_generation":            sum(m.generation                   for m in alive_m) / len(alive_m),
+                "n_mothers":                 len(alive_m),
+                "avg_mother_energy":         sum(m.energy                       for m in alive_m) / len(alive_m),
+                "avg_child_energy":          sum(c.energy for c in alive_c) / len(alive_c) if alive_c else 0.0,
+                "n_children":               len(alive_c),
             })
 
     return pop_hist, energy_hist, snapshots
@@ -210,7 +216,7 @@ def run_evolution(seed: int = 42) -> str:
         plasticity_kin_conditional=True,
         plasticity_energy_cost=PLASTICITY_ENERGY_COST,
         note=(
-            "Phase 11 Stage 1 — Baldwin evolution. "
+            "Phase 7 Stage 1 — Baldwin evolution. "
             "mult=1.15, scatter=2, plast=ON (kin-conditional), depleted init. "
             "10 000 ticks. Load genomes into Stage 2 instinct test."
         ),
@@ -266,7 +272,7 @@ def run_instinct(seed: int = 42, source_dir: str = None) -> str:
     Returns output directory path.
     """
     if source_dir is None:
-        raise ValueError("source_dir required: path to Phase 11 Stage 1 evolution output.")
+        raise ValueError("source_dir required: path to Phase 7 Stage 1 evolution output.")
 
     genomes   = _load_genomes_from_dir(source_dir)
     n_mothers = len(genomes)
@@ -301,7 +307,7 @@ def run_instinct(seed: int = 42, source_dir: str = None) -> str:
         infant_starvation_multiplier=INFANT_STARVATION_MULT,
         birth_scatter_radius=BIRTH_SCATTER_RADIUS,
         note=(
-            "Phase 11 Stage 2 — Instinct test. "
+            "Phase 7 Stage 2 — Instinct test. "
             "mult=1.15, scatter=2, plast=OFF, mut=OFF. "
             "Tests genetic assimilation: care maintained without plastic feedback?"
         ),
@@ -417,7 +423,7 @@ def run(seed: int = 42, stage: str = "evolution", source_dir: str = None) -> str
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Phase 11: Baldwin Effect — Instinct Assimilation")
+    parser = argparse.ArgumentParser(description="Phase 7: Baldwin Effect — Instinct Assimilation")
     parser.add_argument("--seed",       type=int, default=42)
     parser.add_argument("--stage",      default="evolution",
                         choices=["evolution", "instinct"])
@@ -425,4 +431,4 @@ if __name__ == "__main__":
                         help="Stage 1 output dir (required for stage=instinct)")
     args = parser.parse_args()
     out = run(seed=args.seed, stage=args.stage, source_dir=args.source_dir)
-    print(f"\nPhase 11 {args.stage} complete. Output: {out}")
+    print(f"\nPhase 7 {args.stage} complete. Output: {out}")

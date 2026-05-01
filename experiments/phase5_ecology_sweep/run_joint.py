@@ -27,10 +27,10 @@ Ecological pressure applied:
        Phase 5b: birth_scatter_radius=5 (Phase 4 standard) — dispersal control.
        Tests whether natal philopatry is required or if infant dependency alone suffices.
 
-Starting conditions (Phase 4 baseline — direct continuation):
-  care_weight   = 0.80       (Phase 4 Scripts 05/06 initial value)
-  forage_weight = 1.0        (Phase 4 Scripts 05/06 initial value)
-  self_weight   ~ U(0, 1)    (Phase 4 Scripts 05/06 initial value)
+Starting conditions (Phase 3 canonical — before ecological pressure):
+  care_weight   = 0.30       (Phase 3a canonical — best survival genome, no infant pressure)
+  forage_weight = 1.0        (Phase 3a canonical)
+  self_weight   = 0.70       (Phase 3a canonical)
   Grid = 50×50, N=40, food=120 (Phase 4 ecology — unchanged)
   10,000 ticks, seeds 42–51  (Phase 4 duration — unchanged)
 
@@ -38,7 +38,8 @@ Primary measurements:
   - selection_gradient r: Pearson r of care_weight vs generation from birth_log.
     Phase 4 baseline: r≈−0.033 (near-neutral, not significant).
     Phase 5 prediction: r > 0 (care builds — selection now favours caring mothers).
-  - final care_weight at tick 10,000: target > 0.784 (Phase 4 neutral baseline).
+  - final care_weight at tick 10,000: target > 0.30 (Phase 3 canonical starting point).
+    If care rises above 0.30, ecological pressure has caused maternal care to emerge.
 
 Stages:
   'survival_gate' — 1000-tick viability check (≈10 generations).
@@ -85,26 +86,21 @@ PHASE4_SELECT_CARE_WEIGHT  = 0.789  # Script 05 final mean care_weight (standard
 # Phase 4 baseline genome initialisation
 # =============================================================================
 
-def _make_phase4_baseline_genomes(n: int) -> list[Genome]:
-    """Generate n genomes matching Phase 4 Scripts 05/06 starting conditions.
+def _make_phase3_canonical_genomes(n: int) -> list[Genome]:
+    """Generate n genomes matching Phase 3a canonical starting conditions.
 
-    Direct continuation from Phase 4:
-      care_weight   = 0.80         (Phase 4 ceiling-drop init — fixed)
-      forage_weight = 1.0          (Phase 4 standard — fixed)
-      self_weight   ~ U(0, 1)      (Phase 4 standard — random)
+    Phase 3 canonical (evolved under no infant mortality pressure):
+      care_weight   = 0.30   (Phase 3a motivation sweep best-survival genome)
+      forage_weight = 1.0    (Phase 3a canonical)
+      self_weight   = 0.70   (Phase 3a canonical)
 
-    Phase 5 null result: care stays at ~0.784 (same outcome as Phase 4, mult=1.0).
-    Phase 5 prediction: care rises above 0.784 because caring mothers' children survive
-    to maturity (fed repeatedly before tick 42) while non-caring mothers' children die.
+    Phase 5 null result: care stays at ~0.30 (pressure insufficient to shift selection).
+    Phase 5 prediction: care rises above 0.30 because caring mothers' children survive
+    to maturity (~3 feedings before tick 75) while non-caring mothers' children die.
+    This tests the minimum ecological condition for maternal care to emerge.
     """
-    genomes = []
-    for _ in range(n):
-        genomes.append(Genome(
-            care_weight=0.80,
-            forage_weight=1.0,
-            self_weight=_random.uniform(0.0, 1.0),
-        ))
-    return genomes
+    return [Genome(care_weight=0.30, forage_weight=1.0, self_weight=0.70)
+            for _ in range(n)]
 
 
 # =============================================================================
@@ -242,7 +238,7 @@ def _run_survival_gate(seed: int) -> dict:
         ),
     )
 
-    genomes = _make_phase4_baseline_genomes(config.init_mothers)
+    genomes = _make_phase3_canonical_genomes(config.init_mothers)
     sim = Simulation(config)
     sim.initialize(genomes)
 
@@ -296,17 +292,17 @@ def _run_evolution(seed: int, stage: str = "evolution",
         plasticity_enabled=False,
         phase4_neutral_baseline=PHASE4_NEUTRAL_CARE_WEIGHT,
         note=(
-            "Phase 5a — Ecological Emergence. Phase 4 baseline init (care=0.80, forage=1.0, self~U). "
+            "Phase 5a — Ecological Emergence. Phase 3 canonical init (care=0.30, forage=1.0, self=0.70). "
             "infant_starvation_multiplier=1.65: child dies at tick ~75 without care (~3 feedings needed). "
             "birth_scatter_radius=2: natal philopatry amplifies effective r. "
-            "Plasticity OFF — any care rise above 0.784 is pure natural selection."
+            "Plasticity OFF — any care rise above 0.30 is minimum ecological emergence."
             if stage == "evolution" else
             "Phase 5b — Dispersal control. Same as 5a but birth_scatter_radius=5 (Phase 4 standard). "
             "Tests whether natal philopatry is necessary or if infant dependency alone suffices."
         ),
     )
 
-    genomes = _make_phase4_baseline_genomes(config.init_mothers)
+    genomes = _make_phase3_canonical_genomes(config.init_mothers)
     sim = Simulation(config)
     sim.initialize(genomes)
 
@@ -353,7 +349,7 @@ def _run_evolution(seed: int, stage: str = "evolution",
 
     print(f"\n[phase5 | {stage}] Output: {output_dir}")
     print(f"  Surviving mothers     : {n}")
-    print(f"  Final avg care_weight : {final_cw:.4f}  (Phase 4 neutral baseline: {PHASE4_NEUTRAL_CARE_WEIGHT})")
+    print(f"  Final avg care_weight : {final_cw:.4f}  (Phase 3 canonical start: 0.30 | Phase 4 neutral: {PHASE4_NEUTRAL_CARE_WEIGHT})")
     print(f"  Selection gradient r  : {grad:.4f}  (Phase 4 baseline: {PHASE4_NEUTRAL_R})"
           if grad is not None else "  Selection gradient r  : N/A (insufficient birth data)")
     print(f"  genome_fallback_count : {sim.genome_fallback_count}  (must be 0)")
