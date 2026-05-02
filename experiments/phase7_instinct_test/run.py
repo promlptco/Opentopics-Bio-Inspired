@@ -43,6 +43,7 @@ INIT_SELF       = 0.70
 INIT_DS         = 0.068   # distress_sensitivity (cortisol analog)
 INIT_CR         = 0.410   # care_recovery (prolactin analog)
 INIT_LR         = 0.136   # learning_rate
+INIT_LC         = 0.099   # learning_cost (genome.learning_cost evolved from 0.05 default)
 
 SCATTER         = 2
 PLASTIC_GAIN    = 5.0
@@ -50,7 +51,7 @@ MIN_OLD         = 100
 SNAPSHOT_INTERVAL = 100   # tight interval for a smooth graph
 
 
-def _make_genomes(n: int) -> list:
+def _make_genomes(n: int, learning_cost: float = INIT_LC) -> list:
     return [
         Genome(
             care_weight=INIT_CARE,
@@ -59,12 +60,13 @@ def _make_genomes(n: int) -> list:
             distress_sensitivity=INIT_DS,
             care_recovery=INIT_CR,
             learning_rate=INIT_LR,
+            learning_cost=learning_cost,
         )
         for _ in range(n)
     ]
 
 
-def _build_config(seed: int) -> Config:
+def _build_config(seed: int, plasticity_energy_cost: float = 0.0) -> Config:
     cfg = Config()
     cfg.seed          = seed
     cfg.width         = 50
@@ -76,6 +78,7 @@ def _build_config(seed: int) -> Config:
     cfg.infant_starvation_multiplier = MLE_MULT
     cfg.birth_scatter_radius         = SCATTER
     cfg.plastic_gain                 = PLASTIC_GAIN
+    cfg.plasticity_energy_cost       = plasticity_energy_cost
 
     cfg.children_enabled           = True
     cfg.care_enabled               = True
@@ -86,9 +89,9 @@ def _build_config(seed: int) -> Config:
     return cfg
 
 
-def run_phase7(seed: int = 42) -> str:
+def run_phase7(seed: int = 42, plasticity_energy_cost: float = 0.0) -> str:
     """Run Phase 7 single seed. Returns output_dir."""
-    config = _build_config(seed)
+    config = _build_config(seed, plasticity_energy_cost=plasticity_energy_cost)
     set_seed(seed)
 
     output_dir = create_run_dir(PHASE_NAME, seed)

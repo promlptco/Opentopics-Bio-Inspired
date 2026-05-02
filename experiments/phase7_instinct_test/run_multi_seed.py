@@ -20,7 +20,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, PROJECT_ROOT)
 
 from experiments.phase7_instinct_test.run import (
-    run_phase7, MLE_MULT, INIT_CARE, INIT_DS, INIT_CR, INIT_LR,
+    run_phase7, MLE_MULT, INIT_CARE, INIT_DS, INIT_CR, INIT_LR, INIT_LC,
     STAGE1_TICKS, TOTAL_TICKS,
 )
 
@@ -42,6 +42,9 @@ except ImportError:
 SEEDS        = list(range(42, 52))
 COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase7_instinct_test", "multi_seed")
 
+# Sweet spot from tune_learning_cost.py sweep: all seeds survive, highest genetic care_weight.
+PLASTICITY_ENERGY_COST = 0.005
+
 
 def _mean(vals):
     return sum(vals) / len(vals) if vals else float("nan")
@@ -57,13 +60,13 @@ def _ci95(vals):
 
 
 def _run_seed_worker(packed):
-    seed, project_root = packed
+    seed, project_root, pec = packed
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
     import json as _json
     from experiments.phase7_instinct_test.run import run_phase7, INIT_CARE
 
-    rd        = run_phase7(seed=seed)
+    rd        = run_phase7(seed=seed, plasticity_energy_cost=pec)
     snap_path = os.path.join(rd, "generation_snapshots.json")
     snaps     = _json.load(open(snap_path)) if os.path.exists(snap_path) else []
 
@@ -155,7 +158,7 @@ def _plot_baldwin_graph(all_snaps, seeds, results, output_dir):
     fig, axes = plt.subplots(2, 1, figsize=(11, 9), sharex=True)
     fig.suptitle(
         f"Phase 7 — Baldwin Effect: Phenotypic Plasticity → Genetic Instinct\n"
-        f"MLE={MLE_MULT} | care_init={INIT_CARE} | DS={INIT_DS} | CR={INIT_CR} | {len(seeds)} seeds\n"
+        f"MLE={MLE_MULT} | care_init={INIT_CARE} | LC_genome={INIT_LC} | pec={PLASTICITY_ENERGY_COST} | {len(seeds)} seeds\n"
         f"Stage 2 survived: {n_survived}/{len(seeds)}  |  Instinct confirmed: {n_instinct}/{len(seeds)}",
         fontsize=11,
     )
@@ -236,6 +239,7 @@ def main(max_workers=None):
     print(f"\nPhase 7 — Zero-Shot Instinct Test ({len(SEEDS)} seeds)")
     print(f"  MLE ecology     : mult={MLE_MULT}")
     print(f"  Genome init     : care={INIT_CARE}, DS={INIT_DS}, CR={INIT_CR}, LR={INIT_LR}")
+    print(f"  Plasticity cost : energy_cost={PLASTICITY_ENERGY_COST} (fixed/call, non-evolvable)")
     print(f"  Stage 1         : ticks 0-{STAGE1_TICKS}  (plasticity ON)")
     print(f"  Stage 2         : ticks {STAGE1_TICKS}-{TOTAL_TICKS}  (plasticity OFF)")
     print(f"  Seeds           : {SEEDS}")
@@ -244,9 +248,9 @@ def main(max_workers=None):
     run_dirs = {}
     results  = []
 
-    packed = [(s, PROJECT_ROOT) for s in SEEDS]
+    packed = [(s, PROJECT_ROOT, PLASTICITY_ENERGY_COST) for s in SEEDS]
     with ProcessPoolExecutor(max_workers=max_workers) as pool:
-        futures = {pool.submit(_run_seed_worker, p): p[0] for p in packed}
+        futures = {pool.submit(_run_seed_worker, p): p[0] for p in packed}  # p[0] = seed
         for fut in as_completed(futures):
             r = fut.result()
             run_dirs[r["seed"]] = r["run_dir"]
