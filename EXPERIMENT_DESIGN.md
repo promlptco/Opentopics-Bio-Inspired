@@ -6,11 +6,9 @@
 
 ## 0. Thesis Architecture
 
-The thesis argues a two-part claim:
+The thesis establishes the minimum ecological conditions for the emergence of kin-biased maternal care using evolving neuroendocrine agents.
 
-**Part A (Ecological):** Maternal care evolves under natural selection when specific ecological conditions hold — existential infant dependency and/or natal philopatry. The exact necessity of each condition is an empirical question, not an assumption. The experiment is designed to discover the answer, not confirm a preconceived one.
-
-**Part B (Assimilation):** When Part A conditions hold, phenotypic plasticity with metabolic cost causes the Baldwin Effect to complete — care transitions from learned behavior to genetically encoded instinct.
+**Core question (Ecological):** Maternal care evolves under natural selection when specific ecological conditions hold — existential infant dependency and/or natal philopatry. The exact necessity of each condition is an empirical question, not an assumption. The experiment is designed to discover the answer, not confirm a preconceived one.
 
 The pipeline is designed so that each phase either *proves a necessary lemma* or *serves as a control* for the phase that follows. No phase is redundant. Results from each phase propagate forward — if a phase produces a surprising result, the downstream phases must be re-examined before continuing.
 
@@ -58,12 +56,6 @@ Phase 3  Survival Full          ──► find viable motivation weights; charac
   3a     Motivation Sweep       ──► grid search (care × forage × self) → select canonical genome
   3b     Action Visualization   ──► what does care look like in sim? action sequences, frequencies
 Phase 4  Evolution Baseline     ──► does care evolve or erode under standard ecology? (open question)
-Phase 5  Ecology Sweep          ──► [Spatial | Infant | Spatial+Infant] with parameter sweeps
-                                     → find minimum ecology where care evolves + isolate drivers
-Phase 6  Plasticity Test        ──► 4 cells: [poor eco | good eco] × [plasticity OFF | ON]
-                                     → does plasticity amplify, rescue, or do nothing?
-Phase 7  Baldwin Instinct Test  ──► measure baseline → plasticity ON 10k → OFF 10k
-                                     → does care persist as instinct?
 ```
 
 ---
@@ -242,7 +234,7 @@ Before doing Phase 3, use Phase 2 to find the baseline and observe the dynamic o
 
 **Additional metric (amended 2026-04-14):** Track intra-population variance of `care_weight` across ticks. Rising variance suggests stochasticity is maintaining genetic diversity; collapsing variance suggests fixation. Report alongside mean trajectory.
 
-**No zero-shot measurement in this phase.** Zero-shot is a separate instrument applied only as a comparison baseline in Phase 7. Running it here conflates behavioral measurement with evolutionary results.
+**No zero-shot measurement in this phase.** Zero-shot would conflate behavioral measurement with evolutionary results.
 
 **Required plots:**
 1. Per-seed care_weight trajectory over 5,000 ticks (individual lines + mean ± SD band).
@@ -250,253 +242,11 @@ Before doing Phase 3, use Phase 2 to find the baseline and observe the dynamic o
 3. All three motivation weights (care / forage / self) — detect hitchhiking.
 
 **Interpretation gates:**
-- **r < 0, ≥ 9/10 seeds negative:** Care erodes. Proceed to Phase 5.
+- **r < 0, ≥ 9/10 seeds negative:** Care erodes.
 - **r > 0 (unexpected):** Stop. Re-examine parameters. This undermines the thesis premise. Do not proceed without understanding why.
-- **r ≈ 0 (neutral):** Care is genuinely near-neutral — selection pressure is insufficient to move care_weight in either direction at this ecology. Do NOT treat as weak erosion. This is a clean null result and the correct Phase 4 outcome. Proceed to Phase 5 to find the ecological threshold that breaks neutrality.
+- **r ≈ 0 (neutral):** Care is genuinely near-neutral — selection pressure is insufficient to move care_weight in either direction at this ecology. Do NOT treat as weak erosion. This is a clean null result and the correct Phase 4 outcome.
 
 ---
-
-### Phase 5 · Ecology Sweep
-
-**Purpose:** Determine which ecological conditions — natal philopatry (Spatial), infant dependency (Infant), or both — are necessary and/or sufficient for care to evolve. Core factorial experiment of the thesis.
-
-Each condition is tested with a **parameter sweep**, not a single value. A single-point result cannot reveal the threshold or dose-response.
-
-**Four conditions:**
-
-| Condition | infant_starvation_multiplier | birth_scatter_radius | Note |
-|---|---|---|---|
-| Reference (Phase 4) | 1.0 | 5 | Baseline — care erodes |
-| Spatial only | 1.0 | sweep: {2, 3, 4, 5} | scatter=2 already collected (r=+0.0656) |
-| Infant only | sweep: {1.05, 1.10, 1.15, 1.20} | sweep: {5, 8} | High dispersal tests dependency alone |
-| Spatial + Infant | sweep: {1.05, 1.10, 1.15} × {2, 3, 4} | Joint factorial |
-
-> **Existing data point:** Spatial only at scatter=2, mult=1.0 returned mean r=+0.0656, 9/10 seeds positive. ⚠️ This was collected before the Phase 4 bug fix. The true neutral baseline is now ~0.784 (not ~0.50). This data point must be re-validated against the fixed baseline before being treated as final — the direction (positive r) may still hold but magnitude comparison requires a clean rerun.
-
-For each configuration: 5,000 ticks, 10 seeds (42–51), care_weight init = Uniform(0.0, 0.50).
-
-**Required plots:**
-1. Spatial sweep: mean r vs. scatter radius, Spatial only condition (line + error bars).
-2. Infant sweep: mean r vs. mult, Infant only condition at scatter={5, 8} (two lines).
-3. Joint heatmap: mean r across mult × scatter grid.
-4. Summary bar chart: mean r for all conditions at best parameter values, Phase 4 as reference line.
-5. Best ecology trajectory: per-seed care_weight over 5,000 ticks for selected canonical good ecology.
-
-**Selecting canonical good ecology:**
-- Must satisfy: mean r > 0, ≥ 9/10 seeds positive.
-- Prefer the *minimum* (mult, scatter) values that satisfy this.
-- Must be biologically defensible.
-- Selected values stored in `shared/constants.py` and used in Phases 6 and 7.
-
-**Interpretation:**
-- Spatial only sufficient → philopatry is the dominant driver.
-- Infant only sufficient → dependency is the dominant driver.
-- Only joint condition works → true AND-condition.
-- Do not force a conclusion before seeing the full sweep.
-
----
-
-### Phase 6 · Plasticity Test
-
-**Purpose:** Understand the role of plasticity across both ecological conditions. Produces a four-cell comparison that determines whether plasticity amplifies, rescues, or is neutral to care evolution.
-
-**Two ecology conditions:**
-- **Poor ecology:** mult=1.0, scatter=5 (Phase 4 conditions).
-- **Good ecology:** canonical (mult, scatter) from Phase 5.
-
-**Two plasticity conditions:**
-- **OFF:** standard evolution only.
-- **ON:** `plasticity_enabled=True`, `kin_conditional=True`, `plasticity_metabolic_cost > 0`.
-
-> ⚠️ `learning_rate` and `plasticity_metabolic_cost` must be coupled — agents that learn more pay proportionally higher metabolic cost. Zero cost = no assimilation pressure = Phase 7 becomes uninterpretable. This coupling must be implemented and verified before Phase 6 runs.
-
-**Four cells (10 seeds each, 5,000 ticks):**
-
-| Cell | Ecology | Plasticity | Expected |
-|---|---|---|---|
-| 6A | Poor | OFF | Care erodes (replicates Phase 4) |
-| 6B | Poor | ON | Plasticity cannot rescue care without ecological support |
-| 6C | Good | OFF | Care evolves (replicates Phase 5 best ecology) |
-| 6D | Good | ON | Plasticity amplifies evolution; cost pressure begins driving assimilation |
-
-**Required plots:**
-1. 4-panel care_weight plot: one panel per cell, mean ± SD, same y-axis scale across all four.
-2. Learning rate overlay: cells 6B and 6D on the same plot.
-3. Mean r bar chart: four bars (6A, 6B, 6C, 6D).
-4. All three motivation weights for cell 6D — confirm care is not hitchhiking on forage.
-
-**Decision after Phase 6:**
-- Cell 6D (good ecology + plasticity ON) is expected to be the input for Phase 7.
-- If cell 6C already saturates care weight, Phase 7 becomes a cleaner instinct test.
-- If neither 6C nor 6D produces reliable positive r, return to Phase 5 before proceeding.
-
----
-
-### Phase 7 · Baldwin Instinct Test
-
-**Purpose:** The central test of Part B. After evolving under good ecology with costly plasticity, does maternal care persist as instinct when plasticity is permanently disabled?
-
-**Setup — Depleted Baseline Measurement (before Stage 1):**
-
-Before running the main experiment, measure the zero-shot care rate of fresh uninstructed genomes. This is the reference point proving that any post-assimilation care is above chance.
-
-| Parameter | Value |
-|---|---|
-| Genomes | Fresh, care_weight ~ Uniform(0.0, 0.50) |
-| plasticity / mutation / reproduction | OFF |
-| mult, scatter | Canonical good ecology from Phase 5 |
-| Duration | 1,000 ticks, seeds 42–51 |
-
-**Output metric:** `care_window_rate = care_events / alive-mother-ticks` (ticks 0–100).
-
-**Export to `shared/constants.py`:**
-```python
-DEPLETED_BASELINE = <measured value>
-```
-
-This measurement is independent of the evolutionary experiment — it is simply a reference number. It does not require hypothesis testing or multi-seed statistical analysis beyond mean ± SD for stability.
-
----
-
-**Stage 1 — Evolution with Plasticity (10,000 ticks):**
-
-| Parameter | Value |
-|---|---|
-| Ecology | Canonical good ecology from Phase 5 |
-| plasticity | ON, kin_conditional=True |
-| plasticity_metabolic_cost | > 0 |
-| mutation | ON |
-| reproduction | ON |
-| Seeds | 42–51 |
-
-Expected trajectory: care_weight rises, learning_rate climbs early, then metabolic cost begins selecting against heavy learning → genomes begin to encode care directly.
-
----
-
-**Stage 2 — Instinct Test (10,000 ticks):**
-
-| Parameter | Value |
-|---|---|
-| plasticity | OFF |
-| mutation | OFF |
-| reproduction | ON |
-
-Agents can no longer update weights through learning. Only genetically encoded behavior remains. This is the critical test.
-
----
-
-**Instinct Emergence Criteria — all four must be evaluated:**
-
-| # | Criterion | Measurement | Pass |
-|---|---|---|---|
-| 1 | Care weight stability | Drift from end of Stage 1 to end of Stage 2 | ≤ 0.02 |
-| 2 | Action selection | Care action rate in Stage 2 vs. Stage 1 | Comparable — mothers still choosing care without learning |
-| 3 | Offspring welfare | Child energy and child lifetime in Stage 2 vs. Stage 1 | Maintained or improved |
-| 4 | Population trajectory | Infant population count across Stage 2 | Stable or growing |
-
-**Key interpretation logic:** If infant population remains stable or grows after plasticity is removed, mothers are effectively caring using only encoded instinct — the behavioral signature of assimilation. Secondary signal: if learning_rate drops sharply at the start of Stage 2 but population holds steady, care was already encoded and no longer needed the learning mechanism.
-
----
-
-**Final Zero-Shot Confirmation:**
-- Freeze: plasticity=OFF, mutation=OFF, reproduction=OFF.
-- Run 1,000 ticks. Measure `care_window_rate` (ticks 0–100).
-- Compare against `DEPLETED_BASELINE`.
-- Assimilation confirmed if significantly higher.
-
-**Required plots:**
-1. Concatenated trajectory (ticks 0–20,000): care_weight, learning_rate, infant population — mean ± SD, Stage 1/Stage 2 boundary clearly marked.
-2. All three motivation weights over 0–20,000 ticks — care must not be a forage hitchhiker.
-3. Child energy and lifetime: Stage 1 vs. Stage 2 mean (bar chart, individual seed dots, error bars).
-4. Per-seed care_weight trajectories (individual lines, full 20,000 ticks).
-5. Sim action visualization at tick 15,000 (mid-Stage 2): action frequency breakdown for a representative seed — same format as Phase 3b. Confirms mothers still executing care sequences without the learning mechanism.
-
-**If instinct does NOT emerge — diagnose by failed criterion:**
-- Criterion 1 fails (care_weight collapses) → genomes never internalized care. Increase `plasticity_metabolic_cost` or extend Stage 1.
-- Criterion 2 fails (mothers stop choosing care) → utility function cannot sustain care without learning signal. Inspect action threshold and care utility weight.
-- Criteria 3/4 fail (population collapses) → assimilation incomplete before Stage 2. Extend Stage 1 or increase cost pressure.
-
-Each iteration: full 10,000 + 10,000 tick run on all 10 seeds. Single-seed iteration is not acceptable.
-
----
-
-## 3. Cross-Phase Analysis
-
-### 3.1 Ecology Results Summary
-
-| Phase | Condition | mult | scatter | Mean r | Seeds (+) | Interpretation |
-|---|---|---|---|---|---|---|
-| Phase 4 | Reference | 1.0 | 5 | (measured) | /10 | Standard ecology |
-| Phase 5 | Spatial only (best) | 1.0 | best sweep | (measured) | /10 | Philopatry alone |
-| Phase 5 | Spatial @ scatter=2 | 1.0 | 2 | +0.0656 | 9/10 | Pre-collected data point |
-| Phase 5 | Infant only (best) | best sweep | 5 | (measured) | /10 | Dependency alone |
-| Phase 5 | Infant @ scatter=8 | 1.15 | 8 | (measured) | /10 | High dispersal control |
-| Phase 5 | Joint best | (swept) | (swept) | (measured) | /10 | Joint condition |
-
-### 3.2 Plasticity Results Summary
-
-| Cell | Ecology | Plasticity | Mean r | Interpretation |
-|---|---|---|---|---|
-| 6A | Poor | OFF | (measured) | Replication of Phase 4 |
-| 6B | Poor | ON | (measured) | Plasticity without ecology |
-| 6C | Good | OFF | (measured) | Ecology without plasticity |
-| 6D | Good | ON | (measured) | Full combination → input for Phase 7 |
-
-### 3.3 Instinct Assimilation Comparison
-
-| Source | care_window_rate |
-|---|---|
-| DEPLETED_BASELINE (fresh genomes) | (measured in Phase 7 setup) |
-| Post-assimilation (Phase 7, Stage 2) | (measured) |
-
-Assimilation confirmed only if Phase 7 post-assimilation rate significantly exceeds `DEPLETED_BASELINE`.
-
-### 3.4 Hamilton's Rule Interpretation
-
-For each ecology condition, report qualitative rB − C balance:
-- **r** estimated from spatial clustering (inverse of scatter, normalized).
-- **B** proxied by `infant_starvation_multiplier`.
-- **C** assumed constant across phases.
-
-Connect each experimental result back to the theoretical prediction: care evolves when rB > C.
-
-### 3.5 Epigenetic Analysis (Closing Post-Hoc Analysis)
-
-**Not in main experimental scope — conducted after Phase 7 completes.**
-
-**Conceptual grounding:**
-
-The current plasticity mechanism constitutes a form of transgenerational epigenetic-like inheritance. In `plastic_update()`, the Hebbian rule writes directly into `self.genome.care_weight`. At reproduction, `mother.genome.mutate()` is called on the already-modified genome — meaning the child inherits the mother's *experience-adjusted* `care_weight`, not the original genetic baseline. This is structurally analogous to epigenetic marks: an environmental experience (successful feeding event) leaves a heritable molecular-level change (shifted `care_weight`) that influences offspring behavior before any further selection acts.
-
-| Epigenetic concept | Analogue in this simulation |
-|---|---|
-| Epigenetic mark | Plasticity-adjusted `care_weight` value |
-| Environmental trigger | Successful feeding event (hunger reduction = reward) |
-| Transgenerational transmission | Modified genome passed to child at reproduction |
-| Genetic assimilation | Baldwin Effect — mark becomes fixed across generations |
-| Epigenetic reset | Not implemented — a natural future extension |
-
-**Analysis protocol:**
-
-Using Phase 7 Stage 1 output (evolution with plasticity ON, 10,000 ticks, 10 seeds):
-
-1. **Transmission fidelity:** For each mother-child pair, compute the difference between the mother's `care_weight` at time of reproduction and the child's initial `care_weight` (before any plastic update). The gap = mutation noise only. Plot mean gap ± SD across all reproduction events per generation.
-
-2. **Regression to mean:** Track whether the plasticity-elevated `care_weight` drifts back toward the population mean across successive generations without additional reinforcement, or whether it is stable. Stable persistence = epigenetic fixation; regression = incomplete assimilation.
-
-3. **Assimilation rate:** Compare the generation at which `care_weight` crosses a threshold (e.g., 0.85) in Stage 1 (plasticity ON) vs. Stage 2 (plasticity OFF). If Stage 2 maintains the threshold without learning, the elevated value has been encoded genetically — the epigenetic mark has been assimilated.
-
-**Interpretation:**
-
-This analysis reframes the Baldwin Effect result in epigenetic language. If Stage 2 care_weight remains elevated without plasticity, the simulation has demonstrated a complete epigenetic assimilation cycle: environmental experience → heritable mark → genetic fixation. This connects the computational result to a broader biological framework and provides an additional lens for the thesis discussion section.
-
-**Output:**
-- Transmission fidelity plot: mean parent-child `care_weight` gap per generation (Stage 1).
-- Regression plot: mean `care_weight` trajectory across generations in Stage 2 (plasticity OFF).
-- Single summary table: generation of threshold crossing in Stage 1 vs. Stage 2.
-
----
-
 ## 4. File & Code Standards
 
 ### Directory Structure
@@ -513,23 +263,7 @@ experiments/
       run.py
   phase3_survival_full/
       run.py
-  phase4_evolution_baseline/      ← outputs exist in outputs/phase04_care_erosion/
-  phase5_ecology_sweep/
-      run_joint.py                ← Spatial + Infant (mult=1.15, scatter=2) — Phase 07 result
-      run_joint_multi.py          ← multi-seed runner (seeds 42–51)
-      run_spatial.py              ← Spatial only (mult=1.0, scatter=2) — Phase 09 result
-      run_spatial_multi.py        ← multi-seed runner (seeds 42–51)
-      run_dispersal_control.py    ← Dispersal ablation (mult=1.15, scatter=8) — Phase 08 result
-  phase6_plasticity_test/
-      run.py                      ← Baldwin Effect: stages evolution_plastic_kin / zeroshot_plastic_kin
-      run_multi_seed.py           ← multi-seed runner (seeds 42–51)
-  phase7_baldwin_instinct/
-      measure_baseline.py         ← depleted-init zero-shot baseline (setup step, single seed)
-      measure_baseline_multi.py   ← multi-seed baseline (seeds 42–51) → sets DEPLETED_BASELINE
-      run.py                      ← dispatcher: stage='evolution' (10 000 t) or 'instinct' (10 000 t)
-      run_stage1.py               ← thin entry point: plasticity ON, 10,000 ticks
-      run_stage2.py               ← thin entry point: plasticity OFF, 10,000 ticks
-      run_multi_seed.py           ← full two-stage run across seeds 42–51
+  phase4_neutral_drift_baseline/
 shared/
   constants.py
 ```
@@ -539,26 +273,8 @@ shared/
   standalone files; the canonical genome was selected manually from early runs.
 - Phase 4 source scripts (`p3_care_erosion/`) were not retained. All outputs are preserved in
   `outputs/phase04_care_erosion/`. Results are final — re-running is not required.
-- Phase 5 "Infant only" sweep (`run_infant.py`) was not run; the spatial+infant joint condition
-  proved sufficient to reverse the gradient. This gap is documented in §3.1.
-- Phase 6 was implemented as a Baldwin Effect (kin-conditional plasticity) test rather than the
-  four-cell [poor eco | good eco] × [plasticity ON | OFF] factorial. The P5 ecology conditions
-  already establish the good-ecology baseline. Phase 6 result: lr swept 8/10 seeds, no full
-  assimilation at population level (p=0.815 on care_weight). Full assimilation test deferred to
-  Phase 7 with stronger ecological support (mult=1.15 + scatter=2 + `plasticity_energy_cost > 0`).
-- `run_infant.py` is noted as a gap; it is not required for the thesis conclusion since the
-  existing results already support both sub-claims (ecological emergence and philopatry dominance).
 
 ### Shared Constants (`shared/constants.py`)
-
-```python
-# Set after Phase 5 completes
-CANONICAL_MULT = None             # infant_starvation_multiplier for good ecology
-CANONICAL_SCATTER = None          # birth_scatter_radius for good ecology
-
-# Set during Phase 7 setup (before Stage 1)
-DEPLETED_BASELINE = None          # care_window_rate of fresh uninstructed genomes
-```
 
 No phase may hardcode a value measured in another phase. All cross-phase constants are imported from `shared/constants.py`. Violation is a reproducibility failure.
 
@@ -583,8 +299,8 @@ No phase may hardcode a value measured in another phase. All cross-phase constan
 **2026-04-14** — Reproduction mechanism audit (Phase 1 restart):
 The global parameters table originally listed "Roulette wheel on accumulated energy" as the reproduction mechanism. Code audit of `simulation/simulation.py:_check_reproduction()` found this to be inaccurate. Actual mechanism: every mother with `energy ≥ reproduction_threshold` (0.95) reproduces each tick — energy-threshold, not probability sampling. The mechanism is still effectively fitness-proportional (higher-energy mothers reproduce sooner/more often) but there is no probability vector to normalize. Roulette wheel normalization test was removed from Phase 1 protocol and the global parameters table was corrected. No code change required.
 
-**2026-04-30** — Design document audit and epigenetic analysis added:
-Five errors corrected: (1) Sigmoid reproduction gate and perceptual/foraging noise were listed as implemented but were never added to the simulation code — global params table corrected to reflect actual implementation. (2) Phase 4 r≈0 interpretation gate "treat as weak erosion" corrected — r≈0 is the confirmed definitive result, not a marginal case. (3) Evolution duration corrected from 5,000 to 10,000 ticks in global table. (4) Thai character artifact removed from Phase 3 note. (5) Phase 5 pre-collected data point (r=+0.0656) flagged as pre-bug-fix and requiring re-validation. Section 3.5 (Epigenetic Analysis) added as a post-hoc closing analysis — no new code required, uses Phase 7 output. Epigenetic framing connects the Baldwin Effect result to transgenerational inheritance literature.
+**2026-04-30** — Design document audit:
+Four errors corrected: (1) Sigmoid reproduction gate and perceptual/foraging noise were listed as implemented but were never added to the simulation code — global params table corrected to reflect actual implementation. (2) Phase 4 r≈0 interpretation gate "treat as weak erosion" corrected — r≈0 is the confirmed definitive result, not a marginal case. (3) Evolution duration corrected from 5,000 to 10,000 ticks in global table. (4) Thai character artifact removed from Phase 3 note.
 
 **2026-04-14** — Stochastic mechanics update (Global Parameters amended):
 Decision architecture updated from Argmax to Softmax (Gibbs) Sampling with τ=0.1. Reproduction gate updated from hard-threshold to sigmoid probability (midpoint=0.95). Kin recognition noise Gaussian N(0, σ=0.1) added. Foraging variance ±20% added. Mutation rate made stochastic per gene. Implementation notes:

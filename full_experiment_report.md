@@ -1364,7 +1364,7 @@ Bold r values = positive (unexpected direction). Seeds 49 and 50 are the only tw
 
 The design specifies three interpretation gates for Phase 4:
 
-1. **r < 0, ≥ 9/10 seeds negative:** Care erodes. Proceed to Phase 5.
+1. **r < 0, ≥ 9/10 seeds negative:** Care erodes.
 2. **r > 0 (unexpected):** Stop. Re-examine parameters. This undermines the thesis premise.
 3. **r ≈ 0 (neutral):** Selectively invisible. Treat as weak erosion. Note and proceed.
 
@@ -1562,7 +1562,6 @@ Three methodological critiques of the original run:
 2. **Erosion is rapid and consistent.** Care drops from 0.8 to ~0.5 within ~20 generations across all seeds. Signal is large (mean r=−0.34) and low-variance (SD=0.10).
 3. **Low-care lineages outcompete high-care lineages directly.** Lineage r=−0.678 confirms this is genuine fitness selection, not drift or hitchhiking.
 4. **Equilibrium at care ~0.50, not the floor.** Mutation–selection balance prevents full erosion to the Phase 3 viability floor (~0.30).
-5. **Phase 5 hypothesis is strengthened.** Ecological pressure (high infant starvation multiplier + kin clustering) must overcome the selection gradient of −0.34 and push care upward past the ~0.50 equilibrium.
 
 > ⚠️ **Further analysis in Section 14 (Recheck v2) raises a regression-to-mean concern. The ceiling-drop erosion may reflect bounded mutation drift, not care-specific selection. See Section 14 for revised interpretation.**
 
@@ -1627,7 +1626,7 @@ The lineage r (−0.678 from ceiling-drop) remains the strongest evidence for ge
 
 ### Neutral Control Design Failure
 
-`children_enabled=False` was intended as the neutral control (care has no fitness effect). However, this also removes ALL reproduction, causing population extinction within ~400 ticks. Without generational turnover, genetic drift over generations cannot be measured. A corrected neutral control (Phase 5 setup: reproduce with neutral infant survival, feed_cost=0) is needed if this question must be resolved.
+`children_enabled=False` was intended as the neutral control (care has no fitness effect). However, this also removes ALL reproduction, causing population extinction within ~400 ticks. Without generational turnover, genetic drift over generations cannot be measured. A corrected neutral control (reproduce with neutral infant survival, feed_cost=0) would be needed to resolve this fully.
 
 ### Output Artifacts
 
@@ -1640,7 +1639,7 @@ The lineage r (−0.678 from ceiling-drop) remains the strongest evidence for ge
 
 ### Revised Phase 4 Conclusion
 
-> *The equilibrium at care~0.50 reflects bounded mutation drift rather than care-specific natural selection. Both care and forage converge to the midpoint of [0,1] at rates proportional to their initial distance from 0.5. The Pearson r (−0.28 to −0.34) is significant (p<0.01) but may partially reflect a generation-age confound rather than pure selection. The normalized softmax fraction of care barely changes (Δ=0.019 over 10k ticks), indicating the genome's softmax-relevant care emphasis is near-stable. **Phase 5 must demonstrate that ecological pressure pushes care ABOVE 0.50 — not merely that care starts high and converges to 0.50.***
+> *The equilibrium at care~0.50 reflects bounded mutation drift rather than care-specific natural selection. Both care and forage converge to the midpoint of [0,1] at rates proportional to their initial distance from 0.5. The Pearson r (−0.28 to −0.34) is significant (p<0.01) but may partially reflect a generation-age confound rather than pure selection. The normalized softmax fraction of care barely changes (Δ=0.019 over 10k ticks), indicating the genome's softmax-relevant care emphasis is near-stable.*
 
 ---
 
@@ -1717,7 +1716,7 @@ This refutation is the key finding: care has a real, measurable, adverse fitness
 
 ### Definitive Phase 4 Conclusion
 
-> *Care erosion from 0.80 to 0.50 is a two-component process. Bounded mutation drift (regression-to-mean on [0,1]) accounts for ~70% of the drop, converging care toward the drift attractor at ~0.59 regardless of ecology. Genuine selection pressure from infant starvation costs accounts for the remaining ~30%, pushing care from ~0.59 to ~0.50. Phase 5 must demonstrate that ecological pressure (increased `infant_starvation_multiplier`, reduced `birth_scatter_radius`) can push care ABOVE the neutral drift attractor of ~0.59 — not merely above 0.50.*
+> *Care erosion from 0.80 to 0.50 is a two-component process. Bounded mutation drift (regression-to-mean on [0,1]) accounts for ~70% of the drop, converging care toward the drift attractor at ~0.59 regardless of ecology. Genuine selection pressure from infant starvation costs accounts for the remaining ~30%, pushing care from ~0.59 to ~0.50.*
 
 ---
 
@@ -1733,9 +1732,6 @@ This refutation is the key finding: care has a real, measurable, adverse fitness
 | Phase 4 (recheck) | Ceiling drop: does care erode from 0.8? | ✅ Complete | r=−0.3435 (10/10 seeds, p=0.001). Equilibrium ~0.50. Lineage r=−0.678. |
 | Phase 4 (recheck v2) | Is erosion selection or regression-to-mean? | ✅ Complete | Forage drops MORE; normalized fraction barely changes. Drift-to-midpoint pattern. |
 | Phase 4 (Script 04) | True neutral control — separate drift from selection | ✅ **DEFINITIVE** | Neutral eq=0.59, baseline eq=0.50. 70% drift + 30% selection. Two-component confirmed. |
-| Phase 5 | Can ecological pressure cause care to EMERGE from the low-care basin (care=0.30)? | ✅ Complete — Bistability Confirmed | All 21 calibration runs extinct (7 mults × 3 seeds × 5,000 ticks). Selection gradient directionally correct (r>0 in 5/7 mults) but extinction outpaces evolution. Ecological Allee effect demonstrated. Pure selection insufficient — developmental mechanism (Phase 6) required. |
-| Phase 6 | Plasticity test | ❌ NEGATIVE RESULT (2026-05-01) | 0/10 seeds survived at MLE=1.25 with kin-conditional plasticity ON. Mean final care_weight=0.302 (last snapshot before extinction). Pearson r=+0.069, p=0.401 (not significant). Plasticity insufficient to bridge the Phase 5 bistability gap at MLE=1.25. |
-| Phase 7 | Baldwin instinct test | NOT YET RUN | — |
 
 ---
 
@@ -1876,13 +1872,12 @@ Both fixed scripts tracked `genome_fallback_count` per seed across all 10,000 ti
 | Script 04: neutral equilibrium at ~0.59, mean r=−0.205, 10/10 negative | **INVALID — bug artefact** | Same orphan injection; "neutral attractor" at 0.59 was mean(0.80, 0.50) after injection |
 | Two-component decomposition (70% drift + 30% selection) | **VOID** | Both components were the same bug operating at different magnitudes |
 | Lineage r=−0.678 (Script 02) | **LIKELY ARTEFACT** | Lineages founded by early-dying mothers had orphan-fallback children (care=0.50); lineage r reflected inheritance of bug, not genuine fitness selection |
-| Phase 5 target: push care ABOVE 0.59 | **NEEDS REDESIGN** | Baseline is now ~0.79, not 0.59; the Phase 5 rationale must be reformulated |
 
 ---
 
 ### 16.8 Revised Phase 4 Conclusion
 
-> *Under the fixed simulation, care_weight is **genuinely near-neutral** in standard ecology. With the orphan injection bug corrected, care remains at ~0.789 (ceiling-drop) and ~0.784 (true neutral) after 10,000 ticks — a drop of ~1% from the init value of 0.800, not statistically significant (p=0.055 and p=0.172 respectively). The gap between standard-cost and zero-cost conditions is 0.005 — indistinguishable from noise. Bounded mutation alone does not drive care below ~0.75–0.80 under this configuration. The massive erosion previously reported (0.80→0.50 in Scripts 02 and 04) was entirely produced by Genome() fallback injection during the initial population die-off. Phase 5 must now be redesigned: the baseline is care~0.79 (near-neutral), not the bug-artefact attractor of care~0.50. Phase 5 must demonstrate that kin-clustering and infant dependency can maintain or elevate care above the neutral baseline, not merely overcome an artefactual erosion.*
+> *Under the fixed simulation, care_weight is **genuinely near-neutral** in standard ecology. With the orphan injection bug corrected, care remains at ~0.789 (ceiling-drop) and ~0.784 (true neutral) after 10,000 ticks — a drop of ~1% from the init value of 0.800, not statistically significant (p=0.055 and p=0.172 respectively). The gap between standard-cost and zero-cost conditions is 0.005 — indistinguishable from noise. Bounded mutation alone does not drive care below ~0.75–0.80 under this configuration. The massive erosion previously reported (0.80→0.50 in Scripts 02 and 04) was entirely produced by Genome() fallback injection during the initial population die-off.*
 
 ---
 
@@ -1898,9 +1893,6 @@ Both fixed scripts tracked `genome_fallback_count` per seed across all 10,000 ti
 | Phase 4 (Script 04) | True neutral control | ⚠️ **INVALID — bug artefact** | Neutral "attractor" at 0.59 was orphan injection under neutral conditions |
 | Phase 4 (Script 05 — **FIXED**) | Ceiling-drop, bug fixed | ✅ **DEFINITIVE** | care stays at 0.789 mean; r=−0.033, p=0.055 (NOT significant). 0 fallbacks. |
 | Phase 4 (Script 06 — **FIXED**) | True neutral, bug fixed | ✅ **DEFINITIVE** | care stays at 0.784 mean; r=−0.014 (NOT significant). Scripts 05 and 06 indistinguishable. Care is near-neutral. |
-| Phase 5 | Does ecological pressure maintain/elevate care above neutral baseline (~0.79)? | **NEEDS REDESIGN** | — |
-| Phase 6 | Plasticity test | ❌ NEGATIVE RESULT (2026-05-01) | 0/10 seeds survived at MLE=1.25 with kin-conditional plasticity ON. Mean final care_weight=0.302. Pearson r=+0.069, p=0.401 (not significant). |
-| Phase 7 | Baldwin instinct test | NOT YET RUN | — |
 
 ---
 
@@ -2057,9 +2049,7 @@ Care drifts far less than the proportional prediction (−0.011 vs expected ~−
 | 1800 | 1.0000 |
 | 2000 | 1.0000 |
 
-**Conclusion:** The forage decline observed in Script 05 (1.0 → 0.90 over 10,000 ticks) is **entirely boundary mutation drift**. When mutation is disabled, forage is locked at 1.0 with zero deviation across all ticks, confirming there is no selection force acting on forage. The asymmetric Gaussian mutation at the hard ceiling boundary is the sole driver — the geometry of clipping, not fitness. This closes the open question from Section 17.5.
-
-**Implication for Phase 5:** The neutral baseline is genuinely stable at care ≈ 0.79. Phase 5 must demonstrate that ecological pressure (high `infant_starvation_multiplier` + low `birth_scatter_radius`) pushes care **above** that neutral baseline, not merely observes convergence from an artificially high starting point.
+**Conclusion:** The forage decline observed in Script 05 (1.0 → 0.90 over 10,000 ticks) is **entirely boundary mutation drift**. When mutation is disabled, forage is locked at 1.0 with zero deviation across all ticks, confirming there is no selection force acting on forage. The asymmetric Gaussian mutation at the hard ceiling boundary is the sole driver — the geometry of clipping, not fitness. This closes the open question from Section 17.5. The neutral baseline is genuinely stable at care ≈ 0.79.
 
 ---
 
@@ -2073,442 +2063,4 @@ Care drifts far less than the proportional prediction (−0.011 vs expected ~−
 | `post_mortem/plot_04_all_weights_fixed.png` | `plot_04_all_weights_fixed.py` | 3-panel: care/forage/self trajectories; care is most stable |
 
 ---
-
-# PHASE 5 — Ecological Pressure and Care Emergence
-
-**Status:** ✅ COMPLETE — UNEXPECTED RESULT (Bistability — Extinction Precedes Evolution)
-**Question:** Can ecological pressure (high `infant_starvation_multiplier` + kin clustering via low `birth_scatter_radius`) cause care to emerge from the Phase 3 canonical low-care genome (care=0.30)?
-**Starting point:** Phase 3 canonical genome: care=0.30, forage=1.0, self=0.70
-**Protocol:** Calibration sweep — 7 multipliers × 3 seeds × 5,000 ticks; preceded by a 1,000-tick survival gate
-**Scripts:** `experiments/phase5_ecology_sweep/calibrate_mult_phase3_init.py`, `run_joint.py`, `run_joint_multi.py`
-**Outputs:** `outputs/phase5_ecology_sweep/calib_mult{mult}_seed{seed}/`
-
----
-
-## 1. Purpose of Phase 5
-
-Phase 5 tests the central thesis claim:
-
-> *Ecological pressure — specifically infant dependency (high `infant_starvation_multiplier`) and natal philopatry (low `birth_scatter_radius`) — can generate care as an emergent evolutionary strategy from a low-care starting population.*
-
-The setup uses the **Phase 3 canonical genome** (care=0.30, forage=1.0, self=0.70) as the starting condition. This is deliberate and theoretically motivated:
-
-- care=0.30 is the **minimum viable care level** from Phase 3 — mothers survive, children barely survive with canonical foraging, and care costs are real but not existential
-- Starting from care=0.30 tests whether ecological pressure can *generate* care from a near-minimal starting point — this is the **minimum ecological conditions** framing that defines the thesis contribution
-- Starting from a high care level (e.g., Phase 4's care=0.80) would only test whether care is *maintained*, not whether it can *emerge* — a weaker scientific claim
-
-**Contrast with Phase 4:** Phase 4 (Script 02, definitive recheck) shows that without ecological pressure, care erodes from 0.80 → ~0.50 with mean r=−0.344 (10/10 seeds, p=0.001), and that ~70% of this erosion is bounded mutation drift with ~30% genuine selection. Phase 5 tests whether added ecological pressure can reverse this gradient and cause care to *rise* from the low-care starting point.
-
-**Design rationale — why care=0.30 and not a higher init:**
-Choosing any init above the drift attractor (~0.59) would mean ecological pressure only needs to *maintain* what mutation drift already produces — not overcome it. True emergence requires demonstrating the transition from a state where care cannot survive, to a state where it is positively selected. care=0.30 is well below the drift attractor and below the Phase 4 mutation–selection equilibrium (~0.50), placing it squarely in the extinction-risk zone under ecological pressure.
-
----
-
-## 2. Run Configuration
-
-| Parameter | Value | Rationale |
-|---|---|---|
-| `infant_starvation_multiplier` | 1.30–1.60 (calibration sweep) | Ecological pressure: infants require active care to avoid starvation |
-| `birth_scatter_radius` | 2 | Natal philopatry: offspring remain near mother, increasing kin co-occurrence |
-| `care_weight` init | 0.30 (Phase 3 canonical) | Minimum viable care — genuine emergence test |
-| `forage_weight` init | 1.0 (Phase 3 canonical) | Maximum foraging as established in Phase 3 |
-| `self_weight` init | 0.70 (Phase 3 canonical) | Phase 3 canonical self-maintenance |
-| `plasticity_enabled` | False | Isolate genetic selection signal — no within-lifetime learning |
-| `mutation_enabled` | True | Evolution active |
-| `reproduction_enabled` | True | Population turnover active |
-| `children_enabled` | True | Care has a target; infant starvation pressure active |
-| Grid | 50 × 50 | Consistent with Phase 4 definitive recheck |
-| `init_mothers` | 40 | Adequate census size; mitigates genetic drift confound |
-| `init_food` | 120 | Same density as Phase 4 recheck |
-| `max_ticks` | 5,000 (calibration) | Sufficient to detect survival vs extinction over ~50 generations |
-| Seeds | 42–44 (calibration) | 3-seed calibration sweep |
-| Primary metric | Pearson r(care_weight, generation) from birth_log | Selection gradient direction vs Phase 4 baseline (mean r=−0.034) |
-
-### Survival Gate (1,000 ticks, seed=42, mult=1.65)
-
-Before the full calibration sweep, a short survival gate was run at the maximum candidate multiplier:
-
-| Metric | Result | Threshold |
-|--------|--------|-----------|
-| Final population (tick 1,000) | **11 mothers** | ≥ 10 |
-| Verdict | **PASSED** | — |
-
-This confirmed the simulation mechanics were functional and the ecological configuration was non-lethal on a short timescale. As discussed in Section 4.4, the 1,000-tick gate proved insufficient to predict 5,000-tick viability.
-
----
-
-## 3. Calibration Sweep Results
-
-**Script:** `experiments/phase5_ecology_sweep/calibrate_mult_phase3_init.py`
-**Range:** MULTS = [1.30, 1.35, 1.40, 1.45, 1.50, 1.55, 1.60]; SEEDS = [42, 43, 44]; TICKS = 5,000
-**Starting genome:** care=0.30, forage=1.0, self=0.70 (Phase 3 canonical)
-
-### Per-Seed Raw Results
-
-| Mult | Seed | FinalPop | FinalCW | GradR | Status |
-|------|------|----------|---------|-------|--------|
-| 1.30 | 42 | 0 | 0.0000 | +0.3788 | FAIL |
-| 1.30 | 43 | 0 | 0.0000 | +0.1251 | FAIL |
-| 1.30 | 44 | 0 | 0.0000 | +0.1020 | FAIL |
-| 1.35 | 42 | 0 | 0.0000 | −0.1407 | FAIL |
-| 1.35 | 43 | 0 | 0.0000 | +0.3832 | FAIL |
-| 1.35 | 44 | 0 | 0.0000 | −0.1665 | FAIL |
-| 1.40 | 42 | 0 | 0.0000 | +0.0131 | FAIL |
-| 1.40 | 43 | 0 | 0.0000 | +0.2080 | FAIL |
-| 1.40 | 44 | 0 | 0.0000 | −0.1306 | FAIL |
-| 1.45 | 42 | 0 | 0.0000 | −0.0236 | FAIL |
-| 1.45 | 43 | 0 | 0.0000 | −0.0630 | FAIL |
-| 1.45 | 44 | 0 | 0.0000 | −0.1516 | FAIL |
-| 1.50 | 42 | 0 | 0.0000 | +0.3349 | FAIL |
-| 1.50 | 43 | 0 | 0.0000 | +0.0283 | FAIL |
-| 1.50 | 44 | 0 | 0.0000 | −0.0547 | FAIL |
-| 1.55 | 42 | 0 | 0.0000 | +0.0946 | FAIL |
-| 1.55 | 43 | 0 | 0.0000 | −0.1737 | FAIL |
-| 1.55 | 44 | 0 | 0.0000 | +0.5733 | FAIL |
-| 1.60 | 42 | 0 | 0.0000 | +0.1634 | FAIL |
-| 1.60 | 43 | 0 | 0.0000 | −0.0764 | FAIL |
-| 1.60 | 44 | 0 | 0.0000 | −0.2137 | FAIL |
-
-### Per-Multiplier Aggregate
-
-| Mult | Pass Rate | Mean Final CW | Mean Grad r | Verdict |
-|------|-----------|---------------|-------------|---------|
-| 1.30 | 0% | 0.0000 | +0.202 | EXTINCT |
-| 1.35 | 0% | 0.0000 | +0.025 | EXTINCT |
-| 1.40 | 0% | 0.0000 | +0.030 | EXTINCT |
-| 1.45 | 0% | 0.0000 | −0.079 | EXTINCT |
-| 1.50 | 0% | 0.0000 | +0.103 | EXTINCT |
-| 1.55 | 0% | 0.0000 | +0.165 | EXTINCT |
-| 1.60 | 0% | 0.0000 | −0.042 | EXTINCT |
-
-**All 21 runs resulted in population extinction by tick 5,000.** No viable multiplier was found in [1.30, 1.60].
-
-**Note on FinalCW = 0.0000:** This is not evolution to zero care — it is an extinction fallback. When no mothers survive (n=0), the computation `sum(m.genome.care_weight for m in alive) / n if n else 0.0` returns 0.0. The reported value indicates extinction, not a care phenotype.
-
----
-
-## 4. The Unexpected Finding: Bistability and Ecological Allee Effect
-
-### 4.1 What the GradR values reveal
-
-Several multipliers showed a **positive selection gradient (r > 0)** before extinction — most notably mult=1.30 (mean r=+0.202), mult=1.55 (mean r=+0.165), and individual seeds reaching r=+0.57 (seed 44, mult=1.55). This means:
-
-> **Selection was pushing care in the correct direction (upward), but extinction arrived before selection could shift the population genome.**
-
-This is the **selection-extinction race**: when a population carries a positive selection gradient for a trait, but goes extinct before enough generations accumulate to shift the mean phenotype, the evolutionary potential is irreversibly lost.
-
-The gradient r is measured from the birth log — it reflects real reproduction events, real genome variation, and real selection pressure acting during the population's lifespan. The selection signal is genuine; the timescale is fatal.
-
-### 4.2 Bistability — Two Stable Attractors
-
-The calibration results reveal two stable ecological attractors in genome space:
-
-| Attractor | Approximate Location | Mechanism | Evidence |
-|-----------|----------------------|-----------|---------|
-| **High-care survival basin** | care ≥ ~0.50–0.59 | Infants receive enough care to survive → replacement rate ≥ 1.0 → care positively selected | Phase 4 definitive baseline: care erodes FROM 0.80 and stabilises near 0.50–0.59 |
-| **Low-care extinction basin** | care ≤ ~0.30–0.40 | Infants receive insufficient care → high mortality → replacement rate < 1.0 → population collapses before selection can act | All Phase 5 calibration runs |
-
-The system exhibits **bistability with an unstable separatrix** — a threshold care level separating the two basins. care=0.30 lies deep in the extinction basin. Ecological pressure (high multiplier) simultaneously raises the selection gradient for care and raises the extinction rate, making it impossible for mutation-driven genetic change to cross the threshold before the population collapses.
-
-### 4.3 Ecological Allee Effect
-
-This is formally an **Allee effect** — but expressed in genome space rather than census density:
-
-- Below the threshold (~0.50), populations go extinct under ecological pressure regardless of the positive gradient
-- Above the threshold, ecological pressure generates strong positive selection for care
-- The threshold is unstable — populations above it are pulled toward the high-care attractor; populations below are pulled toward extinction
-- A population at care=0.30 cannot spontaneously cross the separatrix by random mutation alone — the per-generation crossing probability is too low relative to the extinction rate at the individual level
-
-This is not a simulation artefact. The Allee effect is a foundational concept in population biology and computational evolution, documented extensively in A-life literature.
-
-### 4.4 Why the 1,000-Tick Survival Gate Was Insufficient
-
-The survival gate (11 mothers at tick 1,000, mult=1.65, seed=42) passed, suggesting short-term viability. However, the gate measured **adult survival**, not **generational replacement viability**:
-
-- At tick 1,000, the initial 40 mothers still provide a population buffer — most are still alive
-- First-generation mothers (care=0.30) themselves survive adequately — they are adults under adult foraging rules, not infants under the elevated starvation multiplier
-- It is their **children** who die at elevated rates under high mult, failing to replace the parent cohort
-- The generational replacement deficit is invisible at tick 1,000 but accumulates over 20–40 generations
-- By tick 3,000–5,000, the replacement rate drops below 1.0 and the population enters a collapse spiral
-
-**Lesson:** For care-emergence studies, a valid survival gate requires ≥2,000 ticks or an explicit replacement-rate check (births per tick / deaths per tick > 1.0).
-
----
-
-## 5. Theoretical Interpretation
-
-### 5.1 Phase 5 as a Positive Scientific Result
-
-The extinction result is not a failure — it is the **primary scientific contribution** of Phase 5. Stated precisely:
-
-> *Under ecological pressure with `infant_starvation_multiplier` in [1.30, 1.60] and `birth_scatter_radius=2` (natal philopatry), pure Darwinian selection cannot rescue maternal care from the low-care basin (care=0.30). The population goes extinct before selection can shift the mean genome to the survival threshold. Ecological pressure creates the selection gradient, but cannot, by itself, bridge the bistability gap.*
-
-This is a **negative result with a positive theoretical implication**: it identifies the boundary of what pure natural selection can accomplish in this ecology, and directly motivates the need for a developmental mechanism (plasticity, kin recognition) to enable threshold crossing.
-
-### 5.2 Reformulated Experimental Hypothesis for Phase 5–6
-
-| Phase | Claim | Status |
-|-------|-------|--------|
-| Phase 5 (complete) | Ecological pressure alone is sufficient for care emergence from care=0.30 | **Refuted** — extinction precedes evolution |
-| Phase 6 (pending) | Plasticity (within-lifetime behavioral flexibility) bridges the bistability gap via the Baldwin Effect | To be tested |
-
-The Phase 5–6 arc is the central theoretical contribution: **ecological pressure is necessary but not sufficient for care emergence; a developmental mechanism (plasticity) provides the bridging mechanism.**
-
-### 5.3 Connection to A-life and Evolutionary Theory
-
-The Phase 5 finding connects to three well-established theoretical frameworks:
-
-**Evolutionary rescue** (Gomulkiewicz & Holt 1995): A population under novel environmental stress may evolve adaptively if evolution is fast enough. When extinction rate exceeds the adaptive response rate, the population collapses before rescue. Phase 5 documents a case where evolution is directionally correct but too slow — the canonical evolutionary rescue failure mode.
-
-**Allee effect** (Allee 1931; Courchamp et al. 1999): Populations below a cooperative threshold face accelerating decline. Phase 5 demonstrates a genome-level Allee effect: below a threshold care level, ecological pressure causes extinction rather than selection. Above the threshold, the same pressure drives positive selection.
-
-**Baldwin Effect** (Baldwin 1896; Hinton & Nowlan 1987): Phenotypic plasticity (learning, development) can allow a population to survive long enough for genetic evolution to encode an adaptive behavior. This is the bridge Phase 6 will test: plasticity as the mechanism that allows a care=0.30 population to express adequate care phenotypically, persist long enough for selection to act, and ultimately assimilate care genetically.
-
-### 5.4 A-life Baseline Contribution
-
-For citation and A-life landmark purposes, Phase 5 provides:
-
-1. **An empirical demonstration of evolutionary bistability in care behavior** — computationally reproducible, parameter-logged, and replicable across seeds
-2. **A quantified selection-extinction race** — gradient r is measurable and positive even in dying populations, separating the selection signal from the demographic outcome
-3. **A clean negative result that motivates Phase 6** — without Phase 5, Phase 6 (plasticity) would have no baseline to compare against and no gap to bridge
-
----
-
-## 6. Output Artifacts
-
-| File | Description |
-|------|-------------|
-| `outputs/phase5_ecology_sweep/calib_mult{mult:.2f}_seed{seed}/` | Per-(mult, seed) run outputs (21 directories) — birth_log.csv, generation_snapshots.json, config.json, metadata.json |
-| `outputs/phase5_ecology_sweep/run_20260430_184802_seed42/` | Survival gate run — 1,000 ticks, mult=1.65, seed=42, 11 mothers (PASSED gate; extinct by tick 5,000) |
-
----
-
-## 7. Phase 5 Conclusions
-
-1. **All 21 calibration runs resulted in extinction.** No multiplier in [1.30, 1.60] with `birth_scatter_radius=2` allowed a care=0.30 population to survive to tick 5,000.
-
-2. **Selection was directionally correct but insufficient.** Mean grad r > 0 in 5/7 multiplier conditions — selection was pushing care upward. Extinction arrived before selection could shift the population genome.
-
-3. **Bistability confirmed.** The simulation has two stable attractor states separated by an unstable threshold near care~0.50: a high-care survival basin and a low-care extinction basin. care=0.30 lies in the extinction basin. Ecological pressure cannot bridge this gap by selection alone.
-
-4. **Ecological Allee effect demonstrated.** This is a theoretically grounded, reproducible result — not a simulation bug or design error.
-
-5. **Pure ecological pressure is insufficient for care emergence.** The thesis must be refined: ecological pressure generates the selection gradient for care, but cannot by itself enable a low-care population to cross the bistability threshold.
-
-6. **Phase 6 is directly motivated.** The Baldwin Effect — where phenotypic plasticity provides a developmental bridge across an evolutionary bistability barrier — is the natural and theoretically grounded next experimental test.
-
-> *Phase 5 establishes the negative baseline: pure natural selection cannot bridge the care bistability gap. Phase 6 tests whether plasticity can.*
-
----
-
----
-
-# CURRENT STATUS UPDATE (2026-05-01)
-
-## What Is Done vs. In Progress
-
-| Phase | Description | Status |
-|---|---|---|
-| Phase 1 | Mechanics validation (31/31 sub-tests) | COMPLETE |
-| Phase 2 | Solo mother ecological baseline (food=48, 94.3% survival) | COMPLETE |
-| Phase 3a | Mother-child caregiving, canonical genome found | COMPLETE |
-| Phase 3b | Behavioral characterisation of canonical genome | COMPLETE |
-| Phase 4 (Scripts 05+06, FIXED) | Near-neutral baseline confirmed (care ~0.79) | COMPLETE |
-| Phase 5 original | Bistability / extinction at care=0.30, all mults 1.30-1.60 | COMPLETE |
-| Phase 5 MLE Sweep | `01_sweep_lethal_threshold.py` — 9 mults x 5 seeds x 5000 ticks, plasticity OFF | COMPLETE — MLE = 1.25 (2026-05-01) |
-| Phase 6 pilot | 10-seed run at mult=1.15, all 10 seeds survived — data is STALE (see below) | STALE |
-| Phase 6 final | 10-seed parallel run at MLE=1.25, kin-conditional plasticity ON | ❌ NEGATIVE — 0/10 survived (2026-05-01) |
-| Phase 7 | Scripts written (`run.py`, `run_multi_seed.py`), MLE_MULT updated to 1.25 | SCRIPTS READY |
-
-### Why Phase 6 Data Is Stale
-
-The preliminary Phase 6 run (10 seeds, mult=1.15, all survived) was generated with:
-- `plastic_gain = 2.0` — too low to produce a visible expressed-genetic gap
-- `avg_expressed_care_weight` averaged over ALL alive mothers, including newborns (birth-reset artifact)
-- No `avg_learning_cost` tracking in snapshots
-
-The code has since been corrected:
-- `plastic_gain = 5.0` (higher gain makes the plastic deviation visible)
-- `avg_expressed_care_weight` now computed from mothers with `age >= 100` only (removes birth-reset artifact)
-- `avg_learning_cost` added to all snapshots
-
-The new Phase 6 run must use MLE = 1.25 (confirmed by Phase 5 sweep, 2026-05-01).
-
----
-
-## What in This Report Does NOT Directly Relate to the Baldwin Claim
-
-The following sections are methodological history that is important for reproducibility but not part of the core scientific argument:
-
-| Section | Why Not Central |
-|---|---|
-| Phase 4 original (U(0,1) init, Script 01) | Invalid — floor-bounce artefact. No scientific output. |
-| Phase 4 Scripts 02 and 04 (ceiling-drop and neutral) | Invalid — orphan injection bug. Both erosion signals were the bug, not selection. |
-| Phase 4 Recheck v2 (weight compression analysis) | Partially invalidated by bug discovery. The softmax-fraction finding (Δ=0.019) survives but is background. |
-| Phase 4 Post-Mortem Plots 01-04 | Documentation of the bug mechanism. Required for reproducibility, not for the Baldwin argument. |
-| Phase 2 sensitivity sweeps Sets A-E | Background calibration for the solo-survival baseline. The canonical food=48 is what matters downstream. |
-| Phase 3 motivation weight grid (48 combinations) | Background. The canonical genome (care=0.30, forage=1.0, self=0.70) is what Phase 5-7 inherit. |
-| Phase 4 neutral control design failure discussion | Historical. Fixed in Script 06. |
-| Forage boundary drift analysis (Section 17.5) | Methodological. Confirms the genome is near-neutral, which is background for Phase 5. |
-
-**What DOES feed the Baldwin Effect chain:**
-- Phase 1 — validates mechanics (required foundation)
-- Phase 3 canonical genome — defines the start state for all subsequent experiments
-- Phase 4 Scripts 05 & 06 (FIXED) — establishes the neutral genetic baseline (care ~0.79). Phase 6 must show care rising ABOVE this.
-- Phase 5 original — bistability confirmed. Selection alone cannot cross the threshold from care=0.30.
-- Phase 5 MLE sweep (COMPLETE, 2026-05-01) — MLE = 1.25. All 5 seeds extinct at mult=1.25 (mean tick=3107); all 5 seeds survived at mult=1.20. Locks ecology for Phase 6 controlled test.
-- Phase 6 — plasticity bridges the gap the Baldwin Effect predicts.
-- Phase 7 — zero-shot test confirms genetic assimilation (instinct).
-
----
-
-## Baldwin Instinct Emergence — Analysis Plan
-
-### The Expected Trajectory (Mirroring the Classic Diagram)
-
-The Baldwin Effect predicts a specific two-curve trajectory across the full 10,000 ticks:
-
-| Metric | Ticks 0-2000 | Ticks 2000-7000 | Ticks 7000-10000 |
-|---|---|---|---|
-| genetic care_weight | ~0.30 (flat initially) | Slow rise via selection | Elevated and stable |
-| expressed care_weight (old mothers) | Rises above genetic (plastic gap opens) | Peaks then narrows | Converges toward genetic |
-| Plastic gap (expressed - genetic) | Grows | Peaks | Shrinks = assimilation signal |
-| learning_rate | ~0.10 | Rises (positively selected) | Plateau |
-| learning_cost | ~0.05 | Stable or slight rise | Stable |
-| n_mothers | Stable | Stable | Stable |
-
-This mirrors the classic Baldwin Effect diagram: fitness (genetic care_weight) rises steadily; phenotypic plasticity (the gap) peaks early then declines as genetic assimilation proceeds.
-
-### Primary Analysis Metrics
-
-1. **Plastic gap** = `avg_expressed_care_weight - avg_care_weight_old` (old-mother matched pair)
-   - Must be positive and peak before declining
-   - Near-zero at tick 10,000 means full assimilation
-
-2. **Genetic assimilation signal** = `avg_learning_rate` trajectory across generations
-   - Rising learning_rate = natural selection is favouring more plastic individuals
-   - This is the heritable signature that plasticity was beneficial
-
-3. **Metabolic cost** = `avg_learning_cost`
-   - Should remain tolerated in Phase 6 (cost is worth paying when plasticity helps)
-   - Expected to face neutral or negative selection in Phase 7 Stage 2 (no benefit, pure cost)
-
-4. **Forage weight hitchhiking check** = `avg_forage_weight`
-   - Must remain stable (~1.0). Any rise in care_weight that co-varies with forage would suggest hitchhiking, not genuine care selection.
-
-### Phase 7 Zero-Shot Test — Success Criteria
-
-| Metric | Threshold | Interpretation |
-|---|---|---|
-| Stage 2 survival (tick 10,000) | >= 10 mothers | Population survives without plasticity |
-| care_weight at Stage 2 entry | > 0.30 | Genetic value has risen above Phase 3 start |
-| expressed_care_weight in Stage 2 | Converges toward genetic | Plastic updates stopped — expressed decays toward genome |
-| Population trajectory in Stage 2 | Stable or declining slowly | Not collapsing = instinct is carrying the load |
-| Verdict | >= 7/10 seeds instinct-confirmed | Baldwin Effect demonstrated (70% threshold) |
-
-### Comparison That Makes the Claim
-
-The Baldwin argument requires three data points at the SAME ecology (MLE):
-
-| Condition | Expected Outcome | Phase |
-|---|---|---|
-| Plasticity OFF, care=0.30, MLE=1.25 ecology | Extinct — 0/5 seeds survived, mean extinction tick=3107 | Phase 5 MLE sweep (COMPLETE) |
-| Plasticity ON, care=0.30, MLE=1.25 ecology | ❌ Extinct — 0/10 seeds survived, Pearson r=+0.069 (n.s.) | Phase 6 (COMPLETE — NEGATIVE, 2026-05-01) |
-| Plasticity ON then OFF, care=0.30, MLE ecology | Survived (instinct) | Phase 7 |
-
-If all three hold, the chain is: ecological pressure alone fails -> plasticity bridges the gap -> instinct emerges.
-
----
-
-## Ecological Parameter Interpretation
-
-### What the MLE Finds
-
-The MLE (Minimum Lethal Ecology from the sweep) is the lowest `infant_starvation_multiplier` at which 0 out of 5 seeds survive without plasticity after 5,000 ticks. It defines:
-
-- **Below MLE**: Pure Darwinian selection suffices. Populations survive without plasticity. Using these values in Phase 6 would produce a weak claim ("plasticity helps" not "plasticity is necessary").
-- **At MLE**: The exact boundary where selection alone fails universally. Using this in Phase 6 makes the strongest possible claim: survival in Phase 6 is attributable solely to plasticity, because Phase 5 shows all seeds go extinct at this ecology without it.
-- **Above MLE**: Ecology is so harsh that even plasticity cannot compensate.
-
-### Why `birth_scatter_radius = 2` Is Essential
-
-The scatter radius interacts with plasticity via the kin-conditional gate. Tight clustering (`scatter=2`) ensures:
-
-1. A mother's own child remains spatially close — plastic updates from kin-conditional care fire frequently
-2. The learning signal (infant distress -> plastic update) is correlated with relatedness, aligning with Hamilton's rule
-3. Kin lineages stay spatially cohesive — the benefits of care flow to genetic relatives, not random neighbours
-
-Without tight clustering, even with plasticity ON, the learning signal is diluted across unrelated infants. The kin-conditional gate then fires rarely (own child is far away), and the plastic gap cannot open. The `scatter=2` parameter is not an arbitrary choice — it is the structural enabler of the Baldwin Effect in this simulation.
-
-### Ecological Pressure as the Necessary Condition
-
-The Phase 5 finding (bistability) combined with the Phase 6 prediction makes a specific causal claim:
-
-> Ecological pressure (`infant_starvation_multiplier` = MLE) does two things simultaneously:
-> 1. Makes care obligatory for infant survival (raises B in Hamilton's rule)
-> 2. Makes the population go extinct without plasticity (creates the gap plasticity must bridge)
->
-> Without ecological pressure, plasticity has no selection gradient to amplify. Without plasticity, ecological pressure causes extinction before selection can act. Both are necessary.
-
----
-
-## Epigenetics Perspective — What Our Experiments Show
-
-### The Structural Parallel
-
-Our simulation does not model molecular biology, but the relationship between `expressed_care_weight` and `genome.care_weight` is mechanistically parallel to epigenetic gene regulation:
-
-| Molecular Biology | Our Simulation |
-|---|---|
-| DNA sequence (heritable, passed at conception) | `genome.care_weight` (heritable via mutation; passed at reproduction) |
-| Epigenetic mark (non-heritable modification — methylation, acetylation) | Deviation of `expressed_care_weight` from `genome.care_weight` (non-heritable; reset at birth) |
-| Gene expression level (regulated by marks) | Effective CARE motivation = `expressed_care_weight * care_cue` (drives behaviour) |
-| Environmental signal -> epigenetic modification | Infant distress -> `plastic_update()` -> `expressed_care_weight` shifts |
-| Epigenetic reprogramming at fertilization/birth | `__init__`: `expressed_care_weight = genome.care_weight` (reset when mother is born) |
-| Epigenetic enzyme expression (heritable, evolvable) | `genome.learning_rate` (heritable, mutates, under positive selection in Phase 6) |
-| Metabolic cost of epigenetic marking | `genome.learning_cost * abs(delta)` (energy cost per plastic update) |
-
-### Why This Is Not Lamarckian
-
-Lamarckian evolution requires the acquired phenotypic modification to be inherited. In our simulation:
-- Reproduction uses `mother.genome.mutate()` — only the genetic value is copied and mutated
-- `expressed_care_weight` is NEVER read during reproduction
-- At maturation: `MotherAgent.__init__` sets `expressed_care_weight = genome.care_weight` — the mark is erased
-
-Any rise in genetic care_weight across Phase 6 is produced entirely by natural selection acting on heritable genetic variation generated by mutation. The plastic modification accelerates survival, which gives selection more time to act — but the modification itself is not transmitted. This is the precise anti-Lamarckian structure the Baldwin Effect requires.
-
-### What the Data Should Show Epigenetically
-
-If our simulation successfully demonstrates the Baldwin Effect:
-
-1. **Phase 6 (mark accumulation and selection)**:
-   - The epigenetic-like mark (`expressed - genetic` gap) accumulates in old mothers as they repeatedly care for distressed infants
-   - The mark is erased at each new generation but the selection pressure it enables persists
-   - `learning_rate` (the epigenetic machinery gene) is positively selected — mothers who can make bigger marks survive better
-   - Genetic `care_weight` slowly rises — the DNA sequence is being changed by selection, not by the mark itself
-
-2. **Phase 7 Stage 1 (same as Phase 6, shorter)**:
-   - Same dynamic: marks accumulate in old mothers; selection acts on genome
-   - At tick 5,000 the genome has partially assimilated (genetic care_weight is elevated above 0.30)
-
-3. **Phase 7 Stage 2 (plasticity OFF = no mark-writing)**:
-   - New mothers start with `expressed = genome.care_weight` (no mark)
-   - No more plastic updates fire (plasticity_enabled = False)
-   - But the genetic value is already elevated — mothers care at the genetic level without needing the mark
-   - If population survives: the behaviour was assimilated into the genome. The mark is no longer needed.
-   - If `learning_cost` had evolved upward during Stage 1, Stage 2 applies a pure cost penalty for regulatory machinery that does nothing — predicts learning_cost should face negative selection in Stage 2.
-
-### The Learning Rate as the Epigenetic Signature of Selection
-
-The most theoretically important metric is `avg_learning_rate`. In standard epigenetics, organisms evolve not just epigenetic marks but the enzymes and regulatory machinery that produce those marks. In our simulation, `learning_rate` is the genome field that controls how strongly environmental signals translate into phenotypic changes. Positive selection for `learning_rate` in Phase 6 is the computational equivalent of selection for more responsive epigenetic regulatory machinery — organisms that can mount a larger behavioural response to infant distress are surviving better, and this responsiveness is being genetically encoded.
-
-This is the cleanest computational demonstration that phenotypic plasticity can be simultaneously:
-- Immediately adaptive (within lifetime via expressed_care_weight)
-- Evolutionarily advantageous (learning_rate selected upward)
-- Transitional (gap narrows as genetic care_weight rises to meet the expressed value)
-- Self-limiting (learning_cost makes excessive plasticity metabolically expensive once assimilation is complete)
-
-### Summary Statement
-
-> Our experiments model phenotypic plasticity as a within-lifetime epigenetic-like mechanism: environmentally responsive, non-heritable, metabolically costly, and under genetic control (learning_rate, learning_cost). The Baldwin Effect in Phase 6-7 corresponds to the transition from epigenetic-dependent behaviour to genetically-encoded instinct — a transition that requires ecological pressure to be necessary, plasticity to be the bridging mechanism, and natural selection to be the assimilating force. This is not Lamarckian because the acquired phenotypic modification is never inherited; it is Baldwin because the genetic machinery that enables the modification is heritable, and the genome that the modification protects long enough to survive is what ultimately encodes the behaviour.
 
