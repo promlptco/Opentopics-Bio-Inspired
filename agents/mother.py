@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import random
 import numpy as np
 
 from agents.agent import Agent
@@ -409,7 +410,13 @@ class MotherAgent(Agent):
         reward: float,
         plastic_gain: float,
         energy_cost: float = 0.0,
+        noise_sigma: float = 0.0,
     ) -> None:
+        if noise_sigma > 0.0:
+            # Multiplicative noise on the reward signal — learning is unreliable.
+            # Mothers with high genetic care_weight are buffered; those relying on
+            # plasticity face stochastic errors. This is the Hinton-Nowlan mechanism.
+            reward = reward * max(0.0, 1.0 + random.gauss(0, noise_sigma))
         delta = self.genome.learning_rate * reward * plastic_gain
         self.expressed_care_weight = max(0.0, min(1.0, self.expressed_care_weight + delta))
         self.energy -= self.genome.learning_cost * abs(delta) + energy_cost

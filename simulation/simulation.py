@@ -44,7 +44,7 @@ class Simulation:
             if self.config.children_enabled:
                 cx, cy = self._nearby_pos(x, y)
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
-                child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
+                child.genome = mother.genome.mutate(lock_learning_rate=self.config.lock_learning_rate) if self.config.mutation_enabled else mother.genome.copy()
                 self.children.append(child)
                 self._child_by_id[child.id] = child
                 self.world.place_entity(child)
@@ -284,8 +284,11 @@ class Simulation:
                             )
                         if self.config.plasticity_enabled:
                             if not self.config.plasticity_kin_conditional or is_own:
-                                mother.plastic_update(benefit, self.config.plastic_gain,
-                                                      energy_cost=self.config.plasticity_energy_cost)
+                                mother.plastic_update(
+                                    benefit, self.config.plastic_gain,
+                                    energy_cost=self.config.plasticity_energy_cost,
+                                    noise_sigma=self.config.plasticity_noise_sigma,
+                                )
                     mother.commit_ticks = 0  # done
                 else:
                     # Move toward
@@ -392,7 +395,7 @@ class Simulation:
             cx, cy = self._birth_pos(mother.x, mother.y)
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
-            child.genome = mother.genome.mutate() if self.config.mutation_enabled else mother.genome.copy()
+            child.genome = mother.genome.mutate(lock_learning_rate=self.config.lock_learning_rate) if self.config.mutation_enabled else mother.genome.copy()
             self.children.append(child)
             self._child_by_id[child.id] = child
             self.world.place_entity(child)

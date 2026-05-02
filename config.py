@@ -79,3 +79,14 @@ class Config:
     #   prior experiments unaffected. Phase 6d may set this to a small positive value (e.g.
     #   0.005) to make plasticity metabolically costly, strengthening the assimilation test.
     plasticity_energy_cost: float = 0.0
+
+    # Phase 8 — Genuine Baldwin Effect controls
+    # plasticity_noise_sigma: std-dev of multiplicative Gaussian noise added to the
+    #   reward signal in plastic_update(). 0.0 = deterministic (Phase 7 behaviour).
+    #   Higher values make learning unreliable, creating a fitness advantage for
+    #   genetic instinct over learned behaviour (Hinton & Nowlan 1987 mechanism).
+    plasticity_noise_sigma: float = 0.0
+    # lock_learning_rate: if True, learning_rate gene is not mutated during reproduction.
+    #   Closes the "become a better learner" escape route so selection can only act on
+    #   the genetic care_weight floor. 0.0 = evolvable (all prior phases unaffected).
+    lock_learning_rate: bool = False

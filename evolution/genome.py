@@ -16,7 +16,12 @@ class Genome:
     # Default 0.0 leaves all prior experiments unaffected.
     care_recovery: float = 0.0
 
-    def mutate(self, mutation_rate: float = 0.1, sigma: float = 0.05) -> Genome:
+    def mutate(
+        self,
+        mutation_rate: float = 0.1,
+        sigma: float = 0.05,
+        lock_learning_rate: bool = False,
+    ) -> Genome:
         def mutate_gene(value: float) -> float:
             if random.random() < mutation_rate:
                 delta = random.gauss(0, sigma)
@@ -27,7 +32,7 @@ class Genome:
             care_weight=mutate_gene(self.care_weight),
             forage_weight=mutate_gene(self.forage_weight),
             self_weight=mutate_gene(self.self_weight),
-            learning_rate=mutate_gene(self.learning_rate),
+            learning_rate=self.learning_rate if lock_learning_rate else mutate_gene(self.learning_rate),
             learning_cost=mutate_gene(self.learning_cost),
             distress_sensitivity=mutate_gene(self.distress_sensitivity),
             care_recovery=mutate_gene(self.care_recovery),
