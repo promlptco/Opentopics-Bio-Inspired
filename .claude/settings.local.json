@@ -34,7 +34,8 @@
       "Bash(PYTHONIOENCODING=utf-8 python experiments/phase3_survival_full/motivation_sweep.py --seeds 15)",
       "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO TABLE)",
       "PowerShell(Get-Process -Name python -ErrorAction SilentlyContinue | Select-Object Id, CPU, WorkingSet, StartTime, @{N='Runtime';E={\\(Get-Date\\) - $_.StartTime}})",
-      "PowerShell(Get-Process -Name python -ErrorAction SilentlyContinue | Select-Object Id, CPU, @{N='Runtime';E={\\(Get-Date\\) - $_.StartTime}})"
+      "PowerShell(Get-Process -Name python -ErrorAction SilentlyContinue | Select-Object Id, CPU, @{N='Runtime';E={\\(Get-Date\\) - $_.StartTime}})",
+      "PowerShell($drive = Get-PSDrive C; Write-Host \"Free: $\\([math]::Round\\($drive.Free/1GB,2\\)\\) GB\")"
     ]
   }
 }

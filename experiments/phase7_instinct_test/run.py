@@ -2,11 +2,11 @@
 """Phase 7 — Zero-Shot Instinct Test
 
 Two-stage single continuous run starting from Phase 6d evolved genomes:
-  Stage 1 (ticks     0 - 5000): plasticity ON  (kin-conditional)
+  Stage 1 (ticks      0 - 15000): plasticity ON  (kin-conditional)
     Population runs with evolved care_weight + DS + CR.
     Plasticity boosts expressed_care above the genetic floor.
 
-  Stage 2 (ticks 5001 - 10000): plasticity OFF (zero-shot)
+  Stage 2 (ticks 15001 - 20000): plasticity OFF (zero-shot)
     Plasticity disabled mid-run. expressed_care freezes, then gradually
     converges to genome value as old mothers are replaced by offspring.
     Key question: does the population STILL survive on genetic care alone?
@@ -32,7 +32,7 @@ PHASE_NAME      = "phase7_instinct_test"
 
 MLE_MULT        = 1.10   # matches Phase 6d
 
-STAGE1_TICKS    = 5_000
+STAGE1_TICKS    = 15_000
 STAGE2_TICKS    = 5_000
 TOTAL_TICKS     = STAGE1_TICKS + STAGE2_TICKS
 
@@ -132,6 +132,13 @@ def run_phase7(seed: int = 42, plasticity_energy_cost: float = 0.0) -> str:
         sim.step()
         sim.tick += 1
 
+        # Discard per-event records every 1000 ticks — Phase 7 only needs snapshots.
+        if sim.tick % 1000 == 0:
+            sim.logger.choice_records.clear()
+            sim.logger.care_records.clear()
+            sim.logger.death_records.clear()
+            sim.logger.birth_records.clear()
+
         if sim.tick % SNAPSHOT_INTERVAL == 0:
             alive = [m for m in sim.mothers if m.alive]
             if not alive:
@@ -168,7 +175,6 @@ def run_phase7(seed: int = 42, plasticity_energy_cost: float = 0.0) -> str:
                 "avg_care_weight_old":       sum(m.genome.care_weight          for m in old) / len(old),
             })
 
-    sim.logger.save_all(output_dir)
     with open(os.path.join(output_dir, "generation_snapshots.json"), "w") as f:
         json.dump(generation_snapshots, f, indent=2)
 

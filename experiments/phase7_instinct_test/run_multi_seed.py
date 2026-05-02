@@ -5,7 +5,7 @@ Produces the key Baldwin Effect graph:
   - Fitness (n_mothers)          — solid line, stable through both stages
   - Phenotypic Plasticity        — dashed line, peaks in Stage 1, drops in Stage 2
   - Genetic care_weight          — dotted line, holds or rises through both stages
-  Vertical dashed line marks Stage 1 -> Stage 2 boundary (tick 5000).
+  Vertical dashed line marks Stage 1 -> Stage 2 boundary (tick 15000).
 
 Verdict: Baldwin Effect confirmed if >=70% seeds survive Stage 2 with
          genetic care_weight >= Phase 6d starting value (0.325).
@@ -21,7 +21,7 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from experiments.phase7_instinct_test.run import (
     run_phase7, MLE_MULT, INIT_CARE, INIT_DS, INIT_CR, INIT_LR, INIT_LC,
-    STAGE1_TICKS, TOTAL_TICKS,
+    STAGE1_TICKS, STAGE2_TICKS, TOTAL_TICKS,
 )
 
 try:
@@ -42,8 +42,7 @@ except ImportError:
 SEEDS        = list(range(42, 52))
 COMBINED_DIR = os.path.join(PROJECT_ROOT, "outputs", "phase7_instinct_test", "multi_seed")
 
-# Sweet spot from tune_learning_cost.py sweep: all seeds survive, highest genetic care_weight.
-PLASTICITY_ENERGY_COST = 0.005
+PLASTICITY_ENERGY_COST = 0.0
 
 
 def _mean(vals):
@@ -179,8 +178,8 @@ def _plot_baldwin_graph(all_snaps, seeds, results, output_dir):
                label="Survival threshold (n=10)")
     ax.set_ylabel("Number of mothers (Fitness)")
     ax.set_ylim(0, 65)
-    ax.text(STAGE1_TICKS * 0.5,  60, "first step",  ha="center", fontsize=10, style="italic")
-    ax.text(STAGE1_TICKS * 1.5,  60, "second step", ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS * 0.5,               60, "first step",  ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS + STAGE2_TICKS * 0.5, 60, "second step", ha="center", fontsize=10, style="italic")
     ax.legend(loc="lower right", frameon=True)
     ax.grid(True)
 
@@ -218,8 +217,8 @@ def _plot_baldwin_graph(all_snaps, seeds, results, output_dir):
     ax.set_xlabel("Simulation tick")
     ax.set_ylabel("care_weight")
     ax.set_ylim(-0.05, 0.90)
-    ax.text(STAGE1_TICKS * 0.5,  0.83, "first step",  ha="center", fontsize=10, style="italic")
-    ax.text(STAGE1_TICKS * 1.5,  0.83, "second step", ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS * 0.5,               0.83, "first step",  ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS + STAGE2_TICKS * 0.5, 0.83, "second step", ha="center", fontsize=10, style="italic")
     ax.legend(loc="upper right", frameon=True)
     ax.grid(True)
 
