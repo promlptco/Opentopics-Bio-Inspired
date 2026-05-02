@@ -292,16 +292,151 @@ Use `--workers N` to run them in parallel via `ProcessPoolExecutor`.
 
 ---
 
+---
+
+## 🐣 Phase 3 — Mother-Child Caregiving Baseline
+
+Mother + child simulation. Finds the minimum viable ecology (MVE) where mothers can support a dependent child using motivation weights (FORAGE / CARE / SELF).
+
+### Run baseline validation
+
+```powershell
+# Sweep mode — grid search over care/forage/self weights
+python experiments/phase3_survival_full/run.py --mode sweep --duration 1000 --repeats 3
+
+# Single mode — one hand-picked config
+python experiments/phase3_survival_full/run.py --mode single --duration 1000 --repeats 10
+```
+
+### Motivation weight grid (48-combination sweep)
+
+```powershell
+# Default (15 seeds, 1000 ticks)
+python experiments/phase3_survival_full/motivation_sweep.py
+
+# Custom seeds / duration
+python experiments/phase3_survival_full/motivation_sweep.py --seeds 30 --duration 1000
+```
+
+### Escalation sweep — find the MVE food level
+
+```powershell
+# Default sweep food=50→95, step=5, 15 seeds
+python experiments/phase3_survival_full/escalation_sweep.py
+
+# Custom range
+python experiments/phase3_survival_full/escalation_sweep.py --food_start 50 --food_end 70 --food_step 5 --seeds 15
+```
+
+### Action visualization — behavioral characterization
+
+```powershell
+python experiments/phase3_survival_full/action_visualization.py
+```
+
+### Phase 3 CLI reference
+
+| Flag | Default | Description |
+|---|---|---|
+| `--duration` | `1000` | Simulation ticks |
+| `--repeats` | `3` | Repeats per seed |
+| `--seeds` | `15` | Number of seeds (sweep scripts) |
+| `--tau` | `0.1` | Softmax temperature |
+| `--perceptual_noise` | `0.1` | Perceptual noise on food/child distance |
+| `--mode` | `sweep` | `sweep` or `single` |
+| `--food_start` | `50` | Start food level (escalation sweep) |
+| `--food_end` | `95` | End food level (escalation sweep) |
+| `--food_step` | `5` | Step size (escalation sweep) |
+
+### Output files
+
+All outputs → `outputs/phase3_survival_full/<timestamp>/`:
+
+| File | Description |
+|---|---|
+| `auto_phase3_summary.json` | Selected configs + validation metrics |
+| `validation_<name>.png` | Energy + population trajectory |
+| `action_selection_<name>.png` | Action rates over time |
+| `motivation_selection_<name>.png` | Motivation rates over time |
+| `mother_child_diagnostics_<name>.png` | Mother / child energy and feeding |
+| `feed_rate_<name>.png` | Feeding event frequency |
+| `spatial_heatmap_<name>.png` | Population occupancy heatmap |
+
+---
+
+## 🧬 Phase 4 — Neutral Drift Baseline (Evolution)
+
+Establishes the genetic baseline: does care_weight evolve or drift under standard ecology (no existential infant dependency)?
+
+> **Run scripts 05 and 06 (FIXED) for all scientific conclusions.** Scripts 01–04 contain a known orphan-injection bug and are archived for reference only.
+
+### Definitive scripts (use these)
+
+```powershell
+# Script 05 — Ceiling-drop baseline (bug-fixed): care_weight init=0.80, standard cost
+python experiments/phase4_neutral_drift_baseline/05_run_ceiling_drop_FIXED.py
+
+# Script 06 — True neutral control (bug-fixed): same as 05 but feed_cost=0 and no infant starvation
+python experiments/phase4_neutral_drift_baseline/06_run_true_neutral_FIXED.py
+```
+
+### Visualization / analysis scripts
+
+```powershell
+# Plot 01 — Artefact mechanism: care crash vs orphan injection rate (stacked)
+python experiments/phase4_neutral_drift_baseline/plot_01_artefact_mechanism.py
+
+# Plot 02 — Lineage fitness scatter: buggy vs fixed
+python experiments/phase4_neutral_drift_baseline/plot_02_lineage_comparison.py
+
+# Plot 03 — Fixed baselines overlay: Script 05 vs Script 06
+python experiments/phase4_neutral_drift_baseline/plot_03_fixed_baselines_overlay.py
+
+# Plot 04 — All-weights stability check (care / forage / self trajectories)
+python experiments/phase4_neutral_drift_baseline/plot_04_all_weights_fixed.py
+
+# Turnover analysis
+python experiments/phase4_neutral_drift_baseline/05_analyze_turnover.py
+```
+
+### Archived scripts (bug-affected — do not use for conclusions)
+
+| Script | Description |
+|---|---|
+| `01_run_floor_bounce_artefact.py` | Original Phase 4 — floor-bounce artefact from U(0,1) init |
+| `02_run_ceiling_drop_erosion.py` | Ceiling-drop recheck — orphan injection bug present |
+| `03_run_bounded_drift_validation.py` | Drift validation — orphan injection bug present |
+| `04_run_true_neutral_control.py` | Neutral control — orphan injection bug present |
+
+### Output files
+
+All outputs → `outputs/phase4_neutral_drift_baseline/`:
+
+| Directory | Description |
+|---|---|
+| `05_ceiling_drop_FIXED/` | Script 05 results (care trajectory, r values, checkpoints) |
+| `06_true_neutral_FIXED/` | Script 06 results |
+| `post_mortem/` | Four visualization plots documenting the bug and fix |
+
+---
+
 ## 🏗️ Project Structure
-- `agents/`: Core agent classes (`mother.py`, `infant.py`).
-- `simulation/`: World dynamics (`world.py`) and main loop (`simulation.py`).
-- `evolution/`: Genetic operators and population management.
-- `experiments/`: Targeted validation phases and calibration scripts.
-  - `live_viewer.py`: Phase-agnostic live visualizer (shared across all phases).
-  - `phase2_survival_minimal/`: Phase 2 ecological survival baseline.
-- `outputs/`: Automatically generated plots and JSON data (organized by date/time).
+
+```
+agents/           mother.py, child.py — core agent classes
+simulation/       world.py, simulation.py — world dynamics and main loop
+evolution/        genome.py, lineage.py — genetic operators and lineage tracking
+experiments/
+  live_viewer.py                    ← phase-agnostic live visualizer
+  phase1_mechanics_tests/           ← mechanics validation (6 tests)
+  phase2_survival_minimal/          ← ecological survival calibration
+  phase3_survival_full/             ← mother-child caregiving baseline
+  phase4_neutral_drift_baseline/    ← neutral genetic drift baseline
+shared/           constants.py — cross-phase constants
+outputs/          auto-generated plots and JSON (organized by phase/timestamp)
+```
 
 ## 📄 Documentation
-For detailed information on the research question, experimental methodology, and success criteria, see:
-- [EXPERIMENT_DESIGN.md](./EXPERIMENT_DESIGN.md)
-- [DESIGN_BASELINE.md](./DESIGN_BASELINE.md)
+
+- [EXPERIMENT_DESIGN.md](./EXPERIMENT_DESIGN.md) — research question, methodology, phase protocol
+- [full_experiment_report.md](./full_experiment_report.md) — full results report (Phases 1–4)
