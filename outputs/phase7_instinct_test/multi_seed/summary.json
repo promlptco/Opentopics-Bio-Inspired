@@ -4,7 +4,7 @@
     "survived": true,
     "final_pop": 11,
     "entry_cw": 0.3799067317701247,
-    "entry_ecw": 0.4432915563572873,
+    "entry_ecw": 0.4378868142299665,
     "final_cw": 0.4080306504578653,
     "final_lr": 0.1872249421000973,
     "instinct_confirmed": true
@@ -14,7 +14,7 @@
     "survived": true,
     "final_pop": 13,
     "entry_cw": 0.27014725574823645,
-    "entry_ecw": 0.7227182712792327,
+    "entry_ecw": 0.4059181908239658,
     "final_cw": 0.4429960909389919,
     "final_lr": 0.21404931058376178,
     "instinct_confirmed": true
@@ -64,7 +64,7 @@
     "survived": true,
     "final_pop": 24,
     "entry_cw": 0.3221018473801125,
-    "entry_ecw": 0.34055575978135744,
+    "entry_ecw": 0.38909550039286883,
     "final_cw": 0.3548473533779221,
     "final_lr": 0.18342242462701275,
     "instinct_confirmed": true

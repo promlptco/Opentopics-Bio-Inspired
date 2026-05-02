@@ -158,8 +158,10 @@ def run_phase7(seed: int = 42) -> str:
                 "avg_mother_energy":         sum(m.energy                      for m in alive) / len(alive),
                 "avg_child_hunger":          (sum(c.hunger for c in alive_children) / len(alive_children)
                                               if alive_children else 0.0),
-                # phenotypic — old mothers only (the key Baldwin signal)
-                "avg_expressed_care_weight": sum(m.expressed_care_weight       for m in old) / len(old),
+                # phenotypic — ALL alive mothers (used for Baldwin graph)
+                "avg_expressed_care_weight": sum(m.expressed_care_weight       for m in alive) / len(alive),
+                # phenotypic — old mothers only (for reference)
+                "avg_expressed_care_weight_old": sum(m.expressed_care_weight   for m in old) / len(old),
                 "avg_care_weight_old":       sum(m.genome.care_weight          for m in old) / len(old),
             })
 

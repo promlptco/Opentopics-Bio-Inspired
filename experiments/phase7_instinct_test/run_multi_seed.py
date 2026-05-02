@@ -98,51 +98,61 @@ def _load_snapshots(run_dir):
 
 def _plot_baldwin_graph(all_snaps, seeds, results, output_dir):
     """
-    The key Baldwin Effect graph — mirrors the textbook diagram:
-      Panel 1: Fitness (n_mothers) — solid, stable across both stages
-      Panel 2: Phenotypic Plasticity (avg_expressed_care_weight) — dashed,
-               peaks in Stage 1, then drops in Stage 2 as instinct takes over
-               Genetic care_weight (avg_care_weight) — dotted,
-               holds steady or rises, showing assimilation floor
+    Baldwin Effect graph matching the textbook figure.
+
+    Two panels:
+      Top    — Fitness: population size (n_mothers), stable across both stages.
+      Bottom — THE KEY GRAPH (mirrors the textbook diagram):
+                 Solid   = Fitness proxy: genetic care_weight (assimilation floor)
+                 Dashed  = Phenotypic Plasticity: expressed_care - genetic_care
+                           (plastic boost above the genetic floor)
+               Stage 1: plastic boost is high (plasticity actively running).
+               Stage 2: plastic boost drops to ~0 (plasticity OFF; new offspring
+                        inherit genetic value only). Genetic floor holds or rises.
+               This is the classic Baldwin Effect signature.
     """
     if not HAS_PLT or not all_snaps:
         return
 
-    # Use all ticks present in any snapshot across all seeds
     all_ticks = sorted(set(s["tick"] for snaps in all_snaps for s in snaps))
     if not all_ticks:
         return
 
-    def get(snaps, t, key, default=None):
+    def get(snaps, t, key, default=0.0):
         for s in snaps:
             if s["tick"] == t:
                 return s.get(key, default)
         return default
 
-    # Build per-seed time series, padding missing ticks with None
-    pop_series   = [[get(snaps, t, "n_mothers")                 for t in all_ticks] for snaps in all_snaps]
-    ecw_series   = [[get(snaps, t, "avg_expressed_care_weight")  for t in all_ticks] for snaps in all_snaps]
-    cw_series    = [[get(snaps, t, "avg_care_weight")            for t in all_ticks] for snaps in all_snaps]
+    pop_series = [[get(snaps, t, "n_mothers")                for t in all_ticks] for snaps in all_snaps]
+    cw_series  = [[get(snaps, t, "avg_care_weight")          for t in all_ticks] for snaps in all_snaps]
+    ecw_series = [[get(snaps, t, "avg_expressed_care_weight") for t in all_ticks] for snaps in all_snaps]
+
+    # Plastic contribution = expressed - genetic (the boost plasticity adds above the genetic floor)
+    gap_series = [
+        [ecw_series[i][j] - cw_series[i][j] for j in range(len(all_ticks))]
+        for i in range(len(all_snaps))
+    ]
 
     def safe_mean(series, i):
         vals = [s[i] for s in series if s[i] is not None]
-        return _mean(vals) if vals else float("nan")
+        return _mean(vals) if vals else 0.0
 
     def safe_ci(series, i):
         vals = [s[i] for s in series if s[i] is not None]
         return _ci95(vals) if len(vals) >= 2 else 0.0
 
-    pop_mean  = [safe_mean(pop_series,  i) for i in range(len(all_ticks))]
-    ecw_mean  = [safe_mean(ecw_series,  i) for i in range(len(all_ticks))]
-    cw_mean   = [safe_mean(cw_series,   i) for i in range(len(all_ticks))]
-    pop_ci    = [safe_ci(pop_series,    i) for i in range(len(all_ticks))]
-    ecw_ci    = [safe_ci(ecw_series,    i) for i in range(len(all_ticks))]
-    cw_ci     = [safe_ci(cw_series,     i) for i in range(len(all_ticks))]
+    pop_mean = [safe_mean(pop_series,  i) for i in range(len(all_ticks))]
+    cw_mean  = [safe_mean(cw_series,   i) for i in range(len(all_ticks))]
+    gap_mean = [safe_mean(gap_series,  i) for i in range(len(all_ticks))]
+    pop_ci   = [safe_ci(pop_series,    i) for i in range(len(all_ticks))]
+    cw_ci    = [safe_ci(cw_series,     i) for i in range(len(all_ticks))]
+    gap_ci   = [safe_ci(gap_series,    i) for i in range(len(all_ticks))]
 
     n_survived = sum(1 for r in results if r["survived"])
     n_instinct = sum(1 for r in results if r["instinct_confirmed"])
 
-    fig, axes = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(11, 9), sharex=True)
     fig.suptitle(
         f"Phase 7 — Baldwin Effect: Phenotypic Plasticity → Genetic Instinct\n"
         f"MLE={MLE_MULT} | care_init={INIT_CARE} | DS={INIT_DS} | CR={INIT_CR} | {len(seeds)} seeds\n"
@@ -150,59 +160,63 @@ def _plot_baldwin_graph(all_snaps, seeds, results, output_dir):
         fontsize=11,
     )
 
-    # ── Panel 1: Fitness (n_mothers) ──────────────────────────────────────────
+    # ── Panel 1: Population size (context) ───────────────────────────────────
     ax = axes[0]
     for snaps in all_snaps:
         ticks = [s["tick"] for s in snaps]
-        vals  = [s["n_mothers"] for s in snaps]
-        ax.plot(ticks, vals, color="#2ca02c", alpha=0.10, linewidth=0.8)
-
-    lo_pop = [m - c for m, c in zip(pop_mean, pop_ci)]
-    hi_pop = [m + c for m, c in zip(pop_mean, pop_ci)]
-    ax.fill_between(all_ticks, lo_pop, hi_pop, alpha=0.20, color="#2ca02c")
+        ax.plot(ticks, [s["n_mothers"] for s in snaps],
+                color="#2ca02c", alpha=0.12, linewidth=0.9)
+    lo = [m - c for m, c in zip(pop_mean, pop_ci)]
+    hi = [m + c for m, c in zip(pop_mean, pop_ci)]
+    ax.fill_between(all_ticks, lo, hi, alpha=0.22, color="#2ca02c")
     ax.plot(all_ticks, pop_mean, color="#2ca02c", linewidth=2.5,
-            label="Fitness (population size)  mean +/- 95% CI")
-    ax.axvline(STAGE1_TICKS, color="black", linestyle="--", linewidth=1.4, alpha=0.7)
-    ax.set_ylabel("Number of mothers")
-    ax.set_ylim(0, 60)
-    ax.text(STAGE1_TICKS - 200, ax.get_ylim()[1] * 0.92, "first step",
-            ha="right", fontsize=9, color="black", alpha=0.7)
-    ax.text(STAGE1_TICKS + 200, ax.get_ylim()[1] * 0.92, "second step",
-            ha="left", fontsize=9, color="black", alpha=0.7)
+            label="Population size  mean +/- 95% CI")
+    ax.axvline(STAGE1_TICKS, color="black", linestyle="--", linewidth=1.5, alpha=0.75)
+    ax.axhline(10, color="crimson", linestyle=":", linewidth=1.1, alpha=0.7,
+               label="Survival threshold (n=10)")
+    ax.set_ylabel("Number of mothers (Fitness)")
+    ax.set_ylim(0, 65)
+    ax.text(STAGE1_TICKS * 0.5,  60, "first step",  ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS * 1.5,  60, "second step", ha="center", fontsize=10, style="italic")
     ax.legend(loc="lower right", frameon=True)
     ax.grid(True)
 
-    # ── Panel 2: Phenotypic Plasticity + Genetic floor ───────────────────────
+    # ── Panel 2: THE Baldwin Effect graph ────────────────────────────────────
     ax = axes[1]
 
-    # Individual seed traces (faint)
-    for snaps in all_snaps:
+    # Faint per-seed traces
+    for i, snaps in enumerate(all_snaps):
         ticks = [s["tick"] for s in snaps]
-        ecw   = [s["avg_expressed_care_weight"] for s in snaps]
-        cw    = [s["avg_care_weight"] for s in snaps]
-        ax.plot(ticks, ecw, color="#d62728", alpha=0.10, linewidth=0.8)
-        ax.plot(ticks, cw,  color="steelblue", alpha=0.08, linewidth=0.8)
+        cw  = [s["avg_care_weight"]           for s in snaps]
+        ecw = [s["avg_expressed_care_weight"]  for s in snaps]
+        gap = [e - c for e, c in zip(ecw, cw)]
+        ax.plot(ticks, cw,  color="steelblue", alpha=0.10, linewidth=0.8)
+        ax.plot(ticks, gap, color="#d62728",   alpha=0.10, linewidth=0.8)
 
-    # Expressed care (phenotypic plasticity) — dashed red
-    lo_ecw = [m - c for m, c in zip(ecw_mean, ecw_ci)]
-    hi_ecw = [m + c for m, c in zip(ecw_mean, ecw_ci)]
-    ax.fill_between(all_ticks, lo_ecw, hi_ecw, alpha=0.18, color="#d62728")
-    ax.plot(all_ticks, ecw_mean, color="#d62728", linewidth=2.5, linestyle="--",
-            label="Phenotypic Plasticity (expressed care_weight)  mean +/- 95% CI")
-
-    # Genetic care_weight — solid blue (the instinct floor)
+    # Genetic care_weight — solid (Fitness / instinct floor)
     lo_cw = [m - c for m, c in zip(cw_mean, cw_ci)]
     hi_cw = [m + c for m, c in zip(cw_mean, cw_ci)]
-    ax.fill_between(all_ticks, lo_cw, hi_cw, alpha=0.18, color="steelblue")
-    ax.plot(all_ticks, cw_mean, color="steelblue", linewidth=2.5,
-            label="Fitness / Genetic care_weight (instinct floor)  mean +/- 95% CI")
+    ax.fill_between(all_ticks, lo_cw, hi_cw, alpha=0.20, color="steelblue")
+    ax.plot(all_ticks, cw_mean, color="steelblue", linewidth=2.8,
+            label="Fitness  (genetic care_weight — instinct floor)")
 
-    ax.axhline(INIT_CARE, color="gray", linestyle=":", linewidth=1.2,
+    # Plastic contribution — dashed (Phenotypic Plasticity)
+    lo_gap = [max(0.0, m - c) for m, c in zip(gap_mean, gap_ci)]
+    hi_gap = [m + c           for m, c in zip(gap_mean, gap_ci)]
+    ax.fill_between(all_ticks, lo_gap, hi_gap, alpha=0.20, color="#d62728")
+    ax.plot(all_ticks, gap_mean, color="#d62728", linewidth=2.8, linestyle="--",
+            label="Phenotypic Plasticity  (expressed care - genetic care)")
+
+    ax.axhline(0,         color="gray", linewidth=0.8, linestyle="-")
+    ax.axhline(INIT_CARE, color="gray", linewidth=1.1, linestyle=":",
                label=f"Phase 6d genome start ({INIT_CARE})")
-    ax.axvline(STAGE1_TICKS, color="black", linestyle="--", linewidth=1.4, alpha=0.7)
-    ax.set_xlabel("Simulation tick  (Stage 1: plasticity ON  |  Stage 2: plasticity OFF)")
+    ax.axvline(STAGE1_TICKS, color="black", linestyle="--", linewidth=1.5, alpha=0.75)
+
+    ax.set_xlabel("Simulation tick")
     ax.set_ylabel("care_weight")
-    ax.set_ylim(0, 1)
+    ax.set_ylim(-0.05, 0.90)
+    ax.text(STAGE1_TICKS * 0.5,  0.83, "first step",  ha="center", fontsize=10, style="italic")
+    ax.text(STAGE1_TICKS * 1.5,  0.83, "second step", ha="center", fontsize=10, style="italic")
     ax.legend(loc="upper right", frameon=True)
     ax.grid(True)
 
