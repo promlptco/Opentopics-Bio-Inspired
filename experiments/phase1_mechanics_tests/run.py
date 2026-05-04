@@ -40,10 +40,10 @@ def main() -> int:
         )
 
         if result.returncode == 0:
-            print(f"✓ PASSED: {test}")
+            print(f"[PASS] {test}")
             passed.append(test)
         else:
-            print(f"✗ FAILED: {test}")
+            print(f"[FAIL] {test}")
             failed.append(test)
 
     print("\n=== Phase 1 Summary ===")

@@ -25,7 +25,7 @@ from evolution.genome import Genome
 
 MODULE_NUM = "03"
 DEFAULT_SEED = 42
-RUN_NUM = 2
+RUN_NUM = 1
 TAG = f"test{MODULE_NUM}_{DEFAULT_SEED}_{RUN_NUM}"
 
 _results = []
