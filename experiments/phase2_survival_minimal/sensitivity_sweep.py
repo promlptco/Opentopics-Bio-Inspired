@@ -167,7 +167,11 @@ def save_csv(results, path):
 
 
 def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
-    fig, axes = plt.subplots(2, 3, figsize=(17, 10))
+    n_sets = len(SENSITIVITY_SUBPLOT_CONFIG)
+    n_cols = 2
+    n_rows = (n_sets + n_cols - 1) // n_cols  # ceil division → always 2×2 for 4 sets
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(13, 9))
     axes_flat = axes.flatten()
     energy_color = "#2E3440"
 
@@ -244,20 +248,12 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
         )
 
         ax_energy.axhline(
-            0.70,
+            0.62,
             color="black",
             linestyle=":",
             linewidth=1.0,
             alpha=0.55,
-            label="Target 0.70",
-        )
-        ax_energy.axhline(
-            0.75,
-            color="black",
-            linestyle="--",
-            linewidth=1.0,
-            alpha=0.35,
-            label="Target 0.75",
+            label="Target 0.62",
         )
 
         ax_energy.set_ylim(-0.05, 1.15)
@@ -290,7 +286,9 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
             framealpha=0.88,
         )
 
-    axes_flat[5].set_visible(False)
+    # Hide any unused slots (e.g. odd number of sets)
+    for i in range(n_sets, n_rows * n_cols):
+        axes_flat[i].set_visible(False)
 
     plt.tight_layout()
     out_path = os.path.join(out_dir, "sensitivity_map.png")
@@ -305,7 +303,8 @@ def main():
     parser.add_argument("--duration", type=int, default=1000)
     parser.add_argument("--seeds", type=int, default=5, help="Number of seeds starting from 42.")
     parser.add_argument("--repeats", type=int, default=3, help="Repeats per seed.")
-    parser.add_argument("--sets", type=str, default="ABCDE", help="Which sets to run, e.g. AB or CDE.")
+    parser.add_argument("--sets", type=str, default="".join(SENSITIVITY_SWEEPS.keys()),
+                        help="Which sets to run, e.g. BC or DE.")
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--tail_window", type=int, default=TAIL_WINDOW)
@@ -378,10 +377,11 @@ def main():
         save_csv(results, csv_path)
         print(f"   Saved CSV → {csv_path}")
 
-    if all(s in all_results for s in "ABCDE"):
+    expected_sets = list(SENSITIVITY_SWEEPS.keys())
+    if all(s in all_results for s in expected_sets):
         plot_sensitivity_map(all_results, BALANCED_BASELINE, out_dir)
     else:
-        missing = [s for s in "ABCDE" if s not in all_results]
+        missing = [s for s in expected_sets if s not in all_results]
         print(f"\nSkipping full sensitivity map — missing sets: {missing}")
 
     summary_path = os.path.join(out_dir, "sensitivity_summary.json")

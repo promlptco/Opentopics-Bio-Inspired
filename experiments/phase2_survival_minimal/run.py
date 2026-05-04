@@ -251,7 +251,6 @@ class SurvivalSimulation:
             perception_radius = getattr(self.config, "perception_radius", DEFAULT_PERCEPTION_RADIUS)
 
             motivation, _, _ = mother.choose_motivation(
-                world=self.world,
                 perception_radius=perception_radius,
                 tau=self.tau,
                 child=None,
@@ -434,7 +433,10 @@ def make_config(params, duration):
     cfg.initial_energy = INITIAL_ENERGY
 
     cfg.perception_radius = params.get("perception_radius", DEFAULT_PERCEPTION_RADIUS)
-    cfg.hunger_rate = params["hunger_rate"]
+    # hunger_rate is locked at 1/35 by starvation constraint (LOGIC.md Change J).
+    # params may still carry the key from BALANCED_BASELINE; use it if present,
+    # otherwise fall back to the root Config default (also 1/35).
+    cfg.hunger_rate = params.get("hunger_rate", cfg.hunger_rate)
     cfg.move_cost = params["move_cost"]
     cfg.eat_gain = params["eat_gain"]
     cfg.init_food = params["init_food"]
@@ -529,6 +531,8 @@ def is_valid_condition(name, result):
             t["min_final_pop"] <= result["final_pop"] <= t["max_final_pop"]
             and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
         )
+        # Note: harsh is defined by low survival rate (10–33%), not low energy.
+        # energy_high is now 0.65 to match ecological reality at eat_gain=0.25.
 
     return False
 
@@ -1014,10 +1018,12 @@ def _penalty_score(name, result):
 
     Hard constraint violations add +1000 per unit deviation.
     Soft terms penalize proportional distance from target.
+    All survival thresholds are rates [0,1] — independent of INIT_MOTHERS.
 
-    Balanced : target ~14/15 survival, energy ~0.70, flat energy slope.
-    Easy     : target ~15/15 survival, energy ≥ 0.85.
-    Harsh    : target ~2–5/15 survival, energy ≤ 0.40.
+    Balanced : target ~92% survival, energy ~0.62, flat energy slope.
+    Easy     : target ~100% survival, energy ≥ 0.55 (crowding lowers mean).
+    Harsh    : target ~10–33% survival. Harsh defined by survival alone —
+               survivors always maintain energy ≥ 0.45 at eat_gain=0.25.
     """
     surv    = result["final_pop"] / INIT_MOTHERS
     energy  = safe(result["tail_mean_energy"])
@@ -1028,35 +1034,35 @@ def _penalty_score(name, result):
     score = 0.0
 
     if name == "balanced":
-        if surv < 10.5 / INIT_MOTHERS:
-            score += HARD * (10.5 / INIT_MOTHERS - surv) * 15
-        if energy < 0.55:
-            score += HARD * (0.55 - energy) * 10
+        if surv < 0.70:
+            score += HARD * (0.70 - surv) * 15
+        if energy < 0.50:
+            score += HARD * (0.50 - energy) * 10
         elif energy > 0.82:
-            score += HARD * (energy - 0.85) * 10
-        score += abs(surv - 14.0 / INIT_MOTHERS) * 30.0
-        score += abs(energy - 0.70) * 30.0
-        score += e_slope * 10_000.0   # slope is heavily penalized
+            score += HARD * (energy - 0.82) * 10
+        score += abs(surv - 0.92) * 30.0
+        score += abs(energy - 0.62) * 30.0
+        score += e_slope * 10_000.0
         score += e_sd * 10.0
 
     elif name == "easy":
-        if surv < 13.5 / INIT_MOTHERS:
-            score += HARD * (13.5 / INIT_MOTHERS - surv) * 15
-        if energy < 0.75:
-            score += HARD * (0.75 - energy) * 10
+        if surv < 0.90:
+            score += HARD * (0.90 - surv) * 15
+        if energy < 0.55:
+            score += HARD * (0.55 - energy) * 10
         score += abs(surv - 1.0) * 20.0
-        score += max(0.0, 0.85 - energy) * 40.0
+        score += max(0.0, 0.60 - energy) * 40.0
         score += e_sd * 5.0
 
     elif name == "harsh":
-        if surv < 2.0 / INIT_MOTHERS:
-            score += HARD * (2.0 / INIT_MOTHERS - surv) * 15
-        elif surv > 5.0 / INIT_MOTHERS:
-            score += HARD * (surv - 5.0 / INIT_MOTHERS) * 15
-        if energy > 0.40:
-            score += HARD * (energy - 0.40) * 10
-        score += abs(surv - 3.5 / INIT_MOTHERS) * 30.0
-        score += abs(energy - 0.35) * 30.0
+        if surv < 0.10:
+            score += HARD * (0.10 - surv) * 15
+        elif surv > 0.33:
+            score += HARD * (surv - 0.33) * 15
+        if energy > 0.65:
+            score += HARD * (energy - 0.65) * 10
+        score += abs(surv - 0.25) * 30.0
+        score += abs(energy - 0.55) * 30.0
 
     return score
 
@@ -1128,7 +1134,7 @@ def _run_pipeline(args, out_dir, n_workers):
     print(f"  Duration={args.duration}  Workers={n_workers}")
 
     ovat_all = {}
-    for set_id in "ABCDE":
+    for set_id in SENSITIVITY_SWEEPS:
         sweep_def = SENSITIVITY_SWEEPS[set_id]
         key       = sweep_def["key"]
         n_vals    = len(sweep_def["values"])
@@ -1160,7 +1166,7 @@ def _run_pipeline(args, out_dir, n_workers):
     hdr = f"  {'Parameter':<18}  {'Synthetic':>10}  {'Detected':>10}  {'Status':<8}  Justification"
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
-    for set_id in "ABCDE":
+    for set_id in SENSITIVITY_SWEEPS:
         c      = clarity[set_id]
         status = "CLEAR" if c["is_clear"] else "UNCLEAR"
         print(

@@ -7,8 +7,8 @@ import numpy as np
 # Global simulation constants
 # ============================================================
 
-INIT_MOTHERS = 15
-INITIAL_ENERGY = 0.75
+INIT_MOTHERS = 12   # matches root Config and all evolutionary phases (Phase 3+)
+INITIAL_ENERGY = 1.0    # matches root Config (Change J): full energy at birth
 
 VALIDATION_SEEDS = list(range(42, 47))
 DEFAULT_SWEEP_SEED_BASE = 42000
@@ -83,10 +83,18 @@ BASELINE_GENOME_WEIGHTS = {
 
 BALANCED_BASELINE = {
     "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-    "hunger_rate": 0.005,
+    # hunger_rate is LOCKED at 1/35 by starvation constraint (LOGIC.md Change J).
+    # Not a free parameter — adult starves in 35 ticks = 7 days (5 ticks/day).
+    "hunger_rate": 1 / 35,
     "move_cost": 0.001,
-    "eat_gain": 0.07,
-    "init_food": 60,
+    # eat_gain rescaled from 0.07 (for old hunger_rate=0.005) → 0.25 (root Config default).
+    # Ratio: one food = eat_gain / hunger_rate ticks of energy.
+    # 0.25 / 0.0286 ≈ 8.7 ticks per food — realistic foraging effort.
+    "eat_gain": 0.25,
+    # init_food: 50x50 grid, 12 mothers, initial_energy=1.0
+    # 240 is at ~78% survival (mid-balanced zone) from OVAT — shifts Step 4 grid
+    # ceiling to ~360, covering the EASY zone (90%+ survival ≈ init_food 300-360).
+    "init_food": 240,
     "rest_recovery": 0.005,
     **BASELINE_GENOME_WEIGHTS,
 }
@@ -97,22 +105,9 @@ BALANCED_BASELINE = {
 # ============================================================
 
 SENSITIVITY_SWEEPS = {
-    "A": {
-        "label": "hunger_rate",
-        "key": "hunger_rate",
-        "values": np.unique(
-            np.round(
-                np.concatenate(
-                    [
-                        np.arange(0.001, 0.004, 0.001),
-                        np.arange(0.004, 0.0085, 0.0005),
-                        np.arange(0.009, 0.016, 0.001),
-                    ]
-                ),
-                5,
-            )
-        ).tolist(),
-    },
+    # Set A (hunger_rate) REMOVED — hunger_rate is locked at 1/35 by starvation
+    # constraint (LOGIC.md Change J). It is a derived biological constant, not a
+    # free parameter. Sweeping it would violate the "no magic numbers" principle.
     "B": {
         "label": "move_cost",
         "key": "move_cost",
@@ -132,28 +127,36 @@ SENSITIVITY_SWEEPS = {
     "C": {
         "label": "eat_gain",
         "key": "eat_gain",
+        # rescaled from old range (0.03–0.155, for hunger_rate=0.005)
+        # to new range (0.10–0.50) appropriate for locked hunger_rate=0.0286.
+        # Ratio: eat_gain / hunger_rate = ticks of energy per food item.
+        # Target range: 3.5–17.5 ticks/food (sparse → generous nutritional value).
         "values": np.unique(
             np.round(
                 np.concatenate(
                     [
-                        np.arange(0.03, 0.05, 0.01),
-                        np.arange(0.05, 0.085, 0.005),
-                        np.arange(0.09, 0.165, 0.01),
+                        np.arange(0.10, 0.15, 0.02),
+                        np.arange(0.15, 0.36, 0.01),
+                        np.arange(0.36, 0.52, 0.02),
                     ]
                 ),
-                5,
+                4,
             )
         ).tolist(),
     },
     "D": {
         "label": "init_food",
         "key": "init_food",
+        # 50x50 grid, initial_energy=1.0: ecological cliff ~100-175 (0-53% surv),
+        # BALANCED zone ~200-260 (65-83% surv), EASY zone ~300-450 (90%+ surv).
+        # Extended from 260 to 460 to characterize the full range.
         "values": np.unique(
             np.concatenate(
                 [
-                    np.arange(20, 30, 5),
-                    np.arange(30, 65, 2),
-                    np.arange(65, 106, 5),
+                    np.arange(30, 70, 10),
+                    np.arange(70, 200, 8),
+                    np.arange(200, 320, 15),
+                    np.arange(320, 470, 25),
                 ]
             ).astype(int)
         ).tolist(),
@@ -167,7 +170,7 @@ SENSITIVITY_SWEEPS = {
 
 
 SENSITIVITY_SUBPLOT_CONFIG = [
-    ("A", "hunger_rate", "Hunger Rate (per tick)", "#4C566A"),
+    # Set A (hunger_rate) removed — locked parameter, not swept.
     ("B", "move_cost", "Move Cost (per step)", "#5E81AC"),
     ("C", "eat_gain", "Eat Gain (energy per food)", "#8FBCBB"),
     ("D", "init_food", "Initial Food Count", "#D08770"),
@@ -175,12 +178,7 @@ SENSITIVITY_SUBPLOT_CONFIG = [
 ]
 
 
-# Hide vertical baseline lines in sensitivity plots.
-# Use set() to show all baseline lines.
-# Example:
-# HIDE_BASELINE_FOR = {"rest_recovery", "init_food"}
 HIDE_BASELINE_FOR = {
-    "hunger_rate",
     "move_cost",
     "eat_gain",
     "init_food",
@@ -195,32 +193,39 @@ HIDE_BASELINE_FOR = {
 SELECTION_TARGETS = {
     "balanced": {
         # Stability boundary: cliff-edge of survival, flat energy trajectory.
-        # Penalty scoring target: ~93% (14/15) survival, energy ~0.70.
-        "min_final_pop": 10.5,        # hard: ≥70% survival (10.5/15)
-        "energy_low": 0.55,           # hard lower energy bound
+        # OVAT shows tail_energy ≈ 0.56–0.63 at 70–83% survival (survivors in
+        # abundant-food zone have lower energy due to inclusion of marginal survivors).
+        # target_energy revised from 0.70 to 0.62 to match ecological reality.
+        "min_final_pop": 8.4,         # hard: ≥70% survival (8.4/12)
+        "energy_low": 0.50,           # hard lower energy bound
         "energy_high": 0.82,          # hard upper energy bound
-        "target_energy": 0.70,
+        "target_energy": 0.62,
         "max_tail_sd": 0.06,
         "max_abs_energy_slope": 0.00005,
         "max_abs_pop_slope": 0.002,
     },
     "easy": {
         # Resource-rich: near-full survival, high sustained energy.
-        # Penalty scoring target: ~100% (15/15) survival, energy ≥ 0.85.
-        "min_final_pop": 13.5,        # hard: ≥90% survival (13.5/15)
-        "min_energy": 0.75,           # hard lower energy bound
-        "target_energy": 0.85,
+        # Penalty scoring target: ~100% (12/12) survival, energy ≥ 0.75.
+        # min_energy revised from 0.75 to 0.55 — OVAT shows tail_energy ≈ 0.55-0.58
+        # even at 90%+ survival (crowding effect: more marginal survivors lower the mean).
+        "min_final_pop": 10.8,        # hard: ≥90% survival (10.8/12)
+        "min_energy": 0.55,           # hard lower energy bound (revised from 0.75)
+        "target_energy": 0.60,
         "max_tail_sd": 0.08,
     },
     "harsh": {
-        # Ecological stress: 13–33% survival (2–5/15), energy ≤ 0.40.
-        # Penalty scoring target: ~23% (3.5/15) survival, energy ~0.35.
-        "min_final_pop": 1.5,         # hard: ≥10% survival (≈1.5/15)
-        "max_final_pop": 5.0,         # hard: ≤33% survival (5/15)
+        # Ecological stress: 10–33% survival (1.2–4/12).
+        # energy_high revised from 0.40 to 0.65: OVAT shows survivors maintain
+        # tail_energy 0.46–0.58 even at low population density — the 0.40 ceiling was
+        # calibrated for old parameters (eat_gain=0.07). At eat_gain=0.25 survivors
+        # always have energy ≥ 0.45. Harsh is defined by LOW SURVIVAL RATE only.
+        "min_final_pop": 1.2,         # hard: ≥10% survival (1.2/12)
+        "max_final_pop": 4.0,         # hard: ≤33% survival (4/12)
         "energy_low": 0.10,           # hard lower energy bound
-        "energy_high": 0.40,          # hard upper energy bound
-        "target_pop": 3.5,
-        "target_energy": 0.35,
+        "energy_high": 0.65,          # hard upper energy bound (revised from 0.40)
+        "target_pop": 3.0,
+        "target_energy": 0.55,        # revised from 0.35 (realistic survivor energy)
     },
 }
 
@@ -252,10 +257,10 @@ def candidate_configs(mode="sweep"):
         return [
             {
                 "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-                "hunger_rate": 0.0045,
-                "move_cost": 0.0005,
-                "eat_gain": 0.08,
-                "init_food": 35,
+                "hunger_rate": 1 / 35,   # locked by starvation constraint
+                "move_cost": 0.001,
+                "eat_gain": 0.25,        # root Config default for locked hunger_rate
+                "init_food": 90,         # 50x50 grid, 12 mothers, initial_energy=1.0
                 "rest_recovery": 0.005,
                 **BASELINE_GENOME_WEIGHTS,
                 "name": "single_test",
@@ -265,23 +270,20 @@ def candidate_configs(mode="sweep"):
     # fmt: off
     _GRIDS = {
         "sweep": {
-            "hunger_rate":    [0.0045],
-            "move_cost":      [0.0005],
-            "eat_gain":       [0.08],
-            "init_food":      [35, 38, 40, 43, 45, 48, 50, 53, 55, 58, 60],
+            "hunger_rate":    [1 / 35],  # locked — not swept
+            "move_cost":      [0.001],
+            "eat_gain":       [0.25],
+            # init_food: shifted ~15% down vs 0.75 baseline (easier start = lower cliff)
+            "init_food":      [55, 65, 75, 85, 95, 100, 110, 120, 135, 150, 165],
             "rest_recovery":  [0.005],
         },
         "pipeline": {
-            # 5/4/5/6/4-level grid. Only perception_radius is fixed.
-            # 5 × 4 × 5 × 6 × 4 = 2400 configs.
-            # Expected runtime: ~15–22 min with --workers 8 at duration 1000.
-            #
-            # Values span each parameter's full viable range so all three
-            # operating zones (harsh / balanced / easy) are covered.
-            "hunger_rate":   [0.002, 0.004, 0.006, 0.009, 0.012],
+            # hunger_rate removed — locked at 1/35 by starvation constraint.
+            # 4/5/6/4 = 480 configs.
+            # init_food shifted ~15% down vs 0.75 baseline.
             "move_cost":     [0.0005, 0.001, 0.003, 0.006],
-            "eat_gain":      [0.04, 0.06, 0.08, 0.10, 0.13],
-            "init_food":     [20, 30, 40, 55, 70, 90],
+            "eat_gain":      [0.12, 0.18, 0.25, 0.32, 0.42],
+            "init_food":     [40, 65, 100, 140, 175, 220],
             "rest_recovery": [0.005, 0.02, 0.05, 0.09],
         },
     }
