@@ -1,0 +1,87 @@
+{
+  "phase": "6",
+  "description": "Mutation-enabled evolution without plasticity",
+  "duration": 10000,
+  "n_seeds": 10,
+  "aggregate_outcomes": {
+    "evolving": {
+      "condition": "evolving",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 898.2,
+      "crash_tick_sd": 247.77037756761803,
+      "max_gen_mean": 8.3,
+      "max_gen_sd": 2.6095976701399777,
+      "child_surv_mean": 0.6812068347790832,
+      "total_births_mean": 82.0,
+      "init_care_mean": 0.29856070023849207
+    },
+    "no_care_fixed": {
+      "condition": "no_care_fixed",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 306.8,
+      "crash_tick_sd": 65.17330741952567,
+      "max_gen_mean": 1.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.0,
+      "total_births_mean": 8.3,
+      "init_care_mean": 0.0
+    },
+    "canonical_fixed": {
+      "condition": "canonical_fixed",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 999.4,
+      "crash_tick_sd": 254.2322560179963,
+      "max_gen_mean": 9.3,
+      "max_gen_sd": 2.3259406699226015,
+      "child_surv_mean": 0.710101713860859,
+      "total_births_mean": 84.3,
+      "init_care_mean": 0.29999999999999993
+    },
+    "high_care_fixed": {
+      "condition": "high_care_fixed",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 1241.7,
+      "crash_tick_sd": 209.17459214732557,
+      "max_gen_mean": 11.1,
+      "max_gen_sd": 1.7578395831246945,
+      "child_surv_mean": 0.8030688048711087,
+      "total_births_mean": 99.6,
+      "init_care_mean": 0.5
+    }
+  },
+  "selection_gradient": {
+    "spearman_r_per_seed": [
+      0.027972027972027972,
+      -0.5384615384615385,
+      -0.18881118881118883,
+      0.4265734265734266,
+      -0.6783216783216784,
+      -0.3426573426573427,
+      -0.09090909090909093,
+      0.14685314685314685,
+      -0.20979020979020982,
+      -0.6713286713286714
+    ],
+    "mean_spearman_r": -0.2118881118881119,
+    "high_care_more_descendants": false
+  },
+  "care_weight_evolution": {
+    "care_increased_on_average": false,
+    "n_mutation_deltas_recorded": 820,
+    "mean_mutation_delta_care": 0.00022830817620654513
+  },
+  "success_criteria": {
+    "care_weight_increases": false,
+    "selection_gradient_positive": false,
+    "evolving_outlasts_no_care": true,
+    "evolving_outlasts_canonical": false
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "phase": "6",
+  "description": "Mutation-enabled evolution without plasticity",
+  "duration": 200,
+  "n_seeds": 1,
+  "aggregate_outcomes": {
+    "evolving": {
+      "condition": "evolving",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 3.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.8666666666666667,
+      "total_births_mean": 36.0,
+      "init_care_mean": 0.19107206646497787
+    },
+    "no_care_fixed": {
+      "condition": "no_care_fixed",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 1.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.0,
+      "total_births_mean": 13.0,
+      "init_care_mean": 0.0
+    },
+    "canonical_fixed": {
+      "condition": "canonical_fixed",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 3.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.7142857142857143,
+      "total_births_mean": 31.0,
+      "init_care_mean": 0.3
+    },
+    "high_care_fixed": {
+      "condition": "high_care_fixed",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 3.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 1.0,
+      "total_births_mean": 30.0,
+      "init_care_mean": 0.5
+    }
+  },
+  "selection_gradient": {
+    "spearman_r_per_seed": [
+      -0.0979020979020979
+    ],
+    "mean_spearman_r": -0.0979020979020979,
+    "high_care_more_descendants": false
+  },
+  "care_weight_evolution": {
+    "care_increased_on_average": true,
+    "n_mutation_deltas_recorded": 36,
+    "mean_mutation_delta_care": 0.0038851849084584095
+  },
+  "success_criteria": {
+    "care_weight_increases": true,
+    "selection_gradient_positive": false,
+    "evolving_outlasts_no_care": false,
+    "evolving_outlasts_canonical": false
+  }
+}

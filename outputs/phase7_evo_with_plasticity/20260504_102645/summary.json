@@ -1,0 +1,80 @@
+{
+  "phase": "7",
+  "description": "Mutation-enabled evolution with care-specific plasticity",
+  "duration": 200,
+  "n_seeds": 1,
+  "aggregate_outcomes": {
+    "no_plasticity": {
+      "condition": "no_plasticity",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 3.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.8666666666666667,
+      "total_births_mean": 36.0,
+      "init_care_mean": 0.19107206646497787,
+      "total_plasticity_mean": 1.0,
+      "care_increased_frac": 0.0
+    },
+    "plasticity": {
+      "condition": "plasticity",
+      "n_seeds": 1,
+      "extinction_rate": 0.0,
+      "n_survived": 1,
+      "crash_tick_mean": NaN,
+      "crash_tick_sd": 0.0,
+      "max_gen_mean": 3.0,
+      "max_gen_sd": 0.0,
+      "child_surv_mean": 0.8214285714285714,
+      "total_births_mean": 33.0,
+      "init_care_mean": 0.19107206646497787,
+      "total_plasticity_mean": 3.0,
+      "care_increased_frac": 0.0
+    }
+  },
+  "selection_gradient": {
+    "no_plasticity": {
+      "spearman_r_per_seed": [
+        -0.0979020979020979
+      ],
+      "mean_spearman_r": -0.0979020979020979
+    },
+    "plasticity": {
+      "spearman_r_per_seed": [
+        0.18181818181818185
+      ],
+      "mean_spearman_r": 0.18181818181818185
+    },
+    "selection_gradient_improved_by_plasticity": true,
+    "selection_gradient_positive_plasticity": true
+  },
+  "care_weight_evolution": {
+    "no_plasticity": {
+      "care_increased_lineage_comparison": true,
+      "care_increased_temporal_frac": 0.0,
+      "mean_mutation_delta_care": 0.0038851849084584095
+    },
+    "plasticity": {
+      "care_increased_lineage_comparison": true,
+      "care_increased_temporal_frac": 0.0,
+      "mean_mutation_delta_care": -0.004660439514950586,
+      "mean_plasticity_events_per_run": 3.0
+    }
+  },
+  "success_criteria": {
+    "plasticity_improves_survival": false,
+    "plasticity_improves_max_gen": false,
+    "plasticity_improves_child_surv": false,
+    "selection_gradient_positive": true,
+    "selection_gradient_improved": true,
+    "care_weight_increases": true,
+    "care_increased_temporal_frac": 0.0
+  },
+  "verdict": {
+    "baldwin_scaffolding_supported": false,
+    "note": "Baldwin not fully supported: see individual success_criteria for details."
+  }
+}

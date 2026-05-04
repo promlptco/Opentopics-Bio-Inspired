@@ -1,0 +1,98 @@
+{
+  "phase": "7",
+  "description": "Mutation-enabled evolution with care-specific plasticity",
+  "duration": 10000,
+  "n_seeds": 10,
+  "aggregate_outcomes": {
+    "no_plasticity": {
+      "condition": "no_plasticity",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 898.2,
+      "crash_tick_sd": 247.77037756761803,
+      "max_gen_mean": 8.3,
+      "max_gen_sd": 2.6095976701399777,
+      "child_surv_mean": 0.6812068347790832,
+      "total_births_mean": 82.0,
+      "init_care_mean": 0.29856070023849207,
+      "total_plasticity_mean": 19.7,
+      "care_increased_frac": 0.1
+    },
+    "plasticity": {
+      "condition": "plasticity",
+      "n_seeds": 10,
+      "extinction_rate": 1.0,
+      "n_survived": 0,
+      "crash_tick_mean": 1094.1,
+      "crash_tick_sd": 365.4308279278036,
+      "max_gen_mean": 9.7,
+      "max_gen_sd": 3.7960505792204615,
+      "child_surv_mean": 0.6934985072176996,
+      "total_births_mean": 76.6,
+      "init_care_mean": 0.29856070023849207,
+      "total_plasticity_mean": 26.5,
+      "care_increased_frac": 0.3
+    }
+  },
+  "selection_gradient": {
+    "no_plasticity": {
+      "spearman_r_per_seed": [
+        0.027972027972027972,
+        -0.5384615384615385,
+        -0.18881118881118883,
+        0.4265734265734266,
+        -0.6783216783216784,
+        -0.3426573426573427,
+        -0.09090909090909093,
+        0.14685314685314685,
+        -0.20979020979020982,
+        -0.6713286713286714
+      ],
+      "mean_spearman_r": -0.2118881118881119
+    },
+    "plasticity": {
+      "spearman_r_per_seed": [
+        0.1188811188811189,
+        0.16783216783216784,
+        -0.35664335664335667,
+        0.3426573426573427,
+        -0.18181818181818185,
+        -0.5944055944055945,
+        -0.11188811188811189,
+        0.1188811188811189,
+        -0.4125874125874127,
+        -0.6433566433566434
+      ],
+      "mean_spearman_r": -0.15524475524475528
+    },
+    "selection_gradient_improved_by_plasticity": true,
+    "selection_gradient_positive_plasticity": false
+  },
+  "care_weight_evolution": {
+    "no_plasticity": {
+      "care_increased_lineage_comparison": false,
+      "care_increased_temporal_frac": 0.1,
+      "mean_mutation_delta_care": 0.00022830817620654513
+    },
+    "plasticity": {
+      "care_increased_lineage_comparison": true,
+      "care_increased_temporal_frac": 0.3,
+      "mean_mutation_delta_care": 2.4796031563984507e-05,
+      "mean_plasticity_events_per_run": 26.5
+    }
+  },
+  "success_criteria": {
+    "plasticity_improves_survival": true,
+    "plasticity_improves_max_gen": true,
+    "plasticity_improves_child_surv": true,
+    "selection_gradient_positive": false,
+    "selection_gradient_improved": true,
+    "care_weight_increases": true,
+    "care_increased_temporal_frac": 0.3
+  },
+  "verdict": {
+    "baldwin_scaffolding_supported": true,
+    "note": "Baldwin supported: plasticity improves survival AND selection gradient improves AND care_weight increases in plasticity condition."
+  }
+}

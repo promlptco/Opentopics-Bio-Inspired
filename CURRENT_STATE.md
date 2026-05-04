@@ -160,11 +160,57 @@ Four bugs fixed (R01/R02/R04/R05). Full details in `REPORT.md → Phase 0`.
 
 ---
 
+### Phase 6 — Evolution Without Plasticity
+
+**Status: COMPLETE — FAIL (evolutionary criterion) / PASS (scientific question)**
+
+- Command: `python experiments/phase6_evo_no_plasticity/run.py --duration 10000 --seeds 10`
+- Output: `outputs/phase6_evo_no_plasticity/20260504_094830/`
+- Runs: 4 conditions × 10 seeds = 40 runs
+- Result: All 4 conditions extinct (boom-bust ecology). No population survived to 10 000 ticks.
+- Key numbers:
+  - no_care_fixed: crash_t=307±65, max_gen=1.0, child_surv=0.000
+  - evolving (mut=ON, init cw~U[0,0.6]): crash_t=898±248, max_gen=8.3, child_surv=0.681
+  - canonical_fixed (cw=0.3): crash_t=999±254, max_gen=9.3, child_surv=0.710
+  - high_care_fixed (cw=0.5): crash_t=1242±209, max_gen=11.1, child_surv=0.803
+- **care_weight_increased_on_average: False** — mean mutation delta=+0.000228 (random drift, no direction)
+- **Selection gradient (Spearman r, initial_cw vs descendants): −0.212** — weak NEGATIVE selection; low-care lineages produced more descendants (forage-first advantage during boom)
+- **high_care_more_descendants: False**
+- Success criteria: care_weight_increases=False, selection_gradient_positive=False, evolving_outlasts_no_care=True, evolving_outlasts_canonical=False
+- Root cause of FAIL: boom-bust ecology too short (~8.3 generations) for positive care selection; selection acts on early reproductive speed, not long-term care benefit
+- `evolution_tick_log.csv` produced — ready for Baldwin analysis
+- Full results in `REPORT.md → Phase 6`
+
+---
+
+### Phase 7 — Evolution With Care-Specific Plasticity
+
+**Status: COMPLETE — PASS (partial Baldwin scaffolding) / INCOMPLETE (no full genetic assimilation)**
+
+- Command: `python experiments/phase7_evo_with_plasticity/run.py --duration 10000 --seeds 10`
+- Output: `outputs/phase7_evo_with_plasticity/20260504_102703/`
+- Runs: 2 conditions × 10 seeds = 20 runs
+- Result: Both conditions extinct (boom-bust). Plasticity improves survival (+21.8%), max_gen (+1.4), and child_surv (+1.8%).
+- Key numbers:
+  - no_plasticity: crash_t=898±248, max_gen=8.3, child_surv=0.681, Spearman r=−0.212
+  - plasticity: crash_t=1094±365, max_gen=9.7, child_surv=0.693, Spearman r=−0.155
+- **Selection gradient improved**: −0.212 → −0.155 (+0.057). Still negative — care not positively selected.
+- **care_weight_increases: True** (lineage comparison); temporal increase in 3/10 seeds (vs 1/10 no_plasticity)
+- **Baldwin scaffolding supported: True** (survival + gradient + care all improve with plasticity)
+- Internal check: no_plasticity exactly replicates Phase 6 (crash_t=898, r=−0.212) — Phase 6 replay confirmed
+- High variance: seed=4 (crash=1963, +119% over no_plasticity) and seed=7 (1584, +39%) are outlier wins
+- `evolution_tick_log.csv` produced — ready for Baldwin analysis
+- Full results in `REPORT.md → Phase 7`
+
+---
+
 ## Next Phase
 
-All food-ecology and birth-cost tuning exhausted (Phases 5b–5f: 31 conditions tested, all fail). Decision: **Accept boom-bust ecology** and proceed to Phase 6. Care contrast is strong (crash x2.9 for canonical, x3.5 for high_care vs no_care). Evolution can act on this difference.
+Phase 7 demonstrates partial Baldwin scaffolding: plasticity improves survival and weakly shifts selection gradient toward care, with genetic care_weight increasing in 3/10 seeds. Not full genetic assimilation, but the mechanism is present.
 
-**Phase 6 ecology settings (frozen):** `reproduction_cost=0.10, init_food=45, replenish_amount=20, threshold_ratio=0.5, continuous_food_rate=0.10, continuous_food_max=200, infant_starvation_multiplier=1.5`
+**Proceed to Phase 8 (Baldwin Zero-Shot Deployment).** Test whether genomes evolved under plasticity express higher baseline care when plasticity is removed — confirming genetic instinct rather than purely learned behaviour.
+
+**Phase 8 ecology settings (inherit from Phase 7):** `reproduction_cost=0.10, init_food=45, replenish_amount=20, threshold_ratio=0.5, continuous_food_rate=0.10, continuous_food_max=200, infant_starvation_multiplier=1.5`
 
 ---
 
