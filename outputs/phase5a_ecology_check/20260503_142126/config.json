@@ -1,0 +1,55 @@
+{
+  "phase": "5a",
+  "experiment": "reproduction_enabled_ecology_check",
+  "duration_ticks": 3000,
+  "n_seeds": 30,
+  "conditions": [
+    {
+      "label": "no_care",
+      "care_w": 0.0,
+      "forage_w": 0.85,
+      "self_w": 0.3
+    },
+    {
+      "label": "canonical",
+      "care_w": 0.3,
+      "forage_w": 0.85,
+      "self_w": 0.3
+    },
+    {
+      "label": "high_care",
+      "care_w": 0.5,
+      "forage_w": 0.85,
+      "self_w": 0.3
+    }
+  ],
+  "frozen_from_phase3": {
+    "infant_starvation_multiplier": 1.5,
+    "effective_child_hunger_rate": 0.012
+  },
+  "fixed_settings": {
+    "plasticity_enabled": false,
+    "reproduction_enabled": true,
+    "mutation_enabled": false,
+    "children_enabled": true,
+    "init_mothers": 12,
+    "init_food": 45,
+    "hunger_rate": 0.008,
+    "reproduction_threshold": 0.95,
+    "reproduction_cost": 0.35,
+    "reproduction_cooldown": 80,
+    "max_population": 100
+  },
+  "success_criteria": [
+    "no_care performs worse than care conditions",
+    "care genome improves child survival or descendant count",
+    "population does not collapse across most seeds",
+    "at least one care condition reaches generation 2",
+    "FEED_CHILD events occur in care conditions"
+  ],
+  "failure_criteria": [
+    "all conditions go extinct",
+    "care does not improve over no-care",
+    "population explodes uncontrollably"
+  ]
+}

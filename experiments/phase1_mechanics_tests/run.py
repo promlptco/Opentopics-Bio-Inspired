@@ -11,6 +11,7 @@ TESTS = [
     "test_04_population_stability.py",
     "test_05_stochasticity_identity.py",
     "test_06_softmax_calibration.py",
+    "test_07_engine_fixes.py",   # Phase 0 blocking-bug fixes (R01/R02/R04/R05)
 ]
 
 phase_dir = os.path.dirname(os.path.abspath(__file__))

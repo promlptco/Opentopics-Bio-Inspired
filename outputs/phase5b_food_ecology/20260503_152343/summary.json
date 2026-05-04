@@ -1,0 +1,136 @@
+{
+  "phase": "5b",
+  "verdict": "FAIL -- no food ecology supports canonical care persistence by tick 30",
+  "n_ecologies_tested": 12,
+  "n_canonical_viable": 0,
+  "checks": {
+    "any_canonical_ecology_viable": false,
+    "no_care_performs_worse": true,
+    "feed_events_occur": true,
+    "care_improves_child_survival": true,
+    "multi_generation_reached": true,
+    "population_not_extinct": true
+  },
+  "selected_ecology": {
+    "init_food": 45,
+    "replenish_amount": 10,
+    "ecology_label": "F45_R10",
+    "canonical_extinction_rate": 0.9667,
+    "canonical_max_gen_mean": 10.13,
+    "canonical_n_seeds_gen2plus": 30,
+    "canonical_init_child_surv": 0.8111,
+    "canonical_feed_rate": 0.0868,
+    "no_care_extinction_rate": 1.0,
+    "high_care_extinction_rate": 1.0
+  },
+  "all_canonical_ecology_summary": [
+    {
+      "ecology_label": "F45_R5",
+      "init_food": 45,
+      "replenish_amount": 5,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 8.77,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F45_R10",
+      "init_food": 45,
+      "replenish_amount": 10,
+      "extinction_rate": 0.9667,
+      "max_gen_mean": 10.13,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.03
+    },
+    {
+      "ecology_label": "F45_R15",
+      "init_food": 45,
+      "replenish_amount": 15,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 9.1,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F60_R5",
+      "init_food": 60,
+      "replenish_amount": 5,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 8.17,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F60_R10",
+      "init_food": 60,
+      "replenish_amount": 10,
+      "extinction_rate": 0.9667,
+      "max_gen_mean": 8.97,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.03
+    },
+    {
+      "ecology_label": "F60_R15",
+      "init_food": 60,
+      "replenish_amount": 15,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.77,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F80_R5",
+      "init_food": 80,
+      "replenish_amount": 5,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.67,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F80_R10",
+      "init_food": 80,
+      "replenish_amount": 10,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.87,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F80_R15",
+      "init_food": 80,
+      "replenish_amount": 15,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 8.73,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F100_R5",
+      "init_food": 100,
+      "replenish_amount": 5,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.83,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F100_R10",
+      "init_food": 100,
+      "replenish_amount": 10,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.57,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    },
+    {
+      "ecology_label": "F100_R15",
+      "init_food": 100,
+      "replenish_amount": 15,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.83,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0
+    }
+  ]
+}

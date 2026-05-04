@@ -426,7 +426,10 @@ class MotherAgent(Agent):
     # ============================================================
 
     def update_state(self, hunger_rate: float) -> None:
-        self.hunger = min(1.0, self.hunger + hunger_rate)
-        self.energy = max(0.0, self.energy - self.hunger * 0.01)
+        # Linear depletion: energy -= hunger_rate per tick.
+        # Matches the Phase 2 validated SurvivalSimulation model exactly.
+        # The old accumulating-hunger proxy (hunger += rate; energy -= hunger*0.01)
+        # was ~100x slower on tick 1 and produced different survival physics.
+        self.energy = max(0.0, self.energy - hunger_rate)
         self.stress = max(0.0, 1.0 - self.energy)
         self.tick_cooldown()

@@ -13,6 +13,7 @@ class ChildAgent(Agent):
         self.hunger: float = 0.0
         self.separation: float = 0.0
         self.distress: float = 0.0
+        self.matured: bool = False  # set True by _check_maturation before die(); distinguishes maturation from starvation in death log
     
     def update_hunger(self, hunger_rate: float) -> None:
         self.hunger = min(1.0, self.hunger + hunger_rate)

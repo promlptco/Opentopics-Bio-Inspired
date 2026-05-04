@@ -1,0 +1,87 @@
+{
+  "phase": "5d",
+  "verdict": "FAIL -- no hybrid ecology supports canonical care persistence by tick 3000",
+  "n_ecologies_tested": 5,
+  "n_canonical_viable": 0,
+  "checks": {
+    "any_canonical_ecology_viable": false,
+    "no_care_performs_worse": true,
+    "feed_events_occur": true,
+    "care_improves_child_survival": true,
+    "multi_generation_reached": true,
+    "food_not_oversaturated": true,
+    "population_not_instantly_extinct": false
+  },
+  "selected_ecology": {
+    "continuous_food_rate": 0.1,
+    "ecology_label": "cfr_0.10",
+    "canonical_extinction_rate": 1.0,
+    "canonical_max_gen_mean": 7.57,
+    "canonical_n_seeds_gen2plus": 30,
+    "canonical_init_child_surv": 0.8222,
+    "canonical_feed_rate": 0.0831,
+    "canonical_final_pop_mean": 0.0,
+    "canonical_mean_crash_tick": 847.3,
+    "canonical_food_sat_frac_mean": 0.0,
+    "canonical_boom_crash_rate": 0.7667,
+    "no_care_extinction_rate": 1.0,
+    "high_care_extinction_rate": 1.0
+  },
+  "all_canonical_ecology_summary": [
+    {
+      "ecology_label": "cfr_0.10",
+      "continuous_food_rate": 0.1,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.57,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0,
+      "mean_crash_tick": 847.3,
+      "food_sat_frac_mean": 0.0,
+      "boom_crash_rate": 0.7667
+    },
+    {
+      "ecology_label": "cfr_0.20",
+      "continuous_food_rate": 0.2,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 7.9,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0,
+      "mean_crash_tick": 885.6,
+      "food_sat_frac_mean": 0.0,
+      "boom_crash_rate": 0.8333
+    },
+    {
+      "ecology_label": "cfr_0.50",
+      "continuous_food_rate": 0.5,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 8.43,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0,
+      "mean_crash_tick": 1009.0,
+      "food_sat_frac_mean": 0.0244,
+      "boom_crash_rate": 0.7333
+    },
+    {
+      "ecology_label": "cfr_1.00",
+      "continuous_food_rate": 1.0,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 9.27,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0,
+      "mean_crash_tick": 1061.2,
+      "food_sat_frac_mean": 0.0989,
+      "boom_crash_rate": 0.9667
+    },
+    {
+      "ecology_label": "cfr_2.00",
+      "continuous_food_rate": 2.0,
+      "extinction_rate": 1.0,
+      "max_gen_mean": 8.43,
+      "n_seeds_gen2plus": 30,
+      "final_pop_mean": 0.0,
+      "mean_crash_tick": 1012.3,
+      "food_sat_frac_mean": 0.1909,
+      "boom_crash_rate": 1.0
+    }
+  ]
+}

@@ -67,6 +67,23 @@ class Config:
     #   Phase 5 sets this to 2; default 8 ~ random placement (current Phase 3/4 behaviour).
     birth_scatter_radius: int = 8
 
+    # Phase 5b — Food Ecology Calibration
+    # food_replenish_amount: food units spawned per replenishment event.
+    #   Default 5 matches the value hardcoded in all prior phases.
+    food_replenish_amount: int = 5
+    # food_replenish_threshold_ratio: replenish when food_count < init_food * ratio.
+    #   Default 0.5 matches the init_food // 2 threshold used in all prior phases.
+    food_replenish_threshold_ratio: float = 0.5
+
+    # Phase 5d — Hybrid Food Replenishment
+    # continuous_food_rate: food units added per tick unconditionally (fractional
+    #   accumulator — fractions carry over to the next tick).
+    #   0.0 = disabled (default). All prior phases unaffected.
+    continuous_food_rate: float = 0.0
+    # continuous_food_max: cap on food_count when continuous trickle is active.
+    #   0 = no cap. Phase 5d sets this to 200 to prevent unbounded accumulation.
+    continuous_food_max: int = 0
+
     # Genome weights (used by Phase 2+ survival experiments)
     # care_weight=0.0 disables CARE motivation; FORAGE/SELF are neutral at 1.0.
     forage_weight: float = 1.0

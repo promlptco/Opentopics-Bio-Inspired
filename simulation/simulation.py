@@ -23,6 +23,7 @@ class Simulation:
         self.genome_fallback_count: int = 0  # defensive counter; must stay 0 after birth-fix
         self._mother_by_id: dict[int, MotherAgent] = {}
         self._child_by_id:  dict[int, ChildAgent]  = {}
+        self._food_frac: float = 0.0  # fractional accumulator for continuous trickle
 
         random.seed(config.seed)
         np.random.seed(config.seed)
@@ -33,7 +34,11 @@ class Simulation:
             x = random.randint(0, self.config.width - 1)
             y = random.randint(0, self.config.height - 1)
 
-            genome = genomes[i % len(genomes)].copy() if genomes else Genome()
+            genome = genomes[i % len(genomes)].copy() if genomes else Genome(
+                care_weight=self.config.care_weight,
+                forage_weight=self.config.forage_weight,
+                self_weight=self.config.self_weight,
+            )
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
             self.mothers.append(mother)
             self._mother_by_id[mother.id] = mother
@@ -122,9 +127,22 @@ class Simulation:
             self.tick += 1
     
     def step(self) -> None:
-        # 1. Spawn food
-        if len(self.world.food_positions) < self.config.init_food // 2:
-            self._spawn_food(5)
+        # 1. Burst replenishment (Phase 5b params)
+        _food_thresh = int(self.config.init_food * self.config.food_replenish_threshold_ratio)
+        if len(self.world.food_positions) < _food_thresh:
+            self._spawn_food(self.config.food_replenish_amount)
+
+        # 1b. Continuous trickle (Phase 5d — disabled when continuous_food_rate == 0.0)
+        if self.config.continuous_food_rate > 0.0:
+            self._food_frac += self.config.continuous_food_rate
+            to_add = int(self._food_frac)
+            if to_add > 0:
+                self._food_frac -= to_add
+                if self.config.continuous_food_max > 0:
+                    current = len(self.world.food_positions)
+                    to_add = min(to_add, max(0, self.config.continuous_food_max - current))
+                if to_add > 0:
+                    self._spawn_food(to_add)
         
         # 2. Update children (only if enabled)
         if self.config.children_enabled:
@@ -160,12 +178,33 @@ class Simulation:
             
             # Perceive (empty if care disabled)
             visible_children = self._get_visible_children(mother) if self.config.care_enabled else []
-            
-            # Determine domain first
+
+            # Determine domain using the unified environmental-cue motivation model.
+            # choose_motivation() returns uppercase ("FORAGE"/"SELF"/"CARE"); lower()
+            # keeps it consistent with _execute_action() and _log_choice().
             if mother.has_commitment():
                 domain = "care"
             else:
-                domain = mother.choose_domain(visible_children)
+                nearest_food = self._nearest_food(mother.pos)
+                dist_to_food = (
+                    float(self.world.get_distance(mother.pos, nearest_food))
+                    if nearest_food is not None
+                    else None
+                )
+                care_child = (
+                    mother.choose_child(visible_children)
+                    if (self.config.care_enabled and visible_children)
+                    else None
+                )
+                chosen, _, _ = mother.choose_motivation(
+                    world=self.world,
+                    perception_radius=self.config.perception_radius,
+                    child=care_child,
+                    nearest_food=nearest_food,
+                    distance_to_food=dist_to_food,
+                    care_enabled=self.config.care_enabled,
+                )
+                domain = chosen.lower()
 
             # Option A — distress_sensitivity: cortisol-analog penalty for ignoring own
             # distressed infant. Fires whenever mother is NOT caring and her own child is
@@ -212,9 +251,10 @@ class Simulation:
                 m.own_child_id = None
         for c in self.children:
             if not c.alive:
+                cause = "matured" if c.matured else "hunger"
                 self.logger.log_death(DeathRecord(
                     tick=self.tick, agent_id=c.id, agent_type="child",
-                    lineage_id=c.lineage_id, generation=c.generation, cause="hunger",
+                    lineage_id=c.lineage_id, generation=c.generation, cause=cause,
                 ))
         for m in self.mothers:
             if not m.alive:
@@ -364,7 +404,9 @@ class Simulation:
 
                 pos = child.pos  # save before removal
 
-                # Remove child FIRST to free its position in occupied
+                # Mark matured BEFORE die() so the cleanup block logs cause="matured"
+                # rather than cause="hunger" (R05 fix).
+                child.matured = True
                 child.die()
                 self._child_by_id.pop(child.id, None)
                 self.world.remove_entity(child.id)

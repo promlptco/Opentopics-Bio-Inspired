@@ -45,22 +45,24 @@ def _make_config(seed: int, ticks: int) -> Config:
 
 
 def _run_and_collect_domains(seed: int, ticks: int) -> list[str]:
-    """Run simulation and record mother domain choices.
+    """Run simulation and record mother motivation choices.
 
-    The MotherAgent.choose_domain method is temporarily wrapped so the test can
-    record the actual choices made by the simulation without changing production code.
+    Patches MotherAgent.choose_motivation (the method now called by simulation.step)
+    to capture every motivation decision without changing production code.
+    choose_motivation returns (motivation_str, scores_dict, probs_dict); the wrapper
+    records motivation_str and passes the full result through unchanged.
     """
     from agents.mother import MotherAgent
 
     domains_log: list[str] = []
-    original_choose_domain = MotherAgent.choose_domain
+    original_choose_motivation = MotherAgent.choose_motivation
 
-    def recording_choose_domain(self, visible_children):
-        domain = original_choose_domain(self, visible_children)
-        domains_log.append(domain)
-        return domain
+    def recording_choose_motivation(self, *args, **kwargs):
+        result = original_choose_motivation(self, *args, **kwargs)
+        domains_log.append(result[0])  # result[0] is the chosen motivation string
+        return result
 
-    MotherAgent.choose_domain = recording_choose_domain
+    MotherAgent.choose_motivation = recording_choose_motivation
 
     try:
         config = _make_config(seed=seed, ticks=ticks)
@@ -72,7 +74,7 @@ def _run_and_collect_domains(seed: int, ticks: int) -> list[str]:
             sim.step()
 
     finally:
-        MotherAgent.choose_domain = original_choose_domain
+        MotherAgent.choose_motivation = original_choose_motivation
 
     return domains_log
 
