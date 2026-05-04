@@ -42,17 +42,21 @@ class Simulation:
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
             self.mothers.append(mother)
             self._mother_by_id[mother.id] = mother
-            self.world.place_entity(mother)
+            self.world.place_entity(mother)  # mothers block movement
             self.lineage.register_mother(mother.id, i, 0)
-            
+
             # Spawn child nearby (only if children enabled)
             if self.config.children_enabled:
                 cx, cy = self._nearby_pos(x, y)
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
-                child.genome = mother.genome.mutate(lock_learning_rate=self.config.lock_learning_rate) if self.config.mutation_enabled else mother.genome.copy()
+                child.genome = mother.genome.mutate(
+                    mutation_rate=self.config.mutation_rate,
+                    sigma=self.config.mutation_sigma,
+                    lock_learning_rate=self.config.lock_learning_rate,
+                ) if self.config.mutation_enabled else mother.genome.copy()
                 self.children.append(child)
                 self._child_by_id[child.id] = child
-                self.world.place_entity(child)
+                self.world.place_entity(child, blocking=False)  # children non-blocking (Change C)
                 self.lineage.register_birth(child.id, mother.id, i, 1)
                 mother.own_child_id = child.id
         
@@ -149,10 +153,18 @@ class Simulation:
             for child in self.children:
                 if not child.alive:
                     continue
-                # Phase 5: infants hunger faster, making B existential (not marginal)
                 hunger_rate = self.config.hunger_rate
-                if self.config.infant_starvation_multiplier != 1.0 and child.age < self.config.maturity_age:
+                if child.age < self.config.maturity_age:
                     hunger_rate *= self.config.infant_starvation_multiplier
+                # Change H: warm behavior — maternal proximity reduces infant hunger cost.
+                # hunger_rate *= (1 - warmth_factor * warmth_proximity) within warmth_radius.
+                if self.config.warmth_factor > 0:
+                    mother = self._get_mother_by_id(child.mother_id)
+                    if mother and mother.alive:
+                        dist_to_mother = self.world.get_distance(child.pos, mother.pos)
+                        if dist_to_mother <= self.config.warmth_radius:
+                            warmth_prox = max(0.0, 1.0 - dist_to_mother / self.config.warmth_radius)
+                            hunger_rate *= (1.0 - self.config.warmth_factor * warmth_prox)
                 child.update_hunger(hunger_rate)
                 mother = self._get_mother_by_id(child.mother_id)
                 if mother and mother.alive:
@@ -197,8 +209,8 @@ class Simulation:
                     else None
                 )
                 chosen, _, _ = mother.choose_motivation(
-                    world=self.world,
                     perception_radius=self.config.perception_radius,
+                    tau=self.config.softmax_tau,  # Change G: tau from Config
                     child=care_child,
                     nearest_food=nearest_food,
                     distance_to_food=dist_to_food,
@@ -291,12 +303,13 @@ class Simulation:
             if target is None or not target.alive:
                 target = mother.choose_child(visible_children)
                 if target:
-                    mother.set_target(target.id, duration=random.randint(3, 5))
+                    mother.set_target(target.id, duration=20)  # Change D: 20-tick max commitment
             
             if target:
                 dist = self.world.get_distance(mother.pos, target.pos)
-                if dist == 1:
-                    # Feed (adjacent)
+                if dist == 0:
+                    # Change C: same-cell feed. Children are non-blocking so the mother
+                    # can occupy their cell. feed_child() guards dist > 1.
                     total_cost = mother.get_total_cost(self.config.feed_cost)
                     success, benefit = mother.feed_child(target, self.config.feed_cost, self.world)
                     r = self.lineage.get_relatedness(mother.id, target.id)
@@ -314,9 +327,6 @@ class Simulation:
                     ))
                     if success:
                         is_own = (target.mother_id == mother.id)
-                        # Option D — care_recovery: prolactin-analog energy reward for
-                        # successfully feeding own infant. Offsets feed_cost, making care
-                        # energetically viable at high care frequency.
                         if is_own and mother.genome.care_recovery > 0:
                             mother.energy = min(
                                 1.0,
@@ -329,9 +339,13 @@ class Simulation:
                                     energy_cost=self.config.plasticity_energy_cost,
                                     noise_sigma=self.config.plasticity_noise_sigma,
                                 )
-                    mother.commit_ticks = 0  # done
+                        # Change D: outcome-based commitment — release only when child sated.
+                        if target.hunger < 0.3:
+                            mother.commit_ticks = 0  # child sated; release commitment
+                        # else: keep commitment; tick_commit() decrements naturally
                 else:
-                    # Move toward
+                    # Move toward child (when dist > 0). Children are non-blocking so
+                    # the mother moves onto their cell when dist becomes 1→0.
                     new_pos = self.world.get_step_toward(mother.pos, target.pos)
                     if self.world.update_position(mother, new_pos):
                         mother.add_move_cost(self.config.move_cost)
@@ -437,13 +451,18 @@ class Simulation:
             cx, cy = self._birth_pos(mother.x, mother.y)
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
-            child.genome = mother.genome.mutate(lock_learning_rate=self.config.lock_learning_rate) if self.config.mutation_enabled else mother.genome.copy()
+            child.genome = mother.genome.mutate(
+                mutation_rate=self.config.mutation_rate,
+                sigma=self.config.mutation_sigma,
+                lock_learning_rate=self.config.lock_learning_rate,
+            ) if self.config.mutation_enabled else mother.genome.copy()
             self.children.append(child)
             self._child_by_id[child.id] = child
-            self.world.place_entity(child)
+            self.world.place_entity(child, blocking=False)  # Change C: non-blocking child
             self.lineage.register_birth(child.id, mother.id, mother.lineage_id, new_gen)
-            
+
             mother.own_child_id = child.id
+            mother.has_reproduced = True  # Change F: one-child-per-lifetime
             mother.energy -= self.config.reproduction_cost
             mother.cooldown = self.config.reproduction_cooldown
 

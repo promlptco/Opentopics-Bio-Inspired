@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    # World
-    width: int = 30
-    height: int = 30
+    # World — 50×50 gives proper spatial separation (Change A)
+    width: int = 50
+    height: int = 50
 
     # Population
     init_mothers: int = 12
@@ -14,27 +14,29 @@ class Config:
     # Perception
     perception_radius: int = 8
 
-    # Energy
-    initial_energy: float = 0.85
-    hunger_rate: float = 0.008
+    # Energy — derived from starvation constraints (Change J)
+    # initial_energy=1.0: full tank at birth
+    # hunger_rate=1/35: adult starves in 35 ticks = 7 days (5 ticks/day convention)
+    initial_energy: float = 1.0
+    hunger_rate: float = 1 / 35
     move_cost: float = 0.005
     feed_cost: float = 0.03
     eat_gain: float = 0.25
     rest_recovery: float = 0.03
 
-    # Reproduction
-    reproduction_threshold: float = 0.95
+    # Reproduction — sigmoid midpoint at 0.85 (Change E)
+    reproduction_threshold: float = 0.85
     reproduction_cost: float = 0.35
     reproduction_cooldown: int = 80
 
-    # Child
-    maturity_age: int = 100
+    # Child — time convention 5 ticks=1 day (Change I)
+    # maturity_age=200 ticks = 40 days; mother_max_age=400 ticks = 80 days
+    maturity_age: int = 200
     starvation_threshold: float = 1.0
 
-    # Mother lifetime cap (optional).
-    # None = disabled; mothers die from energy depletion only (default, all phases safe).
-    # Set to an integer to enforce age-based death on top of starvation.
-    mother_max_age: int | None = None
+    # Mother lifetime cap (Change I).
+    # None = disabled; set to integer to enforce age-based death.
+    mother_max_age: int | None = 400
 
     # Fatigue
     fatigue_rate: float = 0.01
@@ -57,11 +59,21 @@ class Config:
     reproduction_enabled: bool = True
     mutation_enabled: bool = True
 
+    # Softmax / mutation hyperparameters — now Config-visible (Change G)
+    softmax_tau: float = 0.1
+    mutation_rate: float = 0.1
+    mutation_sigma: float = 0.05
+
+    # Warm behavior — spatial thermoregulation (Change H)
+    # Within warmth_radius cells, maternal proximity reduces infant hunger_rate.
+    # hunger_rate *= (1 - warmth_factor * warmth_proximity)
+    warmth_radius: int = 3
+    warmth_factor: float = 0.3
+
     # Phase 5 — Ecological Emergence
-    # infant_starvation_multiplier: infants hunger this many times faster than adults
-    #   during [0, maturity_age]. B becomes existential (alive/dead) instead of marginal.
-    #   Phase 5 sets this to 3.0; default 1.0 = Phase 3/4 behaviour.
-    infant_starvation_multiplier: float = 1.0
+    # infant_starvation_multiplier=2.33 = 35/15: infant starves in 15 ticks (Change J)
+    # B becomes existential (alive/dead) — without care, infant cannot reach maturity.
+    infant_starvation_multiplier: float = 2.33
     # birth_scatter_radius: Chebyshev radius searched for a free cell at birth.
     #   Tighter radius keeps kin spatially clustered (natal philopatry).
     #   Phase 5 sets this to 2; default 8 ~ random placement (current Phase 3/4 behaviour).

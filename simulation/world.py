@@ -20,9 +20,10 @@ class GridWorld:
     def is_free(self, pos: tuple[int, int]) -> bool:
         return pos not in self.occupied and self.in_bounds(*pos)
     
-    def place_entity(self, entity: Entity) -> None:
+    def place_entity(self, entity: Entity, blocking: bool = True) -> None:
         self.entities[entity.id] = entity
-        self.occupied.add(entity.pos)
+        if blocking:
+            self.occupied.add(entity.pos)
     
     def remove_entity(self, entity_id: int) -> None:
         if entity_id in self.entities:

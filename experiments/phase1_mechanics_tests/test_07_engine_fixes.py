@@ -173,6 +173,8 @@ def test_maturation_logged_as_matured_not_hunger():
     config.mutation_enabled = False
     config.init_food = 300            # ample food to keep mothers alive
     config.hunger_rate = 0.004        # 0.004 * 100 = 0.40 at maturity; well below death (1.0)
+    config.maturity_age = 100         # explicit mechanism window, independent of Config default
+    config.infant_starvation_multiplier = 1.0  # no extra pressure so children reach maturity
     config.max_ticks = 115            # past maturity_age=100
 
     sim = Simulation(config)

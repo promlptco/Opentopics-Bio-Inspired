@@ -56,6 +56,7 @@ class MotherAgent(Agent):
 
         self.own_child_id: int | None = None
         self.cooldown: int = 0
+        self.has_reproduced: bool = False  # one-child-per-lifetime (Change F)
 
         self.target_child_id: int | None = None
         self.commit_ticks: int = 0
@@ -78,7 +79,9 @@ class MotherAgent(Agent):
     # Commitment
     # ============================================================
 
-    def set_target(self, child_id: int, duration: int = 5) -> None:
+    def set_target(self, child_id: int, duration: int = 20) -> None:
+        # Outcome-based commitment: up to 20 ticks (4 days). Cleared early when
+        # child.hunger < 0.3 (sated) — see simulation._execute_action (Change D).
         self.target_child_id = child_id
         self.commit_ticks = duration
 
@@ -151,140 +154,60 @@ class MotherAgent(Agent):
 
     def compute_forage_cue(
         self,
-        world: GridWorld,
         perception_radius: float,
         nearest_food: tuple[int, int] | None = None,
         distance_to_food: float | None = None,
     ) -> float:
-        """
-        Environmental FORAGE cue.
+        """Neutral FORAGE cue bounded [0, 1] (Change B).
 
-        This imports the useful Phase 2 logic:
-          - food nearby increases forage cue
-          - standing on food gives strong forage cue
-          - already holding food suppresses further foraging
-
-        This cue is not genetic by itself.
-        The final FORAGE score is:
-          genome.forage_weight * forage_cue
+        forage_cue = 1 - dist_to_nearest_food / perception_radius
+        0 = no food visible; 1 = food at same cell.
+        Scale asymmetry removed: genome weights are now the sole differentiator.
         """
         if perception_radius <= 0:
             perception_radius = 1.0
-
-        if self.pos in world.food_positions:
-            forage_cue = 1.5
-
-        elif nearest_food is not None and distance_to_food is not None:
-            forage_cue = BASE_FORAGE_CUE + max(0.0, 1.0 - (distance_to_food / perception_radius))
-
-        else:
-            # Exploration bias: even when no food is visible,
-            # the mother still has a small drive to forage.
-            forage_cue = BASE_FORAGE_CUE
-
-        # If mother already holds food, reduce urge to gather more.
-        if self.held_food > 0:
-            forage_cue *= 0.25
-
-        return float(max(0.0, forage_cue))
+        if nearest_food is None or distance_to_food is None:
+            return 0.0
+        return float(max(0.0, min(1.0, 1.0 - distance_to_food / perception_radius)))
 
     def compute_self_cue(self) -> float:
+        """Neutral SELF cue bounded [0, 1] (Change B).
+
+        self_cue = 1 - energy (energy deficit).
+        No energy = maximum self-urgency; full energy = no urgency.
         """
-        Environmental SELF cue.
+        return float(max(0.0, 1.0 - self.energy))
 
-        SELF is based on the need to maintain the mother's own state:
-          - low energy
-          - fatigue
+    def compute_care_cue(self, child: ChildAgent | None) -> float:
+        """Neutral CARE cue = child.distress, bounded [0, 1] (Change B).
 
-        This does not decide EAT vs REST yet.
-        It only decides whether SELF maintenance should dominate.
-        """
-        energy_deficit = max(0.0, 1.0 - self.energy)
-        fatigue_pressure = max(0.0, self.fatigue)
-
-        self_cue = BASE_SELF_CUE + 0.65 * energy_deficit + 0.35 * fatigue_pressure
-
-        # If holding food and energy is low, self-maintenance is more actionable.
-        if self.held_food > 0:
-            self_cue += 0.25 * energy_deficit
-
-        return float(max(0.0, self_cue))
-
-    def compute_care_cue(
-        self,
-        child: ChildAgent | None,
-        world: GridWorld,
-        perception_radius: float,
-    ) -> float:
-        """
-        Environmental CARE cue.
-
-        CARE uses two mostly independent dimensions:
-        - biological need: child hunger
-        - spatial need: mother-child distance
-
-        child.distress is intentionally not used here because distress is already
-        derived from hunger and separation. It should be used as an outcome metric,
-        not as an additional input to avoid double-counting.
+        Mother cannot observe child's internal hunger directly — only the composite
+        behavioural signal (distress = (hunger + separation) / 2) is observable.
+        This removes the magic-constant 60/40 weighting and the direct hunger read.
         """
         if child is None or not child.alive:
             return 0.0
-
-        if perception_radius <= 0:
-            perception_radius = 1.0
-
-        child_dist = world.get_distance(self.pos, child.pos)
-        distance_pressure = min(1.0, child_dist / perception_radius)
-        hunger_pressure = max(0.0, child.hunger)
-
-        care_cue = (
-            BASE_CARE_CUE
-            + 0.60 * hunger_pressure
-            + 0.40 * distance_pressure
-        )
-
-        # If the mother already has food, child hunger becomes more actionable
-        # because FEED can happen once she reaches the child.
-        if self.held_food > 0:
-            care_cue += 0.40 * hunger_pressure
-
-        return float(max(0.0, care_cue))
+        return float(child.distress)
 
     def compute_motivation_scores(
         self,
-        world: GridWorld,
         perception_radius: float,
         child: ChildAgent | None = None,
         nearest_food: tuple[int, int] | None = None,
         distance_to_food: float | None = None,
         care_enabled: bool = True,
     ) -> dict[str, float]:
-        """
-        New unified motivation scoring.
+        """Unified motivation scoring: genome_weight × neutral_cue (Change B).
 
-        This is the key synthesis:
-
-          final_FORAGE = genome.forage_weight * environmental_forage_cue
-          final_SELF   = genome.self_weight   * environmental_self_cue
-          final_CARE   = genome.care_weight   * environmental_care_cue
-
-        Phase 2 can run with:
-          care_enabled = False
-          care_weight = 0.0
-          forage_weight = 1.0
-          self_weight = 1.0
-
-        Phase 3 can run with:
-          care_enabled = True
-          care_weight > 0
+        final_FORAGE = forage_weight × (1 - dist_to_food / perception_radius)
+        final_SELF   = self_weight   × (1 - energy)
+        final_CARE   = expressed_care_weight × child.distress
         """
         forage_cue = self.compute_forage_cue(
-            world=world,
             perception_radius=perception_radius,
             nearest_food=nearest_food,
             distance_to_food=distance_to_food,
         )
-
         self_cue = self.compute_self_cue()
 
         scores = {
@@ -293,18 +216,13 @@ class MotherAgent(Agent):
         }
 
         if care_enabled:
-            care_cue = self.compute_care_cue(
-                child=child,
-                world=world,
-                perception_radius=perception_radius,
-            )
+            care_cue = self.compute_care_cue(child=child)
             scores["CARE"] = max(0.0, self.expressed_care_weight * care_cue)
 
         return scores
 
     def choose_motivation(
         self,
-        world: GridWorld,
         perception_radius: float,
         tau: float = SOFTMAX_TAU,
         child: ChildAgent | None = None,
@@ -312,23 +230,8 @@ class MotherAgent(Agent):
         distance_to_food: float | None = None,
         care_enabled: bool = True,
     ) -> tuple[str, dict[str, float], dict[str, float]]:
-        """
-        Choose motivation using synthesis logic.
-
-        Returns:
-          motivation, scores, probabilities
-
-        motivation:
-          FORAGE / SELF / CARE
-
-        scores:
-          weighted utilities before softmax
-
-        probabilities:
-          softmax probabilities
-        """
+        """Choose motivation via softmax over neutral cue scores. Returns (action, scores, probs)."""
         scores = self.compute_motivation_scores(
-            world=world,
             perception_radius=perception_radius,
             child=child,
             nearest_food=nearest_food,
@@ -337,12 +240,8 @@ class MotherAgent(Agent):
         )
 
         probs = softmax_probs(scores, tau=tau)
-
         keys = list(probs.keys())
-        weights = [probs[k] for k in keys]
-
-        chosen = np.random.choice(keys, p=weights)
-
+        chosen = np.random.choice(keys, p=[probs[k] for k in keys])
         return str(chosen), scores, probs
 
     # ============================================================
@@ -367,20 +266,17 @@ class MotherAgent(Agent):
             self.energy = min(1.0, self.energy + eat_gain)
 
     def feed_child(self, child: ChildAgent, feed_cost: float, world: GridWorld) -> tuple[bool, float]:
-        """
-        Feed child if adjacent.
+        """Feed child at same cell (dist == 0). Change C: same-cell proximity required.
 
-        Return:
-          success, actual hunger reduction
+        Children are non-blocking (placed with blocking=False in world), so the mother
+        can move onto the child's cell. feed_child() guards dist > 1 so that any
+        residual dist-1 approach step cannot trigger a premature feed.
         """
         dist = world.get_distance(self.pos, child.pos)
-
-        if dist != 1:
+        if dist > 1:
             return False, 0.0
-
         self.energy -= feed_cost
         hunger_reduced = child.receive_food(0.2)
-
         return True, hunger_reduced
 
     def rest(self, rest_recovery: float) -> None:
@@ -390,12 +286,18 @@ class MotherAgent(Agent):
     # Reproduction
     # ============================================================
 
-    def can_reproduce(self, threshold: float) -> bool:
-        return (
-            self.energy >= threshold
-            and self.own_child_id is None
-            and self.cooldown == 0
-        )
+    def can_reproduce(self, threshold: float = 0.85) -> bool:
+        """Sigmoid reproduction gate (Change E) + one-child-per-lifetime (Change F).
+
+        P(reproduce) = 1 / (1 + exp(-(energy - threshold) / 0.05))
+        At threshold=0.85: P=0.50.  At energy=1.0: P≈0.95.  At energy=0.70: P≈0.05.
+        Blocking conditions (own_child, cooldown, has_reproduced) are deterministic.
+        """
+        import math
+        if self.own_child_id is not None or self.cooldown > 0 or self.has_reproduced:
+            return False
+        p = 1.0 / (1.0 + math.exp(-(self.energy - threshold) / 0.05))
+        return random.random() < p
 
     def tick_cooldown(self) -> None:
         if self.cooldown > 0:
@@ -427,9 +329,10 @@ class MotherAgent(Agent):
 
     def update_state(self, hunger_rate: float) -> None:
         # Linear depletion: energy -= hunger_rate per tick.
-        # Matches the Phase 2 validated SurvivalSimulation model exactly.
-        # The old accumulating-hunger proxy (hunger += rate; energy -= hunger*0.01)
-        # was ~100x slower on tick 1 and produced different survival physics.
+        # Mother hunger is defined as the current energy deficit.
+        # This keeps hunger consistent with the Phase 2 survival model:
+        # high energy -> low hunger, low energy -> high hunger.
         self.energy = max(0.0, self.energy - hunger_rate)
+        self.hunger = 1.0 - self.energy
         self.stress = max(0.0, 1.0 - self.energy)
         self.tick_cooldown()

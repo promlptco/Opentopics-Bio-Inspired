@@ -34,8 +34,9 @@ def main() -> int:
         print(f"\n--- Running {test} ---")
 
         result = subprocess.run(
-            [sys.executable, test_path],
+            [sys.executable, "-X", "utf8", test_path],
             cwd=phase_dir,
+            env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"},
         )
 
         if result.returncode == 0:

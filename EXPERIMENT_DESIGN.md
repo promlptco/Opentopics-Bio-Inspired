@@ -4,6 +4,25 @@
 
 ---
 
+## Core Research Philosophy
+
+> **The primary aim is not to monitor whether `care_weight` rises or falls. The aim is to discover the minimum ecological conditions under which maternal care instinct *emerges* from natural selection — without being pre-programmed, biased in, or assumed.**
+
+A valid phase in this project must satisfy all three of the following requirements:
+
+**1. Gradient sensitivity, not a biased environment.**
+The ecology must be responsive: small parameter changes produce measurable, proportional behavioral changes. A flat response means the parameter is not an evolutionary lever. A cliff-edge collapse means the system is too brittle to support natural emergence. The target is a smooth gradient where ecology *shapes* selection pressure — not forces a particular outcome. This is not a claim of finding the global optimum; it is a systematic search for the conditions that are necessary and sufficient.
+
+**2. No magic numbers.**
+Every parameter value must be justified by biological reasoning — mammalian physiology, documented survival timescales, ecological precedent — not tuned post-hoc to produce a desired result. Parameters without principled justification are confounds, not controls. If a parameter value cannot be explained to another biologist in one sentence from first principles, it must be rederived.
+
+**3. Emergence, not confirmation.**
+This project discovers what ecological conditions are *necessary* for maternal care instinct to arise. A result showing that care does not emerge under a given ecology is a valid and important scientific finding — not a failure to be explained away. No phase is designed to confirm a hypothesis; each is designed to test a necessary lemma in a proof-by-construction argument.
+
+**The evolutionary endpoint** is *maternal instinct*: care behavior that is genetically encoded (high `care_weight` in the fixed genome) and no longer requires learned reinforcement (plasticity declines after assimilation). The proposed mechanism is the **Baldwin Effect**: ecological pressure first selects for plastic (learned) behavior, which is later genetically assimilated as instinct.
+
+---
+
 ## 0. Thesis Architecture
 
 The thesis establishes the minimum ecological conditions for the emergence of kin-biased maternal care using evolving neuroendocrine agents.
@@ -16,22 +35,41 @@ The pipeline is designed so that each phase either *proves a necessary lemma* or
 
 ## 1. Global Simulation Parameters
 
+> See **LOGIC.md** for the complete biological reasoning behind every architectural decision, all approved pending changes, and the precise biological analogs for each parameter.
+
 Unless explicitly overridden by a phase, all runs use the following defaults:
+
+### Locked Architectural Parameters (cannot change between phases)
 
 | Parameter | Value | Rationale |
 |---|---|---|
-| Grid type | 2D discrete grid-world | Spatial proximity is a key variable |
-| Decision architecture | Softmax (Gibbs) Sampling over utility scores {Care, Forage, Self} | Stochastic selection proportional to utility — enables exploration and naturalistic errors |
-| Softmax Temperature (τ) | 0.1 | Controls sharpness of selection; low τ approximates Argmax, high τ approaches random |
-| Reproduction gate | Hard threshold (energy ≥ 0.95) | Planned as sigmoid probability but not implemented — code uses hard-threshold in `can_reproduce()`. Effective fitness-proportionality still holds: mothers accumulate energy at different rates. |
-| Kin recognition noise | Not implemented | Planned as Gaussian N(0, σ=0.1) on distress signal — omitted; mothers read `child.distress` directly with no perceptual noise. |
-| Foraging variance | Not implemented | Planned as ±20% on eat_gain — omitted; `eat()` applies `eat_gain` as a fixed constant. |
-| Mutation rate | Stochastic P(mutate) | Mutation probability is stochastic per gene per reproduction event |
-| Mutation magnitude | Gaussian N(0, σ=0.05) per parameter, bounded | Small-step mutation; prevents drift explosion |
-| Kin recognition | None — targets chosen by max visible distress (+ noise) | Ensures any kin bias emerges structurally, not by explicit recognition |
-| Evolution duration | 10,000 ticks (Phase 4 onward) | Extended from original 5,000 — stochastic system requires more ticks for selection signal to emerge under neutral conditions |
-| Replication | 10 seeds (42–51) | Minimum for mean ± SD and sign-test |
-| Primary metric | Pearson's r (care_weight vs. reproductive fitness) | Direct measure of selection gradient direction and magnitude |
+| Time convention | **5 ticks = 1 day** | Ecologically meaningful timescales map to tractable ticks. All durations expressed in both units. |
+| Grid size | **50 × 50** | 2500 cells — required for realistic spatial separation at population sizes of 20+ agents. 30×30 was too crowded (inflated food encounter rates). |
+| Grid type | 2D discrete grid-world | Spatial proximity is a key evolutionary variable (natal philopatry, warm behavior). |
+| Decision architecture | Softmax (Gibbs) Sampling over utility scores {Care, Forage, Self} | Stochastic selection proportional to utility — enables exploration and naturalistic decision errors. |
+| Softmax Temperature (τ) | **0.1** (in `Config.softmax_tau`) | At τ=0.1 top action wins ~95% of the time. Low τ ≈ Argmax but retains stochasticity. |
+| Reproduction gate | **Sigmoid probability** P = 1/(1+exp(-(energy−0.85)/0.05)) | Fitness-proportional: higher energy → higher P(reproduce). Midpoint at 0.85, near-zero below 0.7. |
+| Feed proximity | **Same cell (dist = 0)** | Direct resource transfer requires physical co-location, consistent with food-picking rule. |
+| Food proximity | **Same cell (dist = 0)** | Mother must stand on food cell to pick it up. |
+| Warm behavior radius | **3 cells** | Mother's body heat reduces infant hunger rate by up to 30% when within 3 cells. Passive spatial benefit. |
+| One child per lifetime | **has_reproduced = False flag** | Scopes study to dyadic mother-infant bonds; prevents multi-child care confounds. |
+| Mother max age | **400 ticks (80 days)** | One full adult lifetime. Forces generational turnover; prevents immortal founders dominating evolution. |
+| Child maturity age | **200 ticks (40 days)** | Infancy period. Infant is dependent for the first 40 days, then matures into a new mother. |
+| Mutation rate | **In `Config.mutation_rate` = 0.1** | Stochastic P(mutate) per gene per reproduction event. |
+| Mutation magnitude | **In `Config.mutation_sigma` = 0.05** | Gaussian N(0, σ=0.05) per gene, bounded [0,1]. Prevents drift explosion. |
+| Commitment rule | **Outcome-based: until child.hunger < 0.3 or 20 ticks** | 20 ticks = 4 days. Commit to a care episode until the infant is sated or time-out. |
+
+### Derived Ecological Parameters (fixed by starvation-constraint analysis)
+
+| Parameter | Value | Derivation |
+|---|---|---|
+| `initial_energy` | **1.0** | Full energy at birth — every agent starts equal. |
+| `hunger_rate` | **1/35 ≈ 0.0286 per tick** | Adult starves in 35 days (175 ticks) without food. |
+| `infant_starvation_multiplier` | **35/15 ≈ 2.33** | Infant starves in 15 days without care — makes B existential (alive/dead), not marginal. |
+
+### Phase-Determined Parameters (set by Phase 2 sweep)
+
+`eat_gain`, `init_food`, `move_cost`, `rest_recovery` — values determined by ecological sweep in Phase 2 remake. Not hardcoded here.
 
 ### Statistical Validity Requirements
 
@@ -253,19 +291,49 @@ Before doing Phase 3, use Phase 2 to find the baseline and observe the dynamic o
 
 ```
 experiments/
-  phase1_mechanics_tests/
-      run.py
-      test_01_mutation.py
-      test_02_inheritance.py
-      test_03_reproduction.py
-      test_04_population_stability.py
-  phase2_survival_minimal/
-      run.py
-  phase3_survival_full/
-      run.py
-  phase4_neutral_drift_baseline/
+  phaseN_<name>/
+    config.py          ← phase-specific Config (imports root Config, overrides this phase only)
+    run.py             ← CLI entrypoint (--headless/--live/--seed/--max_ticks; all Config fields overridable)
+    *.py               ← phase-specific analysis scripts
+
+outputs/
+  phaseN_<name>/       ← mirrors experiments/ naming exactly
+    <run_id>/          ← timestamp (YYYYMMDD_HHMMSS) or test ID
+      results.csv      ← per-tick or per-generation data
+      summary.json     ← key metrics, config snapshot, seed used
+      plots/
+        *.png          ← all required plots for this phase
+
 shared/
-  constants.py
+  constants.py         ← all cross-phase constants (no phase may hardcode a value from another phase)
+```
+
+**Naming rule:** experiments/ and outputs/ subdirectory names must match exactly. `experiments/phase2_survival_minimal/` → `outputs/phase2_survival_minimal/<run_id>/`. This makes output provenance unambiguous.
+
+**Phase output requirements:**
+Every phase run must produce, at minimum:
+1. `results.csv` — machine-readable data (tick, metric columns).
+2. `summary.json` — config snapshot + key aggregate metrics.
+3. All plots specified in the phase protocol (see §2 and §6).
+4. A new dated entry in `REPORT.md` with expert-level analysis of the findings.
+
+A phase is not considered complete until all four items exist on disk and are committed to the repository.
+
+**Per-phase config pattern:**
+```python
+# experiments/phase2_survival_minimal/config.py
+from config import Config
+
+PHASE2_CONFIG = Config(
+    max_ticks=10_000,
+    init_mothers=20,
+    # ... only parameters that differ for this phase
+)
+```
+
+**CLI override pattern (all Config fields injectable from terminal):**
+```bash
+python experiments/phase2_survival_minimal/run.py --max_ticks 5000 --seed 99 --init_food 60
 ```
 
 **Notes on divergence from original design:**
@@ -283,12 +351,106 @@ No phase may hardcode a value measured in another phase. All cross-phase constan
 ## 5. Protocol Rules
 
 - **Never fabricate results.** If a file does not exist on disk, say so. Do not infer from memory or prior session notes.
-- **Never mark a phase DONE without verifying result files on disk.**
+- **Never mark a phase DONE without verifying result files on disk AND REPORT.md has been updated.**
 - **Never rerun only failing seeds.** All 10 seeds run together. Selective rerunning biases results.
 - **Never name a phase after its expected outcome before running it.**
 - **Pause before each phase.** Present the plan. Wait for questions. Proceed only after explicit approval.
 - **Pause after each phase.** Do not continue until the user has pushed to origin.
 - **If something unexpected happens, stop and report it.** Do not explain it away or proceed around it. Unexpected results must be understood before the pipeline continues.
+- **REPORT.md is updated after every phase.** Write the analysis as if writing a research methods section: state what was run, what was found, what it means biologically, and what it implies for the next phase. Do not omit negative or null results.
+
+---
+
+## 6. Analysis Framework
+
+All phases that produce an evolutionary result must be analyzed through three complementary lenses. These are not optional — they constitute the scientific content of the thesis.
+
+---
+
+### 6.1 Baldwin Effect — Genetic Assimilation Plot
+
+**Hypothesis:** A behavior first expressed through lifetime learning (plasticity) will, under sustained selection pressure, become genetically encoded and no longer require learning to maintain its adaptive value.
+
+**Operational definitions for this simulation:**
+- **Fitness**: Proportion of children that survive to maturity per generation cohort. This is the inclusive-fitness-relevant quantity — a mother's evolutionary success is measured by surviving offspring, not by her own longevity.
+- **Plasticity**: Mean `learning_rate` gene in the living mother population, sampled per generation window (not per tick). `learning_rate` is exclusively a care-plasticity gene — it governs the speed of `expressed_care_weight` adjustment per reward signal and has no effect on foraging or self-maintenance.
+
+**Averaging rule — macro-average by lineage (not naive population mean):**
+
+For each generation window t:
+```
+fitness_t    = mean over lineages_i [ survived_children_i / born_children_i ]
+plasticity_t = mean over lineages_i [ mean(learning_rate of living mothers in lineage_i) ]
+```
+
+This weights each lineage equally regardless of size. Prevents a large dominant lineage from collapsing the entire population signal into its own trajectory. Lineages that went extinct contribute 0.0 survival rate — extinction is a valid fitness outcome, not a missing value.
+
+**Required plot — Baldwin Curve (single figure, dual y-axis):**
+
+Both fitness and plasticity are plotted on the **same figure** over the **entire simulation duration** (minimum 10,000 ticks; adjustable via `Config.max_ticks`):
+
+- X-axis: Tick (0 to max_ticks). Generation windows sampled at fixed intervals (e.g., every 200 ticks = 40 days).
+- Y-axis (left, blue): Fitness — macro-averaged child survival rate (0.0–1.0).
+- Y-axis (right, orange): Plasticity — macro-averaged mean `learning_rate` (0.0–1.0).
+- Both curves plotted per-seed (thin lines) + mean ± SD band (thick line + shaded region).
+
+**Interpretation signatures:**
+- **Assimilation (target outcome):** Fitness rises → Plasticity initially rises (learning is beneficial) → Plasticity later declines (genetic instinct replaces learned behavior, learning no longer needed).
+- **Incomplete assimilation:** Fitness rises but plasticity does not decline — learning remains necessary; the genetic floor has not risen enough.
+- **No selection signal:** Plasticity rises without fitness rising — learning is not producing any adaptive advantage; no selection pressure for assimilation exists.
+- **Null result:** Both flat — ecology is insufficient to drive care emergence under these parameters. Report as-is.
+
+---
+
+### 6.2 Hamilton's Rule — Kin-Biased Altruism Analysis
+
+**Hypothesis:** Maternal care is evolutionarily stable only when rB > C (Hamilton 1964). The simulation tests whether the ecological structure (natal philopatry + lineage tracking) produces care patterns consistent with this prediction as an *emergent* property — not because the agents compute rB > C.
+
+**Operational definitions:**
+- **r**: Genetic relatedness coefficient, computed by `LineageManager.get_relatedness()` as r = 2^(−d), where d = generation distance within the same founding lineage. Own child: r = 0.5.
+- **B**: Benefit to recipient = `hunger_reduced` per care event (units: child hunger units, scale [0,1]).
+- **C**: Cost to actor = total energy expended per care event (movement cost + feed_cost), scale [0,1].
+
+**Required analysis:**
+- Per phase: compute mean (rB − C) across all logged care events. A positive mean indicates care is evolutionarily favored under that ecology.
+- Compare own-child events (r = 0.5) vs. allomothering events (r < 0.5): kin-biased care should show systematically higher rB for own-child events.
+- **Scatter plot**: rB (y-axis) vs. C (x-axis), colored by `is_own_child` flag. Overlay the Hamilton boundary line (rB = C). Points above the line are evolutionarily stable care events; points below are altruistic losses.
+
+---
+
+### 6.3 Ecological Sensitivity — Parameter-Driven Emergence
+
+**This is the "epigenetics" of the simulation.** Ecological parameters activate or suppress behavioral programs without changing the genome — analogous to how environmental signals alter gene expression in real organisms without altering DNA sequence.
+
+**Analysis method:** For each phase transition introducing a new ecological condition, document:
+1. Which parameter changed and by how much.
+2. What behavioral shift occurred (action frequency distributions, child survival rate, care rate).
+3. Whether the response is gradient (proportional) or threshold (step change at a tipping point).
+4. Whether the behavioral shift led to a subsequent genetic change (directional selection on `care_weight`).
+
+**Parameters of interest and their ecological roles:**
+
+| Parameter | Phase Introduced | Ecological Role |
+|---|---|---|
+| `hunger_rate` | Phase 2 | Primary selection force — sets baseline mortality pressure |
+| `init_food` | Phase 2 | Food density — sets ecological harshness gradient |
+| `infant_starvation_multiplier` | Phase 5 | Infant dependency — makes care benefit existential, not marginal |
+| `birth_scatter_radius` | Phase 5 | Natal philopatry — controls kin spatial clustering |
+| `plasticity_noise_sigma` | Phase 8 | Learning unreliability — drives genetic assimilation of instinct |
+
+**Output format for each parameter shift:** *"Changing X from A to B caused a Y% shift in Z. The behavioral tipping point is at [value], above which [behavior] emerges consistently in ≥ 9/10 seeds."*
+
+---
+
+### 6.4 Final Parameter Set — Scientific Deliverable
+
+The output of this project is not only a result — it is a **validated, reasoned parameter set** that another researcher or ALife practitioner can reproduce and extend. Every parameter in the final configuration must be accompanied by:
+
+1. Its biological justification (what in nature does it correspond to?).
+2. The phase in which it was empirically validated.
+3. Its sensitivity range (the parameter values at which the ecology transitions between regimes).
+
+This deliverable is what distinguishes principled ALife from arbitrary simulation.
 
 ---
 
@@ -309,3 +471,29 @@ Decision architecture updated from Argmax to Softmax (Gibbs) Sampling with τ=0.
 - Record τ=0.1 and σ_percept=0.1 in `shared/constants.py`.
 - Phase 4 duration extended to 10,000 ticks to account for slower signal emergence under stochastic system.
 - Two new Phase 1 tests added: Test 05 (Stochasticity Identity) and Test 06 (Softmax Calibration).
+
+**2026-05-04** — Major architectural overhaul & analysis framework finalization:
+
+All decisions below are **approved and locked** before Phase 2 remake. Full biological reasoning in **LOGIC.md**.
+
+Architectural changes approved:
+1. Grid size locked at **50×50** for all phases.
+2. **Neutral demand-signal cues**: forage_cue = food proximity [0,1]; self_cue = energy deficit [0,1]; care_cue = child.distress only (mother cannot read child.hunger directly).
+3. **Same-cell feeding** (dist = 0) for both food pick-up and child feeding. Warm behavior uses radius ≤ 3 cells (passive heat effect).
+4. **Outcome-based commitment**: commit until child.hunger < 0.3 or 20 ticks.
+5. **Sigmoid reproduction gate**: P = 1/(1+exp(-(energy−0.85)/0.05)).
+6. **One child per lifetime** via `has_reproduced` flag.
+7. **softmax_tau, mutation_rate, mutation_sigma** moved into root Config (CLI overridable).
+8. **Warm behavior**: within 3 cells, child hunger_rate × (1 − 0.3 × warmth_proximity). Passive spatial effect.
+9. **Mother max age = 400 ticks (80 days). Child maturity = 200 ticks (40 days).**
+10. **Derived starvation parameters**: initial_energy=1.0, hunger_rate=1/35≈0.0286, infant_starvation_multiplier=35/15≈2.33.
+
+Analysis framework finalized:
+- **Baldwin Curve**: fitness AND plasticity on the SAME figure (dual y-axis), over entire simulation (≥10,000 ticks, adjustable via max_ticks). Macro-averaged by lineage: each lineage contributes one mean value per generation window; final metric is mean of lineage means. Never a naive population mean.
+- **Hamilton scatter**: rB vs C per care event, colored by is_own_child, Hamilton boundary line rB=C overlaid.
+- **Ecological Sensitivity**: per-parameter behavioral tipping points documented.
+
+Output standard finalized:
+- Every phase produces: results.csv + summary.json + plots/ + REPORT.md entry.
+- outputs/ mirrors experiments/ naming exactly.
+- Phase is not done until all four artifacts exist on disk and are committed.
