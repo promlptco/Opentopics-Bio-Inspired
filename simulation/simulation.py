@@ -182,7 +182,7 @@ class Simulation:
         
         # 4. Update mothers
         for mother in alive_mothers:
-            mother.update_state(self.config.hunger_rate)
+            mother.update_state(self.config.hunger_rate, self.config.fatigue_rate)
             mother.tick_age()
             if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
                 mother.die()
@@ -362,9 +362,10 @@ class Simulation:
                 if nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
+                        mother.add_move_cost(self.config.move_cost)
                         mother.energy -= self.config.move_cost
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
-        
+
         elif domain == "self":
             mother.rest(self.config.rest_recovery)
     

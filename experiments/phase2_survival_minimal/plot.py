@@ -166,7 +166,7 @@ def save_figure(fig, out_dir, filename):
     path = os.path.join(out_dir, filename)
     fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"Saved plot → {path}")
+    print(f"Saved plot -> {path}")
 
 
 # ============================================================

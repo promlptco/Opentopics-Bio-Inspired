@@ -12,7 +12,7 @@ INITIAL_ENERGY = 1.0    # matches root Config (Change J): full energy at birth
 
 VALIDATION_SEEDS = list(range(42, 47))
 DEFAULT_SWEEP_SEED_BASE = 42000
-DEFAULT_PERCEPTION_RADIUS = 8.0
+DEFAULT_PERCEPTION_RADIUS = 15.0
 TAIL_WINDOW = 200
 
 
@@ -91,10 +91,9 @@ BALANCED_BASELINE = {
     # Ratio: one food = eat_gain / hunger_rate ticks of energy.
     # 0.25 / 0.0286 ≈ 8.7 ticks per food — realistic foraging effort.
     "eat_gain": 0.25,
-    # init_food: 50x50 grid, 12 mothers, initial_energy=1.0
-    # 240 is at ~78% survival (mid-balanced zone) from OVAT — shifts Step 4 grid
-    # ceiling to ~360, covering the EASY zone (90%+ survival ≈ init_food 300-360).
-    "init_food": 240,
+    # init_food: 50x50 grid, 12 mothers, 1:1 food replacement.
+    # Humped curve: peak at 134 (EASY). 78 gives ~60% survival (BALANCED zone).
+    "init_food": 78,
     "rest_recovery": 0.005,
     **BASELINE_GENOME_WEIGHTS,
 }
@@ -192,40 +191,36 @@ HIDE_BASELINE_FOR = {
 
 SELECTION_TARGETS = {
     "balanced": {
-        # Stability boundary: cliff-edge of survival, flat energy trajectory.
-        # OVAT shows tail_energy ≈ 0.56–0.63 at 70–83% survival (survivors in
-        # abundant-food zone have lower energy due to inclusion of marginal survivors).
-        # target_energy revised from 0.70 to 0.62 to match ecological reality.
-        "min_final_pop": 8.4,         # hard: ≥70% survival (8.4/12)
-        "energy_low": 0.50,           # hard lower energy bound
-        "energy_high": 0.82,          # hard upper energy bound
-        "target_energy": 0.62,
-        "max_tail_sd": 0.06,
-        "max_abs_energy_slope": 0.00005,
-        "max_abs_pop_slope": 0.002,
+        # Mid-range survival: ~50-65% (food=78 zone, 1:1 replacement ecology).
+        # Energy is POPULATION-WEIGHTED: sum(alive energy) / init_mothers.
+        # At 60% survival × per-survivor energy ~0.38 → tail pop-weighted ≈ 0.20-0.28.
+        # Sort key prefers LOWER init_food so food=78 wins over food=100 (peak).
+        # NOTE: slope constraints REMOVED — 1:1 replacement causes inherent slow decline
+        # (pop_slope -0.005 to -0.015 is normal). Old constraints calibrated for stable
+        # batch-replenishment ecology; they excluded all non-peak food values.
+        "min_final_pop": 5.5,         # hard: >=46% survival — buffer for 15-seed variance
+        "energy_low": 0.18,           # pop-weighted lower bound
+        "energy_high": 0.38,          # pop-weighted upper bound
+        "target_energy": 0.25,
+        "max_tail_sd": 0.08,
     },
     "easy": {
-        # Resource-rich: near-full survival, high sustained energy.
-        # Penalty scoring target: ~100% (12/12) survival, energy ≥ 0.75.
-        # min_energy revised from 0.75 to 0.55 — OVAT shows tail_energy ≈ 0.55-0.58
-        # even at 90%+ survival (crowding effect: more marginal survivors lower the mean).
-        "min_final_pop": 10.8,        # hard: ≥90% survival (10.8/12)
-        "min_energy": 0.55,           # hard lower energy bound (revised from 0.75)
-        "target_energy": 0.60,
+        # Peak survival zone: food=100 gives ~70-80% survival under 1:1 replacement.
+        # Pop-weighted tail energy at peak: ~0.29-0.33.
+        "min_final_pop": 7.5,         # hard: >=62% survival (7.5/12)
+        "min_energy": 0.22,           # pop-weighted lower bound
+        "target_energy": 0.30,
         "max_tail_sd": 0.08,
     },
     "harsh": {
         # Ecological stress: 10–33% survival (1.2–4/12).
-        # energy_high revised from 0.40 to 0.65: OVAT shows survivors maintain
-        # tail_energy 0.46–0.58 even at low population density — the 0.40 ceiling was
-        # calibrated for old parameters (eat_gain=0.07). At eat_gain=0.25 survivors
-        # always have energy ≥ 0.45. Harsh is defined by LOW SURVIVAL RATE only.
+        # Pop-weighted tail energy: 10-25% survival × per-survivor energy → 0.03-0.12.
         "min_final_pop": 1.2,         # hard: ≥10% survival (1.2/12)
         "max_final_pop": 4.0,         # hard: ≤33% survival (4/12)
-        "energy_low": 0.10,           # hard lower energy bound
-        "energy_high": 0.65,          # hard upper energy bound (revised from 0.40)
+        "energy_low": 0.02,           # pop-weighted lower bound
+        "energy_high": 0.20,          # pop-weighted upper bound
         "target_pop": 3.0,
-        "target_energy": 0.55,        # revised from 0.35 (realistic survivor energy)
+        "target_energy": 0.08,
     },
 }
 
@@ -273,8 +268,11 @@ def candidate_configs(mode="sweep"):
             "hunger_rate":    [1 / 35],  # locked — not swept
             "move_cost":      [0.001],
             "eat_gain":       [0.25],
-            # init_food: shifted ~15% down vs 0.75 baseline (easier start = lower cliff)
-            "init_food":      [55, 65, 75, 85, 95, 100, 110, 120, 135, 150, 165],
+            # init_food: 1:1 replacement creates a humped survival curve peaking
+            # at food=134. Above 134, FORAGE motivation dominates and agents
+            # starve holding food. Zones: HARSH=50, BALANCED=78-100, EASY=134.
+            # Values above 182 are excluded — they give LOWER survival than 134.
+            "init_food":      [50, 60, 78, 100, 134, 182],
             "rest_recovery":  [0.005],
         },
         "pipeline": {
@@ -283,7 +281,7 @@ def candidate_configs(mode="sweep"):
             # init_food shifted ~15% down vs 0.75 baseline.
             "move_cost":     [0.0005, 0.001, 0.003, 0.006],
             "eat_gain":      [0.12, 0.18, 0.25, 0.32, 0.42],
-            "init_food":     [40, 65, 100, 140, 175, 220],
+            "init_food":     [50, 78, 134, 182, 260],
             "rest_recovery": [0.005, 0.02, 0.05, 0.09],
         },
     }

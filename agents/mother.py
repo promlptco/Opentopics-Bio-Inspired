@@ -327,12 +327,11 @@ class MotherAgent(Agent):
     # State update
     # ============================================================
 
-    def update_state(self, hunger_rate: float) -> None:
-        # Linear depletion: energy -= hunger_rate per tick.
-        # Mother hunger is defined as the current energy deficit.
-        # This keeps hunger consistent with the Phase 2 survival model:
-        # high energy -> low hunger, low energy -> high hunger.
-        self.energy = max(0.0, self.energy - hunger_rate)
+    def update_state(self, hunger_rate: float, fatigue_rate: float = 0.0) -> None:
+        # Passive per-tick depletion:
+        #   hunger_rate = fixed metabolic baseline
+        #   fatigue * fatigue_rate = proportional drain from accumulated tiredness
+        self.energy = max(0.0, self.energy - hunger_rate - self.fatigue * fatigue_rate)
         self.hunger = 1.0 - self.energy
         self.stress = max(0.0, 1.0 - self.energy)
         self.tick_cooldown()

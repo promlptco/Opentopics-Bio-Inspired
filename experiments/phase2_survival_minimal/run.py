@@ -233,6 +233,7 @@ class SurvivalSimulation:
 
         tick_energy_flow = {
             "hunger_loss": 0.0,
+            "fatigue_loss": 0.0,
             "move_loss": 0.0,
             "eat_gain": 0.0,
             "net_energy_change": 0.0,
@@ -246,6 +247,10 @@ class SurvivalSimulation:
             before_hunger = mother.energy
             mother.energy = max(0.0, mother.energy - self.config.hunger_rate)
             tick_energy_flow["hunger_loss"] += before_hunger - mother.energy
+
+            before_fatigue = mother.energy
+            mother.energy = max(0.0, mother.energy - mother.fatigue * self.config.fatigue_rate)
+            tick_energy_flow["fatigue_loss"] += before_fatigue - mother.energy
 
             nearest, dist_to_food = self._perceived_nearest_food(mother)
             perception_radius = getattr(self.config, "perception_radius", DEFAULT_PERCEPTION_RADIUS)
@@ -273,6 +278,7 @@ class SurvivalSimulation:
             if motivation == "FORAGE":
                 if mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
+                    self._spawn_food(1)  # 1:1 replacement — food count stays at init_food
                     mother.held_food += 1
 
                     self.action_counts["PICK"] += 1
@@ -342,15 +348,14 @@ class SurvivalSimulation:
 
             tick_energy_flow["net_energy_change"] += mother.energy - energy_before_agent
 
-        target = int(self.config.init_food * self.food_mult)
-
-        if len(self.world.food_positions) < max(1, target // 3):
-            self._spawn_food(3)
-
         alive_now = [m for m in self.mothers if m.alive]
         self.population_history.append(len(alive_now))
 
-        avg_energy = sum(m.energy for m in alive_now) / len(alive_now) if alive_now else 0.0
+        # Divide by init_mothers (not alive count) so dead agents contribute 0 energy.
+        # This gives the population-weighted ecological metric: expected energy of a
+        # randomly chosen starting agent. Without this, HARSH survivors look healthy
+        # (survivor bias), which inverts the ecological gradient.
+        avg_energy = sum(m.energy for m in alive_now) / self.config.init_mothers
         avg_fatigue = sum(m.fatigue for m in alive_now) / len(alive_now) if alive_now else 0.0
 
         self.energy_history.append(avg_energy)
@@ -693,7 +698,7 @@ def select_condition_by_validation(name, sweep_records, args, workers: int = 1):
             f"  {name.upper()} candidate {idx:03d}/{len(pool)} | "
             f"food={params['init_food']} | rest={params['rest_recovery']} | "
             f"val_pop={validation_summary['final_pop']:.2f}/15 | "
-            f"tailE={validation_summary['tail_mean_energy']:.3f} ± "
+            f"tailE={validation_summary['tail_mean_energy']:.3f} +/- "
             f"{validation_summary['tail_energy_sd']:.3f}"
         )
 
@@ -1036,22 +1041,22 @@ def _penalty_score(name, result):
     if name == "balanced":
         if surv < 0.70:
             score += HARD * (0.70 - surv) * 15
-        if energy < 0.50:
-            score += HARD * (0.50 - energy) * 10
-        elif energy > 0.82:
-            score += HARD * (energy - 0.82) * 10
-        score += abs(surv - 0.92) * 30.0
-        score += abs(energy - 0.62) * 30.0
+        if energy < 0.35:
+            score += HARD * (0.35 - energy) * 10
+        elif energy > 0.70:
+            score += HARD * (energy - 0.70) * 10
+        score += abs(surv - 0.70) * 30.0
+        score += abs(energy - 0.41) * 30.0
         score += e_slope * 10_000.0
         score += e_sd * 10.0
 
     elif name == "easy":
-        if surv < 0.90:
-            score += HARD * (0.90 - surv) * 15
-        if energy < 0.55:
-            score += HARD * (0.55 - energy) * 10
-        score += abs(surv - 1.0) * 20.0
-        score += max(0.0, 0.60 - energy) * 40.0
+        if surv < 0.75:
+            score += HARD * (0.75 - surv) * 15
+        if energy < 0.35:
+            score += HARD * (0.35 - energy) * 10
+        score += abs(surv - 0.83) * 20.0
+        score += max(0.0, 0.41 - energy) * 40.0
         score += e_sd * 5.0
 
     elif name == "harsh":
@@ -1138,7 +1143,7 @@ def _run_pipeline(args, out_dir, n_workers):
         sweep_def = SENSITIVITY_SWEEPS[set_id]
         key       = sweep_def["key"]
         n_vals    = len(sweep_def["values"])
-        print(f"\n── Set {set_id}: '{key}'  ({n_vals} values × {N_SEEDS} seeds = {n_vals * N_SEEDS} runs) ──")
+        print(f"\n-- Set {set_id}: '{key}'  ({n_vals} values x {N_SEEDS} seeds = {n_vals * N_SEEDS} runs) --")
         results = run_set(
             set_id=set_id,
             sweep=sweep_def,
@@ -1155,7 +1160,7 @@ def _run_pipeline(args, out_dir, n_workers):
         save_sens_csv(results, os.path.join(ovat_dir, f"set_{set_id}_{key}.csv"))
 
     plot_sensitivity_map(ovat_all, synthetic, ovat_dir, hide_keys=set())
-    print(f"\n  OVAT plots saved → {ovat_dir}")
+    print(f"\n  OVAT plots saved -> {ovat_dir}")
 
     # ── Step 3: Dual-metric cliff-edge detection ───────────────────────────────
     print("\n" + "=" * 70)
@@ -1188,7 +1193,7 @@ def _run_pipeline(args, out_dir, n_workers):
     sweep_configs, grid_desc = _pipeline_multidim_configs(detected, clarity, synthetic)
     total_runs = len(sweep_configs) * N_SEEDS
     print(f"  Grid    : {grid_desc}")
-    print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs × {N_SEEDS} seeds)")
+    print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds)")
     print(f"  CLEAR params locked to cliff-edge values; UNCLEAR varied across plausible range")
 
     sweep_tasks = [
@@ -1204,7 +1209,7 @@ def _run_pipeline(args, out_dir, n_workers):
             flat_results = list(pool.map(_run_task, sweep_tasks))
 
     step4_records = []
-    print(f"\n  {'#':>4}  {'food':>5}  {'surv':>6}  {'tailE':>7}  {'E±':>6}  {'slope':>9}")
+    print(f"\n  {'#':>4}  {'food':>5}  {'surv':>6}  {'tailE':>7}  {'E+/-':>6}  {'slope':>9}")
     for idx, params in enumerate(sweep_configs):
         reps = flat_results[idx * N_SEEDS : (idx + 1) * N_SEEDS]
         sr   = summarize_repeats(reps, args.duration)
@@ -1221,7 +1226,7 @@ def _run_pipeline(args, out_dir, n_workers):
     print("\n" + "=" * 70)
     print("PIPELINE Step 5 — Automated Selection via Penalty Scoring")
     print("=" * 70)
-    print(f"  {'Condition':<12}  {'Score':>9}  {'Surv':>6}  {'TailE':>7}  {'E±':>6}  Config")
+    print(f"  {'Condition':<12}  {'Score':>9}  {'Surv':>6}  {'TailE':>7}  {'E+/-':>6}  Config")
     print(f"  {'-'*12}  {'-'*9}  {'-'*6}  {'-'*7}  {'-'*6}  {'-'*40}")
 
     selected   = {}
@@ -1341,7 +1346,7 @@ def run_experiment(args):
             from experiments.live_viewer import LiveViewer, Phase2LiveProvider
 
             run_seed = VALIDATION_SEEDS[0] * 1000
-            print(f"\nLive mode: seed={VALIDATION_SEEDS[0]}  speed=×{args.speed}")
+            print(f"\nLive mode: seed={VALIDATION_SEEDS[0]}  speed=x{args.speed}")
             set_seed(run_seed)
             cfg = make_config(params, args.duration)
             sim = SurvivalSimulation(cfg, tau=args.tau, perceptual_noise=args.perceptual_noise)
@@ -1394,7 +1399,7 @@ def run_experiment(args):
     ]
 
     print(
-        f"\nStep 1: Auto sweep | {len(configs)} configs × {args.repeats} reps"
+        f"\nStep 1: Auto sweep | {len(configs)} configs x {args.repeats} reps"
         f" = {len(sweep_tasks)} tasks | workers={n_workers}"
     )
 
@@ -1414,7 +1419,7 @@ def run_experiment(args):
             print(
                 f"  [{idx + 1:03d}/{len(configs)}] "
                 f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
-                f"tailE={summary_result['tail_mean_energy']:.3f} ± "
+                f"tailE={summary_result['tail_mean_energy']:.3f} +/- "
                 f"{summary_result['tail_energy_sd']:.3f}"
             )
 

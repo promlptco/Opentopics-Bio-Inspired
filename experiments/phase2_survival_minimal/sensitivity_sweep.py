@@ -104,6 +104,66 @@ def summarize_runs(run_results, duration, tail_window=TAIL_WINDOW):
     }
 
 
+def find_food_anchor(
+    seeds,
+    repeats,
+    duration,
+    tau,
+    noise,
+    workers=1,
+    target_survival=0.50,
+    food_step=15,
+    food_max=600,
+):
+    """Phase A — sweep init_food from near-zero upward; return the first value
+    where mean survival rate >= target_survival.
+
+    All non-food parameters are held at BALANCED_BASELINE.  The result is
+    empirically derived — no hand-picked food value is required.
+    """
+    base = {k: v for k, v in BALANCED_BASELINE.items() if k != "init_food"}
+    food_range = range(10, food_max + food_step, food_step)
+
+    print(f"\n-- Phase A: Food anchor sweep (target survival >= {target_survival:.0%}) --")
+
+    anchor_food = None
+    anchor_summary = None
+
+    for food in food_range:
+        params = {**base, "init_food": int(food)}
+        tasks = [
+            (dict(params), seed * 1000 + rep, duration, tau, noise)
+            for seed in seeds
+            for rep in range(repeats)
+        ]
+
+        if workers <= 1:
+            run_results = [_run_task(t) for t in tasks]
+        else:
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                run_results = list(pool.map(_run_task, tasks))
+
+        summary = summarize_runs(run_results, duration)
+        survival = summary["survival_rate_mean"]
+
+        print(
+            f"  init_food={food:4d}  "
+            f"survival={survival:.2f}  tailE={summary['tail_energy_mean']:.3f}"
+        )
+
+        if anchor_food is None and survival >= target_survival:
+            anchor_food = int(food)
+            anchor_summary = summary
+            print(f"\n  Anchor found: init_food = {anchor_food} (survival = {survival:.2f})")
+            break
+
+    if anchor_food is None:
+        anchor_food = int(list(food_range)[-1])
+        print(f"\n  Warning: no anchor found up to init_food={anchor_food}. Using last value.")
+
+    return anchor_food, anchor_summary
+
+
 def run_set(set_id, sweep, baseline, seeds, repeats, duration, tau, noise, tail_window, workers=1):
     key = sweep["key"]
     results = []
@@ -131,8 +191,8 @@ def run_set(set_id, sweep, baseline, seeds, repeats, duration, tau, noise, tail_
         print(
             f"  Set {set_id} [{key}={params[key]}] "
             f"runs={summary['num_runs']:02d} | "
-            f"survival={summary['survival_rate_mean']:.2f} ± {summary['survival_rate_sd']:.2f} | "
-            f"tailE={summary['tail_energy_mean']:.3f} ± {summary['tail_energy_sd']:.3f}"
+            f"survival={summary['survival_rate_mean']:.2f} +/- {summary['survival_rate_sd']:.2f} | "
+            f"tailE={summary['tail_energy_mean']:.3f} +/- {summary['tail_energy_sd']:.3f}"
         )
 
     return results
@@ -295,7 +355,7 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"\nSaved sensitivity map → {out_path}")
+    print(f"\nSaved sensitivity map -> {out_path}")
 
 
 def main():
@@ -310,6 +370,14 @@ def main():
     parser.add_argument("--tail_window", type=int, default=TAIL_WINDOW)
     parser.add_argument("--workers", type=int, default=1,
                         help="Parallel workers (0=auto/cpu_count, 1=sequential)")
+    parser.add_argument("--anchor_target", type=float, default=0.50,
+                        help="Phase A target survival rate for food anchor (default 0.50).")
+    parser.add_argument("--anchor_step", type=int, default=15,
+                        help="init_food step size for Phase A anchor sweep (default 15).")
+    parser.add_argument("--anchor_max", type=int, default=600,
+                        help="Upper bound of Phase A anchor sweep (default 600).")
+    parser.add_argument("--skip_anchor", action="store_true",
+                        help="Skip Phase A and use BALANCED_BASELINE init_food directly.")
 
     args = parser.parse_args()
 
@@ -329,11 +397,34 @@ def main():
     )
     os.makedirs(out_dir, exist_ok=True)
 
+    # ── Phase A: find empirical food anchor ──────────────────────────────────
+    if args.skip_anchor:
+        anchor_food = BALANCED_BASELINE["init_food"]
+        anchor_summary = None
+        print(f"\nPhase A skipped -- using BALANCED_BASELINE init_food = {anchor_food}")
+    else:
+        anchor_food, anchor_summary = find_food_anchor(
+            seeds=seeds,
+            repeats=args.repeats,
+            duration=args.duration,
+            tau=args.tau,
+            noise=args.perceptual_noise,
+            workers=n_workers,
+            target_survival=args.anchor_target,
+            food_step=args.anchor_step,
+            food_max=args.anchor_max,
+        )
+
+    # Phase B baseline: non-food params from BALANCED_BASELINE, init_food from Phase A.
+    # Set D sweeps init_food itself — it still uses this baseline for all other params,
+    # and the anchor_food value is recorded as the reference marker on the plot.
+    anchored_baseline = {**BALANCED_BASELINE, "init_food": anchor_food}
+
     total_values = sum(len(SENSITIVITY_SWEEPS[s]["values"]) for s in sets_to_run)
     total_runs = total_values * len(seeds) * args.repeats
 
-    print("=" * 70)
-    print("Phase 2 · OVAT Sensitivity Sweep")
+    print("\n" + "=" * 70)
+    print("Phase 2 - OVAT Sensitivity Sweep (Phase B)")
     print(f"Duration         : {args.duration} ticks")
     print(f"Seeds            : {seeds}")
     print(f"Repeats per seed : {args.repeats}")
@@ -345,7 +436,7 @@ def main():
     print(f"Perceptual noise : {args.perceptual_noise}")
     print(f"Tail window      : {args.tail_window}")
     print(f"Workers          : {n_workers}")
-    print(f"Baseline         : {BALANCED_BASELINE}")
+    print(f"Anchored baseline: {anchored_baseline}")
     print(f"Output           : {out_dir}")
     print("=" * 70)
 
@@ -355,13 +446,13 @@ def main():
         sweep = SENSITIVITY_SWEEPS[set_id]
         key = sweep["key"]
 
-        print(f"\n── Set {set_id}: Sweeping '{key}' ──")
+        print(f"\n-- Set {set_id}: Sweeping '{key}' --")
         print(f"   Values: {sweep['values']}")
 
         results = run_set(
             set_id=set_id,
             sweep=sweep,
-            baseline=BALANCED_BASELINE,
+            baseline=anchored_baseline,
             seeds=seeds,
             repeats=args.repeats,
             duration=args.duration,
@@ -375,20 +466,22 @@ def main():
 
         csv_path = os.path.join(out_dir, f"set_{set_id}_{key}.csv")
         save_csv(results, csv_path)
-        print(f"   Saved CSV → {csv_path}")
+        print(f"   Saved CSV -> {csv_path}")
 
     expected_sets = list(SENSITIVITY_SWEEPS.keys())
     if all(s in all_results for s in expected_sets):
-        plot_sensitivity_map(all_results, BALANCED_BASELINE, out_dir)
+        plot_sensitivity_map(all_results, anchored_baseline, out_dir)
     else:
         missing = [s for s in expected_sets if s not in all_results]
-        print(f"\nSkipping full sensitivity map — missing sets: {missing}")
+        print(f"\nSkipping full sensitivity map -- missing sets: {missing}")
 
     summary_path = os.path.join(out_dir, "sensitivity_summary.json")
     with open(summary_path, "w") as f:
         json.dump(
             {
-                "baseline": BALANCED_BASELINE,
+                "anchor_food": anchor_food,
+                "anchored_baseline": anchored_baseline,
+                "balanced_baseline_original": BALANCED_BASELINE,
                 "duration": args.duration,
                 "seeds": seeds,
                 "repeats": args.repeats,
@@ -403,8 +496,85 @@ def main():
             indent=2,
         )
 
-    print(f"Saved summary JSON → {summary_path}")
+    print(f"Saved summary JSON -> {summary_path}")
+
+    if "D" in all_results:
+        _auto_update_sweep_grid(all_results["D"], summary_path)
+
     print("\nDone.")
+
+
+def _auto_update_sweep_grid(set_d_results, summary_path):
+    """
+    Detect HARSH / BALANCED / EASY zones from Set D and patch the
+    init_food sweep grid in config.py automatically.
+
+    Zone definitions (survival rate):
+      HARSH    : 0.10 - 0.33
+      BALANCED : 0.55 - 0.80
+      EASY     : peak survival (>= 0.75, highest food values)
+
+    Selects up to 4 representative init_food values per zone, deduplicates,
+    sorts, and writes them back into the "sweep" grid in config.py.
+    """
+    import re
+
+    harsh, balanced, easy = [], [], []
+
+    for d in set_d_results:
+        surv = d["survival_rate_mean"]
+        food = int(round(d["param_value"]))
+        if 0.10 <= surv <= 0.33:
+            harsh.append(food)
+        elif 0.55 <= surv <= 0.80:
+            balanced.append(food)
+        elif surv > 0.75:
+            easy.append(food)
+
+    def pick(lst, n=3):
+        if not lst:
+            return []
+        lst = sorted(set(lst))
+        if len(lst) <= n:
+            return lst
+        indices = [int(round(i)) for i in np.linspace(0, len(lst) - 1, n)]
+        return [lst[i] for i in indices]
+
+    grid = sorted(set(pick(harsh, 3) + pick(balanced, 4) + pick(easy, 3)))
+
+    if not grid:
+        print("\n[auto-update] WARNING: No init_food candidates detected -- config.py not updated.")
+        return
+
+    grid_str = "[" + ", ".join(str(v) for v in grid) + "]"
+
+    config_path = os.path.join(PROJECT_ROOT, "experiments", "phase2_survival_minimal", "config.py")
+    with open(config_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    new_content = re.sub(
+        r'("init_food"\s*:\s*)\[[\d,\s]+\]',
+        r'\g<1>' + grid_str,
+        content,
+    )
+
+    if new_content == content:
+        print("\n[auto-update] WARNING: Could not find init_food line in config.py -- not updated.")
+        return
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    harsh_str   = str(pick(harsh, 3))  if harsh   else "[]"
+    bal_str     = str(pick(balanced, 4)) if balanced else "[]"
+    easy_str    = str(pick(easy, 3))  if easy    else "[]"
+
+    print(f"\n[auto-update] config.py sweep grid updated:")
+    print(f"  HARSH    candidates : {harsh_str}")
+    print(f"  BALANCED candidates : {bal_str}")
+    print(f"  EASY     candidates : {easy_str}")
+    print(f"  Final grid          : {grid_str}")
+    print(f"  Source              : {summary_path}")
 
 
 if __name__ == "__main__":

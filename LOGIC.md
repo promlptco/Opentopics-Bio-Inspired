@@ -154,6 +154,54 @@ energy -= genome.learning_cost × |delta|   # metabolic cost of learning
 
 ---
 
+### 3.6 Agent Mechanism — Energy, Fatigue, and Rest Economy
+
+The three motivations form a closed energy loop. Every action either depletes or restores energy; the balance determines which motivation wins the Softmax next tick.
+
+**Per-tick passive depletion (`update_state()`, every tick):**
+```
+energy -= hunger_rate                   # fixed metabolic baseline (always)
+energy -= fatigue × fatigue_rate        # proportional drain from accumulated tiredness
+```
+`fatigue` (0–1) is not merely a movement counter — it is an active metabolic cost. An agent that moves repeatedly accumulates fatigue, which then drains energy every subsequent tick even while standing still. This creates sustained ecological pressure toward SELF selection after any burst of movement or care.
+
+**Movement cost (per step, any motivated move):**
+```
+energy  -= move_cost      # immediate cost of each step
+fatigue += fatigue_rate   # tiredness accumulates per step
+```
+`move_cost` is charged uniformly on every step that results in a position change, regardless of which motivation drove the step:
+
+| Motivation | Move condition | move_cost charged |
+|---|---|---|
+| FORAGE | no food held, not on food cell → step toward food | Yes |
+| CARE | not at same cell as child → step toward child | Yes |
+| SELF | rest in place (no movement) | **No** |
+
+SELF never moves. The only path to energy recovery is standing still.
+
+**SELF action — rest (`rest()`):**
+```
+fatigue -= rest_recovery   # tiredness decreases only — no direct energy change
+```
+REST reduces fatigue, which in turn reduces the passive fatigue drain next tick (`energy -= fatigue × fatigue_rate`). This is an **indirect** energy benefit — not a direct restoration. Agents cannot rest their way to survival; they must forage to replenish energy. This keeps food density as the primary survival lever.
+
+**Why no direct energy from REST:** If REST restored energy directly at rate R, and `R ≥ hunger_rate`, agents could survive indefinitely without food — making `init_food`, `eat_gain`, and `move_cost` irrelevant. This collapses the entire foraging ecology into a single threshold. Keeping REST as fatigue-management only preserves the gradient sensitivity required for Phase 2.
+
+**Closed-loop summary:**
+
+| Event | fatigue | energy | effect on self_cue |
+|---|---|---|---|
+| Any move step (FORAGE or CARE) | ↑ +fatigue_rate | ↓ −move_cost | ↑ rises (indirectly) |
+| Per tick (passive fatigue drain) | — | ↓ −fatigue×fatigue_rate | ↑ rises |
+| Per tick (hunger baseline) | — | ↓ −hunger_rate | ↑ rises |
+| SELF (rest) | ↓ −rest_recovery | — (indirect only) | ↓ falls slowly via reduced drain |
+| Eat held food (FORAGE) | — | ↑ +eat_gain | ↓ falls |
+
+**Why this design:** Energy can only be gained by eating. Every other action either drains or manages the drain rate. `rest_recovery` controls how quickly fatigue resets between movement bursts — it is a **mobility recovery** parameter, not an energy parameter. Its evolutionary relevance is speed of recovery between foraging trips, not survival without food.
+
+---
+
 ## 4. ChildAgent — Passive Signal Emitter (`agents/child.py`)
 
 ```python
@@ -166,6 +214,12 @@ child.distress  = (hunger + separation) / 2
 **Death:** `energy <= 0` → starvation. Identical to mother death condition. `hunger` is a derived metric — it is NOT tracked independently.
 
 **Why separation in distress:** Infant distress in mammals is not purely hunger — it is a composite signal including physical separation (cold, vulnerability, isolation). `separation = distance_to_mother / perception_radius` models how a crying infant's signal grows proportionally to how far away the mother is. At `separation = 1.0`, the mother is at or beyond perception radius — the infant is "lost."
+
+**Warm behavior is a dual distress reducer:** Maternal proximity (warm) lowers `child.distress` through both components of the formula simultaneously:
+- **Hunger path** — when mother is within `warmth_radius`, `hunger_rate` is reduced (Change H). Energy depletes more slowly → `hunger = 1 − energy` stays lower → distress drops.
+- **Separation path** — being physically close directly reduces `separation = distance / perception_radius` → distress drops.
+
+At same-cell proximity (dist = 0): `separation = 0` and maximum warmth reduction applies to `hunger_rate`. Both components of distress are minimised at once. This is why maternal co-location is the most efficient care action — it simultaneously sates and soothes.
 
 **Why the mother reads distress, not hunger directly:** Biologically, a mother cannot observe her infant's internal metabolic state. She can only observe behavioral signals: vocalization intensity, postural cues, activity level. `distress` is this observable signal. Reading `child.hunger` directly would mean the mother has metabolic telepathy — it violates the ecological realism requirement.
 

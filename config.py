@@ -81,7 +81,8 @@ class Config:
 
     # Phase 5b — Food Ecology Calibration
     # food_replenish_amount: food units spawned per replenishment event.
-    #   Default 5 matches the value hardcoded in all prior phases.
+    #   Phase 2 overrides this with proportional replenishment (init_food // 10)
+    #   in SurvivalSimulation.step() to prevent tragedy-of-commons.
     food_replenish_amount: int = 5
     # food_replenish_threshold_ratio: replenish when food_count < init_food * ratio.
     #   Default 0.5 matches the init_food // 2 threshold used in all prior phases.
