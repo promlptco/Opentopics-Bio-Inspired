@@ -5,18 +5,16 @@ One-Variable-at-a-Time (OVAT) Sensitivity Analysis for Phase 2.
 
 Usage:
   python experiments/phase2_survival_minimal/sensitivity_sweep.py
-  python experiments/phase2_survival_minimal/sensitivity_sweep.py --duration 1000 --seeds 5 --repeats 3
-  python experiments/phase2_survival_minimal/sensitivity_sweep.py --sets AB
+  python experiments/phase2_survival_minimal/sensitivity_sweep.py --duration 1000 --seeds 10 --repeats 3
+  python experiments/phase2_survival_minimal/sensitivity_sweep.py --sets ABC
   python experiments/phase2_survival_minimal/sensitivity_sweep.py --tau 0.1 --perceptual_noise 0.1
 
 Outputs:
   outputs/phase2_survival_minimal/sensitivity/<timestamp>/
     ├── sensitivity_map.png
-    ├── set_A_hunger_rate.csv
-    ├── set_B_move_cost.csv
-    ├── set_C_eat_gain.csv
-    ├── set_D_init_food.csv
-    ├── set_E_rest_recovery.csv
+    ├── set_A_init_food.csv
+    ├── set_B_eat_gain.csv
+    ├── set_C_move_cost.csv
     └── sensitivity_summary.json
 """
 
@@ -37,8 +35,8 @@ import matplotlib.pyplot as plt
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-from experiments.phase2_survival_minimal.run import SurvivalSimulation, make_config
-from experiments.phase2_survival_minimal.config import (
+from experiments.phase2_survival_minimal.new_run import SurvivalSimulation, make_config
+from experiments.phase2_survival_minimal.new_config import (
     INIT_MOTHERS,
     TAIL_WINDOW,
     BALANCED_BASELINE,
@@ -118,8 +116,9 @@ def find_food_anchor(
     """Phase A — sweep init_food from near-zero upward; return the first value
     where mean survival rate >= target_survival.
 
-    All non-food parameters are held at BALANCED_BASELINE.  The result is
-    empirically derived — no hand-picked food value is required.
+    All non-food parameters are held at the provisional BALANCED_BASELINE.
+    This only finds a rough food-density anchor. Final ecologies must still
+    come from the multi-parameter validation grid.
     """
     base = {k: v for k, v in BALANCED_BASELINE.items() if k != "init_food"}
     food_range = range(10, food_max + food_step, food_step)
@@ -276,13 +275,15 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
             alpha=0.10,
         )
 
+        ax_surv.axhspan(0.10, 0.45, color="#BF616A", alpha=0.06, label="HARSH target")
+        ax_surv.axhspan(0.50, 0.75, color="#EBCB8B", alpha=0.08, label="BALANCED target")
         ax_surv.axhline(
             0.80,
-            color="#BF616A",
+            color="#A3BE8C",
             linestyle=":",
             linewidth=1.1,
             alpha=0.75,
-            label="Collapse threshold",
+            label="EASY minimum",
         )
 
         ax_surv.set_ylim(-0.05, 1.15)
@@ -308,12 +309,12 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
         )
 
         ax_energy.axhline(
-            0.62,
+            0.0,
             color="black",
             linestyle=":",
             linewidth=1.0,
-            alpha=0.55,
-            label="Target 0.62",
+            alpha=0.35,
+            label="Zero energy",
         )
 
         ax_energy.set_ylim(-0.05, 1.15)
@@ -361,10 +362,10 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
 def main():
     parser = argparse.ArgumentParser(description="OVAT Sensitivity Sweep for Phase 2.")
     parser.add_argument("--duration", type=int, default=1000)
-    parser.add_argument("--seeds", type=int, default=5, help="Number of seeds starting from 42.")
+    parser.add_argument("--seeds", type=int, default=10, help="Number of seeds starting from 42. Phase 2 claims require at least 10 seeds.")
     parser.add_argument("--repeats", type=int, default=3, help="Repeats per seed.")
     parser.add_argument("--sets", type=str, default="".join(SENSITIVITY_SWEEPS.keys()),
-                        help="Which sets to run, e.g. BC or DE.")
+                        help="Which sets to run, e.g. A, B, C, or ABC.")
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--tail_window", type=int, default=TAIL_WINDOW)
@@ -498,8 +499,8 @@ def main():
 
     print(f"Saved summary JSON -> {summary_path}")
 
-    if "D" in all_results:
-        _auto_update_sweep_grid(all_results["D"], summary_path)
+    # Do not auto-overwrite the validation grid. Final HARSH/BALANCED/EASY
+    # ecologies must be selected from the multi-parameter validation grid in run.py.
 
     print("\nDone.")
 

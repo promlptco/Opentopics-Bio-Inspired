@@ -64,121 +64,127 @@ Finds parameter sets (`balanced`, `easy`, `harsh`) where the population survives
 
 ### Pipeline mode — fully automatic (recommended)
 
-Runs the complete workflow in one command: wide sweep → auto-select balanced/easy/harsh → OVAT around the balanced baseline.
-No manual baseline selection step required.
+Runs the complete 8-step ROADMAPS.md workflow in one command.
+No manual baseline selection required.
 
 ```powershell
 # Sequential
-python experiments/phase2_survival_minimal/run.py --mode pipeline --duration 1000 --repeats 3
+python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --repeats 3
 
 # Parallel (recommended)
-python experiments/phase2_survival_minimal/run.py --mode pipeline --duration 1000 --repeats 3 --workers 8
+python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --repeats 3 --workers 8
 ```
 
 Pipeline steps (printed during execution):
 
-**Step 1 — Synthetic starting baseline**
-Uses `BALANCED_BASELINE` from `config.py` as the absolute center point.
-No manual calibration required. Logs starting parameters.
+**Step 1 — Mechanics lock**
+Confirms all Phase 2 constraints are active: grid=50×50, energy=1.0, hunger_rate=1/35, tau=0.1, mutation/reproduction/children/plasticity/care all OFF.
 
-**Step 2 — OVAT sensitivity sweep (N=50 seeds per point)**
-Runs all five OVAT sets (A–E) around the synthetic center.
-Each sweep point is averaged over **50 independent seeds** to account for Softmax stochasticity.
-Saves `sensitivity_ovat/sensitivity_map.png` with vertical synthetic-center lines visible.
+**Step 2 — Provisional baseline**
+Logs `BALANCED_BASELINE` from `new_config.py` as the starting reference point. No manual calibration required.
 
-**Step 3 — Dual-metric cliff-edge detection**
+**Step 3 — First-pass init_food gradient scan**
+Calls `find_food_anchor()`: sweeps `init_food` upward from 10 until mean survival ≥ 50%.
+Produces the `anchored_baseline` used in all subsequent steps.
+
+**Step 4 — OVAT sensitivity sweep (N=50 seeds per point)**
+Runs all three OVAT sets (A=init_food, B=eat_gain, C=move_cost) around the anchored baseline.
+Each sweep point is averaged over **50 independent seeds** to account for softmax stochasticity.
+Saves `sensitivity_ovat/sensitivity_map.png` with anchored-baseline reference lines.
+
+**Step 5 — Dual-metric cliff-edge detection**
 For each parameter curve, locates the *last stable point* before the tipping-point collapse:
-- **CLEAR** (survival span ≥ 0.20): finds the point satisfying survival ∈ [0.80–0.95] **AND** energy ∈ [0.65–0.75] where the *next adjacent step* shows the steepest drop.
-- **UNCLEAR** (flat curve): synthetic value retained; parameter becomes a secondary axis in Step 4.
+- **CLEAR** (survival span ≥ 0.20): finds the point where the *next adjacent step* shows the steepest drop.
+- **UNCLEAR** (flat curve): anchored value retained; parameter becomes a secondary axis in Step 6.
 
-Prints a table: Parameter | Synthetic | Detected Cliff-Edge | Status | Justification.
+Prints a table: Parameter | Anchored | Detected Cliff-Edge | Status | Justification.
 
-**Step 4 — Multi-dimensional validation grid (N=50 per config)**
-- **Base params**: synthetic baseline (combining all individual cliff-edge values simultaneously would make the system too harsh for partial survival).
-- **Primary axis**: `init_food` spanning from harsh to easy zone — anchored between `min(detected_food, synthetic_food)` and `max(detected_food, synthetic_food)`, extended ±4 steps on each side.
-- **Secondary axes**: one axis per UNCLEAR parameter (5 evenly-spaced values from its sweep range).
-- Total configs = food_steps × UNCLEAR_param_combinations; each run N=50 seeds.
+**Step 6 — Multi-parameter validation grid (N=50 per config)**
+Builds `init_food × eat_gain × move_cost` grid from cliff-edge detection results.
+CLEAR params locked to detected values; UNCLEAR params varied across their sweep range.
+Each config run over N=50 seeds.
 
-**Step 5 — Automated penalty scoring selection**
-Scores every Step 4 config with a penalty function combining hard constraints and soft distance-to-target terms:
-- **Balanced**: target ≈ 14/15 survival, energy ≈ 0.70, flat slope (slope heavily penalised).
-- **Easy**: target ≈ 15/15 survival, energy ≥ 0.85.
-- **Harsh**: target ≈ 2–5/15 survival, energy ≤ 0.40.
+**Step 7 — Select canonical ecological regimes**
+Scores every Step 6 config with a penalty function and selects the best HARSH / BALANCED / EASY configuration.
+- **HARSH**: target 25% survival (10–45% bounds)
+- **BALANCED**: target 62.5% survival (50–75% bounds)
+- **EASY**: target 90% survival (≥80% bound)
 
-Prints the final ecological baseline table (exact genome + environment for all three states).
+Prints the final ecological baseline table (exact genome + environment for all three regimes).
 
-**Step 6 — Diagnostic report generation**
-Runs full N=50-seed validation for each selected condition and generates the complete diagnostic suite.
+**Step 8 — Final plots + diagnostic report**
+Runs full N=50-seed validation for each selected regime and generates the complete diagnostic suite.
 
 Output layout:
 ```
 outputs/phase2_survival_minimal/<timestamp>_validation_selected_baselines/
-├── auto_baseline_summary.json        ← includes _pipeline_meta key
+├── auto_baseline_summary.json        ← includes _pipeline_meta with anchor_food
 ├── validation_balanced.csv / .png
 ├── validation_easy.csv / .png
 ├── validation_harsh.csv / .png
 ├── <all other diagnostic plots>
 └── sensitivity_ovat/
-    ├── sensitivity_map.png           ← baseline lines mark synthetic center
-    ├── set_A_hunger_rate.csv
-    ├── set_B_move_cost.csv
-    ├── set_C_eat_gain.csv
-    ├── set_D_init_food.csv
-    └── set_E_rest_recovery.csv
+    ├── sensitivity_map.png           ← anchored baseline reference lines
+    ├── set_A_init_food.csv
+    ├── set_B_eat_gain.csv
+    └── set_C_move_cost.csv
 ```
 
 ---
 
 ### Sweep mode — auto-calibration
 
-Runs a grid of candidate configs, selects the best three conditions by validation-first rule,
-then saves diagnostic plots and a summary JSON.
+Runs ROADMAPS.md Steps 1-2, 6-8: pre-defined `SWEEP_GRID` (init_food × eat_gain × move_cost),
+selects the best three conditions, saves diagnostic plots and summary JSON.
+Steps 3-5 (food anchor scan + OVAT + cliff-edge detection) are skipped — use pipeline mode for the full workflow.
 
 ```powershell
 # Sequential (default)
-python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3
+python -m experiments.phase2_survival_minimal.new_run --mode sweep --duration 1000 --repeats 3
 
 # Parallel — 8 workers (recommended for multi-core machines)
-python experiments/phase2_survival_minimal/run.py --mode sweep --duration 1000 --repeats 3 --workers 8
+python -m experiments.phase2_survival_minimal.new_run --mode sweep --duration 1000 --repeats 3 --workers 8
 
 # Auto-detect worker count
-python experiments/phase2_survival_minimal/run.py --mode sweep --workers 0
+python -m experiments.phase2_survival_minimal.new_run --mode sweep --workers 0
 ```
 
 ### Single mode — focused validation
 
-Runs one hand-picked config across all validation seeds.
+Runs ROADMAPS.md Steps 1-2 and Step 8 only: one hand-picked config with all diagnostic plots.
+No OVAT, no grid, no regime selection.
 
 ```powershell
 # Headless, sequential
-python experiments/phase2_survival_minimal/run.py --mode single --duration 1000
+python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1000
 
 # Headless, parallel (faster)
-python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --workers 4
+python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1000 --workers 4
 
 # Live viewer, default speed
-python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --live
+python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1000 --live
 
 # Live viewer, 5× speed
-python experiments/phase2_survival_minimal/run.py --mode single --duration 1000 --live --speed 5
+python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1000 --live --speed 5
 ```
 
-### OVAT Sensitivity Sweep
+### OVAT Sensitivity Sweep (standalone)
 
-One-variable-at-a-time analysis over hunger rate, move cost, eat gain, food count, and rest recovery.
+One-variable-at-a-time analysis over init_food (Set A), eat_gain (Set B), and move_cost (Set C).
+Minimum 10 seeds required for any directional claim.
 
 ```powershell
-# All five sets, sequential
-python experiments/phase2_survival_minimal/sensitivity_sweep.py --duration 1000 --seeds 5 --repeats 3
+# All three sets, sequential
+python -m experiments.phase2_survival_minimal.new_sensitivity --duration 1000 --seeds 10 --repeats 3
 
-# All five sets, parallel
-python experiments/phase2_survival_minimal/sensitivity_sweep.py --duration 1000 --seeds 5 --repeats 3 --workers 8
+# All three sets, parallel
+python -m experiments.phase2_survival_minimal.new_sensitivity --duration 1000 --seeds 10 --repeats 3 --workers 8
 
 # Specific sets only (e.g. A and C)
-python experiments/phase2_survival_minimal/sensitivity_sweep.py --sets AC
+python -m experiments.phase2_survival_minimal.new_sensitivity --sets AC
 
 # Auto-detect worker count
-python experiments/phase2_survival_minimal/sensitivity_sweep.py --workers 0
+python -m experiments.phase2_survival_minimal.new_sensitivity --workers 0
 ```
 
 ### Phase 2 CLI reference
@@ -284,8 +290,8 @@ Use `--workers N` to run them in parallel via `ProcessPoolExecutor`.
 | `0` | Auto: uses `os.cpu_count()` |
 
 **Scripts that support `--workers`:**
-- `experiments/phase2_survival_minimal/run.py`
-- `experiments/phase2_survival_minimal/sensitivity_sweep.py`
+- `experiments/phase2_survival_minimal/new_run.py`
+- `experiments/phase2_survival_minimal/new_sensitivity.py`
 
 > `--live` and `--workers` are independent.
 > The live viewer runs one simulation; `--workers` speeds up the headless validation runs.

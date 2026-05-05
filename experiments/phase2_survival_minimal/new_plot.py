@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from experiments.phase2_survival_minimal.config import (
+from experiments.phase2_survival_minimal.new_config import (
     INIT_MOTHERS,
     DEFAULT_PERCEPTION_RADIUS,
     TAIL_WINDOW,
@@ -59,6 +59,21 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
 
     tail_means = np.array(tail_means, dtype=float)
 
+    total_actions = []
+    rest_rates = []
+    failed_forage_rates = []
+
+    for r in repeat_results:
+        actions = r.get("actions", {})
+        failed = r.get("failed", {})
+        action_total = sum(actions.get(k, 0) for k in ["MOVE", "PICK", "EAT", "REST"])
+        total_actions.append(action_total)
+        rest_rates.append(actions.get("REST", 0) / action_total if action_total > 0 else 0.0)
+        failed_forage_rates.append(
+            failed.get("FAILED_FORAGE", 0) / (action_total + failed.get("FAILED_FORAGE", 0))
+            if (action_total + failed.get("FAILED_FORAGE", 0)) > 0 else 0.0
+        )
+
     return {
         "final_pop": float(np.mean(final_pops)),
         "final_pop_sd": float(np.std(final_pops)),
@@ -68,6 +83,9 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
         "tail_energy_sd": float(np.std(tail_means)),
         "tail_energy_slope": float(np.mean(energy_slopes)),
         "tail_pop_slope": float(np.mean(pop_slopes)),
+        "rest_action_rate": float(np.mean(rest_rates)) if rest_rates else 0.0,
+        "failed_forage_rate": float(np.mean(failed_forage_rates)) if failed_forage_rates else 0.0,
+        "total_actions_mean": float(np.mean(total_actions)) if total_actions else 0.0,
     }
 
 
@@ -200,14 +218,14 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
     for i in range(len(results)):
         label = "Individual Runs" if i == 0 else "_nolegend_"
-        ax1.plot(ticks, energy_matrix[i], alpha=0.15, linewidth=0.8, color="gray", label=label)
-        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.15, linewidth=0.8, color="gray", label=label)
+        ax1.plot(ticks, energy_matrix[i], alpha=0.4, linewidth=0.8, color="gray", label=label)
+        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.4, linewidth=0.8, color="gray", label=label)
 
-    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="tab:blue", alpha=0.15, label="Mean ± SD")
-    ax1.plot(ticks, mean_e, color="tab:blue", linewidth=2.0, label="Group Mean")
+    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="tab:green", alpha=0.15, label="Mean ± SD")
+    ax1.plot(ticks, mean_e, color="tab:green", linewidth=2.0, label="Group Mean")
 
-    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="tab:green", alpha=0.15, label="Mean ± SD")
-    ax2.plot(ticks, mean_p, color="tab:green", linewidth=2.0, label="Group Mean")
+    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="tab:blue", alpha=0.15, label="Mean ± SD")
+    ax2.plot(ticks, mean_p, color="tab:blue", linewidth=2.0, label="Group Mean")
 
     _t = SELECTION_TARGETS.get(name, {})
     _target_e  = _t.get("target_energy",  0.70)
@@ -219,11 +237,11 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     ax2.axhline(0.0, color="tab:red", linestyle="--", alpha=0.5, label="Extinction")
     ax2.axhline(INIT_MOTHERS, color="gray", linestyle=":", label="Initial count")
 
-    ax1.set_title("Energy Trajectory: Mean ± SD")
+    ax1.set_title("Energy Trajectory: Mean ± SD (green)")
     ax1.set_ylabel("Mean energy")
     ax1.set_ylim(-0.05, 1.05)
 
-    ax2.set_title("Alive Population: Mean ± SD")
+    ax2.set_title("Survival / Alive Population: Mean ± SD (blue)")
     ax2.set_ylabel("# alive mothers")
     ax2.set_xlabel("Tick")
     ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
@@ -245,7 +263,7 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
 
     for ax in (ax1, ax2):
         style_axes(ax)
-        ax.legend(loc="lower right", **_LEGEND_KW)
+        ax.legend(loc="lower left", **_LEGEND_KW)
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"validation_{name}.png")
@@ -287,6 +305,8 @@ def save_validation_csv(name, results, out_dir):
                 "final_energy",
                 "mean_fatigue",
                 "final_fatigue",
+                "REST_RATE",
+                "FAILED_SELF_NOTE",
                 "MOVE",
                 "PICK",
                 "EAT",
@@ -308,6 +328,9 @@ def save_validation_csv(name, results, out_dir):
             mean_fatigue = float(np.mean(fatigue_history)) if fatigue_history else 0.0
             final_fatigue = float(fatigue_history[-1]) if fatigue_history else 0.0
 
+            total_actions = sum(actions.get(k, 0) for k in ["MOVE", "PICK", "EAT", "REST"])
+            rest_rate = actions.get("REST", 0) / total_actions if total_actions > 0 else 0.0
+
             writer.writerow(
                 {
                     "seed": r["base_seed"],
@@ -318,6 +341,8 @@ def save_validation_csv(name, results, out_dir):
                     "final_energy": r["final_energy"],
                     "mean_fatigue": mean_fatigue,
                     "final_fatigue": final_fatigue,
+                    "REST_RATE": rest_rate,
+                    "FAILED_SELF_NOTE": "N/A: SELF falls back to REST in Phase 2",
                     "MOVE": actions.get("MOVE", 0),
                     "PICK": actions.get("PICK", 0),
                     "EAT": actions.get("EAT", 0),
@@ -550,6 +575,115 @@ def plot_stacked_action_failed_over_time(name, results, duration, out_dir, windo
 
     plt.tight_layout()
     save_figure(fig, out_dir, f"stacked_action_failed_{name}.png")
+
+
+
+# ============================================================
+# Required roadmap barplots
+# ============================================================
+
+def _sum_counts(results, top_key, keys):
+    totals = {key: 0.0 for key in keys}
+    for r in results:
+        counts = r.get(top_key, {})
+        for key in keys:
+            totals[key] += counts.get(key, 0)
+    return totals
+
+
+def plot_motivation_action_count_bar(name, results, out_dir):
+    """Barplot of action counts grouped by motivation domain.
+
+    Phase 2 active mapping:
+      FORAGE -> MOVE, PICK
+      SELF   -> EAT, REST
+    CARE is disabled and omitted.
+    """
+    actions = _sum_counts(results, "actions", ["MOVE", "PICK", "EAT", "REST"])
+
+    labels = ["FORAGE\nMOVE", "FORAGE\nPICK", "SELF\nEAT", "SELF\nREST"]
+    values = [actions["MOVE"], actions["PICK"], actions["EAT"], actions["REST"]]
+
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    bars = ax.bar(labels, values)
+
+    for bar, value in zip(bars, values):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{int(value)}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    fig.suptitle(
+        f"Motivation → Action Counts — {name.upper()}\n"
+        "Phase 2 active domains: FORAGE and SELF",
+        fontsize=14,
+        fontweight="bold",
+    )
+    ax.set_ylabel("Total count across validation runs")
+    ax.set_xlabel("Motivation domain and realized action")
+    style_axes(ax)
+
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"motivation_action_counts_{name}.png")
+
+
+def plot_failed_action_rate_bar(name, results, out_dir):
+    """Barplot comparing realized action counts with failed realization counts.
+
+    FAILED_SELF is omitted from the plotted comparison because Phase 2 SELF has a
+    designed fallback to REST, so FAILED_SELF is structurally not applicable.
+    """
+    actions = _sum_counts(results, "actions", ["MOVE", "PICK", "EAT", "REST"])
+    failed = _sum_counts(results, "failed", ["FAILED_FORAGE", "FAILED_SELF"])
+
+    labels = ["MOVE", "PICK", "EAT", "REST", "FAILED_FORAGE"]
+    realized = [actions["MOVE"], actions["PICK"], actions["EAT"], actions["REST"], 0]
+    failed_values = [0, 0, 0, 0, failed["FAILED_FORAGE"]]
+
+    x = np.arange(len(labels))
+    width = 0.38
+
+    fig, ax = plt.subplots(figsize=(10, 5.8))
+    b1 = ax.bar(x - width / 2, realized, width, label="Realized")
+    b2 = ax.bar(x + width / 2, failed_values, width, label="Failed")
+
+    for bars in (b1, b2):
+        for bar in bars:
+            h = bar.get_height()
+            if h > 0:
+                ax.text(bar.get_x() + bar.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=8)
+
+    total_forage_attempts = actions["MOVE"] + actions["PICK"] + failed["FAILED_FORAGE"]
+    failed_rate = failed["FAILED_FORAGE"] / total_forage_attempts if total_forage_attempts > 0 else 0.0
+
+    ax.text(
+        0.02,
+        0.96,
+        f"FAILED_FORAGE rate = {failed_rate:.2%}\nFAILED_SELF = N/A (SELF falls back to REST)",
+        transform=ax.transAxes,
+        fontsize=9,
+        va="top",
+        bbox=_ANNOT_BOX,
+    )
+
+    fig.suptitle(
+        f"Failed-Action Rate Summary — {name.upper()}\n"
+        "Realized actions vs failed motivation realization",
+        fontsize=14,
+        fontweight="bold",
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Total count across validation runs")
+    ax.legend(loc="lower left", **_LEGEND_KW)
+    style_axes(ax)
+
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"failed_action_rates_{name}.png")
 
 
 # ============================================================

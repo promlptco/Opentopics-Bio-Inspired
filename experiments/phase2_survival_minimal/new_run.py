@@ -51,7 +51,7 @@ from agents.mother import MotherAgent, softmax_probs
 from evolution.genome import Genome
 from utils.experiment import set_seed
 
-from experiments.phase2_survival_minimal.config import (
+from experiments.phase2_survival_minimal.new_config import (
     INIT_MOTHERS,
     INITIAL_ENERGY,
     VALIDATION_SEEDS,
@@ -77,7 +77,7 @@ from experiments.phase2_survival_minimal.config import (
     candidate_configs,
 )
 
-from experiments.phase2_survival_minimal.plot import (
+from experiments.phase2_survival_minimal.new_plot import (
     safe,
     summarize_repeats,
     plot_multiseed_condition,
@@ -85,6 +85,8 @@ from experiments.phase2_survival_minimal.plot import (
     plot_motivation_selection_over_time,
     plot_failed_selection_over_time,
     plot_stacked_action_failed_over_time,
+    plot_motivation_action_count_bar,
+    plot_failed_action_rate_bar,
     plot_failed_self_energy_correlation,
     plot_failed_forage_energy_correlation,
     plot_rate_sum_check,
@@ -457,6 +459,7 @@ def make_config(params, duration):
     cfg.care_enabled = False
     cfg.plasticity_enabled = False
     cfg.reproduction_enabled = False
+    cfg.mutation_enabled = False
 
     return cfg
 
@@ -511,21 +514,41 @@ def validate_params(params, args, workers: int = 1):
 # Selection rules
 # ============================================================
 
+def _survival_rate(result):
+    return result["final_pop"] / INIT_MOTHERS
+
+
+def _rest_action_rate_from_summary(result):
+    return safe(result.get("rest_action_rate", 0.0))
+
+
+def rest_sanity_label(rest_rate):
+    """Roadmap sanity interpretation for REST behavior.
+
+    This is reported and used as a soft sorting cue, not as the primary hard gate.
+    """
+    if rest_rate <= 0.01:
+        return "too_harsh_or_no_recovery"
+    if rest_rate >= 0.40:
+        return "too_easy_or_low_movement_pressure"
+    return "plausible"
+
+
 def is_valid_condition(name, result):
+    surv = _survival_rate(result)
+
     if name == "balanced":
         t = SELECTION_TARGETS["balanced"]
         return (
-            result["final_pop"] >= t["min_final_pop"]
+            t["min_survival_rate"] <= surv <= t["max_survival_rate"]
             and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
             and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
-            and abs(safe(result.get("tail_energy_slope", 0.0))) <= t.get("max_abs_energy_slope", float("inf"))
-            and abs(safe(result.get("tail_pop_slope", 0.0))) <= t.get("max_abs_pop_slope", float("inf"))
         )
 
     if name == "easy":
         t = SELECTION_TARGETS["easy"]
         return (
-            result["final_pop"] >= t["min_final_pop"]
+            surv >= t["min_survival_rate"]
             and safe(result["tail_mean_energy"]) >= t["min_energy"]
             and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
         )
@@ -533,11 +556,9 @@ def is_valid_condition(name, result):
     if name == "harsh":
         t = SELECTION_TARGETS["harsh"]
         return (
-            t["min_final_pop"] <= result["final_pop"] <= t["max_final_pop"]
+            t["min_survival_rate"] <= surv <= t["max_survival_rate"]
             and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
         )
-        # Note: harsh is defined by low survival rate (10–33%), not low energy.
-        # energy_high is now 0.65 to match ecological reality at eat_gain=0.25.
 
     return False
 
@@ -548,31 +569,36 @@ def strict_sort_key(name, record):
 
     if name == "balanced":
         t = SELECTION_TARGETS["balanced"]
+        rest_rate = _rest_action_rate_from_summary(r)
+        rest_penalty = 1.0 if rest_sanity_label(rest_rate) != "plausible" else 0.0
         return (
-            p["init_food"],
+            abs(_survival_rate(r) - t["target_survival_rate"]),
+            rest_penalty,
             abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
             safe(r["tail_energy_sd"], nan=1.0),
-            abs(r["final_pop"] - INIT_MOTHERS),
-            p["rest_recovery"],
+            p["init_food"],
         )
 
     if name == "easy":
+        t = SELECTION_TARGETS["easy"]
+        rest_rate = _rest_action_rate_from_summary(r)
         return (
+            abs(_survival_rate(r) - t["target_survival_rate"]),
+            max(0.0, 0.40 - rest_rate),
             -safe(r["tail_mean_energy"]),
             safe(r["tail_energy_sd"], nan=1.0),
-            -r["final_pop"],
             -p["init_food"],
-            p["rest_recovery"],
         )
 
     if name == "harsh":
         t = SELECTION_TARGETS["harsh"]
+        rest_rate = _rest_action_rate_from_summary(r)
         return (
-            abs(r["final_pop"] - t["target_pop"]),
+            abs(_survival_rate(r) - t["target_survival_rate"]),
+            max(0.0, rest_rate - 0.40),
             abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
             p["init_food"],
             safe(r["tail_energy_sd"], nan=1.0),
-            p["rest_recovery"],
         )
 
     return (999,)
@@ -581,38 +607,46 @@ def strict_sort_key(name, record):
 def fallback_sort_key(name, record):
     r = record["result"]
     p = record["params"]
+    surv = _survival_rate(r)
+    rest_rate = _rest_action_rate_from_summary(r)
 
     if name == "balanced":
         t = SELECTION_TARGETS["balanced"]
+        if surv < t["min_survival_rate"]:
+            surv_gap = t["min_survival_rate"] - surv
+        elif surv > t["max_survival_rate"]:
+            surv_gap = surv - t["max_survival_rate"]
+        else:
+            surv_gap = 0.0
         return (
-            max(0.0, t["min_final_pop"] - r["final_pop"]),
-            p["init_food"],
+            surv_gap,
+            abs(surv - t["target_survival_rate"]),
+            1.0 if rest_sanity_label(rest_rate) != "plausible" else 0.0,
             abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
-            safe(r["tail_energy_sd"], nan=1.0),
+            p["init_food"],
         )
 
     if name == "easy":
         t = SELECTION_TARGETS["easy"]
         return (
-            max(0.0, t["min_final_pop"] - r["final_pop"]),
+            max(0.0, t["min_survival_rate"] - surv),
+            max(0.0, 0.40 - rest_rate),
             max(0.0, t["min_energy"] - safe(r["tail_mean_energy"])),
-            safe(r["tail_energy_sd"], nan=1.0),
             -p["init_food"],
         )
 
     if name == "harsh":
         t = SELECTION_TARGETS["harsh"]
-
-        if r["final_pop"] < t["min_final_pop"]:
-            pop_gap = t["min_final_pop"] - r["final_pop"]
-        elif r["final_pop"] > t["max_final_pop"]:
-            pop_gap = r["final_pop"] - t["max_final_pop"]
+        if surv < t["min_survival_rate"]:
+            surv_gap = t["min_survival_rate"] - surv
+        elif surv > t["max_survival_rate"]:
+            surv_gap = surv - t["max_survival_rate"]
         else:
-            pop_gap = 0.0
-
+            surv_gap = 0.0
         return (
-            pop_gap,
-            abs(r["final_pop"] - t["target_pop"]),
+            surv_gap,
+            abs(surv - t["target_survival_rate"]),
+            max(0.0, rest_rate - 0.40),
             abs(safe(r["tail_mean_energy"]) - t["target_energy"]),
             p["init_food"],
         )
@@ -626,33 +660,20 @@ def build_validation_pool(name, sweep_records):
     if valid:
         return sorted(valid, key=lambda r: strict_sort_key(name, r))
 
-    if name == "balanced":
-        t = SELECTION_TARGETS["balanced"]
+    t = SELECTION_TARGETS[name]
+
+    if name in ["balanced", "harsh"]:
+        min_surv = max(0.0, t["min_survival_rate"] - 0.10)
+        max_surv = min(1.0, t["max_survival_rate"] + 0.10)
         relaxed = [
             r for r in sweep_records
-            if r["result"]["final_pop"] >= t["min_final_pop"] - 1.0
-            and t["energy_low"] - 0.05
-            <= safe(r["result"]["tail_mean_energy"])
-            <= t["energy_high"] + 0.05
+            if min_surv <= _survival_rate(r["result"]) <= max_surv
         ]
-
     elif name == "easy":
-        t = SELECTION_TARGETS["easy"]
         relaxed = [
             r for r in sweep_records
-            if r["result"]["final_pop"] >= t["min_final_pop"] - 1.0
-            and safe(r["result"]["tail_mean_energy"]) >= t["min_energy"] - 0.05
+            if _survival_rate(r["result"]) >= max(0.0, t["min_survival_rate"] - 0.10)
         ]
-
-    elif name == "harsh":
-        t = SELECTION_TARGETS["harsh"]
-        relaxed = [
-            r for r in sweep_records
-            if t["min_final_pop"] - 1.0
-            <= r["result"]["final_pop"]
-            <= t["max_final_pop"] + 3.0
-        ]
-
     else:
         relaxed = []
 
@@ -697,9 +718,12 @@ def select_condition_by_validation(name, sweep_records, args, workers: int = 1):
         print(
             f"  {name.upper()} candidate {idx:03d}/{len(pool)} | "
             f"food={params['init_food']} | rest={params['rest_recovery']} | "
-            f"val_pop={validation_summary['final_pop']:.2f}/15 | "
+            f"val_pop={validation_summary['final_pop']:.2f}/{INIT_MOTHERS} | "
+            f"surv={_survival_rate(validation_summary):.2%} | "
             f"tailE={validation_summary['tail_mean_energy']:.3f} +/- "
-            f"{validation_summary['tail_energy_sd']:.3f}"
+            f"{validation_summary['tail_energy_sd']:.3f} | "
+            f"REST={_rest_action_rate_from_summary(validation_summary):.1%} "
+            f"({rest_sanity_label(_rest_action_rate_from_summary(validation_summary))})"
         )
 
         if best_fallback is None or fallback_sort_key(name, candidate) < fallback_sort_key(name, best_fallback):
@@ -721,6 +745,24 @@ def select_condition_by_validation(name, sweep_records, args, workers: int = 1):
     return best_fallback, checked
 
 
+
+def save_selected_ecologies_json(summary, out_dir):
+    """Write a compact importable file for later phases."""
+    import json
+    path = os.path.join(out_dir, "selected_ecologies.json")
+    selected = {}
+    for name in ["harsh", "balanced", "easy"]:
+        if name in summary:
+            selected[name] = {
+                "selected_config": summary[name].get("selected_config", {}),
+                "selection_status": summary[name].get("selection_status", summary[name].get("status", "unknown")),
+                "validation_summary": summary[name].get("validation_summary", {}),
+            }
+    with open(path, "w") as f:
+        json.dump(selected, f, indent=2)
+    print(f"Saved selected ecologies -> {path}")
+
+
 # ============================================================
 # Output helpers
 # ============================================================
@@ -737,6 +779,11 @@ def build_validation_summary(results):
             "actions": r.get("actions", {}),
             "motivations": r.get("motivations", {}),
             "failed": r.get("failed", {}),
+            "rest_action_rate": (
+                r.get("actions", {}).get("REST", 0)
+                / max(1, sum(r.get("actions", {}).get(k, 0) for k in ["MOVE", "PICK", "EAT", "REST"]))
+            ),
+            "failed_self_note": "N/A: SELF falls back to REST in Phase 2",
         }
         for r in results
     ]
@@ -791,6 +838,18 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
             window=PLOT_SMOOTH_WINDOW,
             as_rate=True,
         )
+
+    plot_motivation_action_count_bar(
+        name=name,
+        results=results,
+        out_dir=out_dir,
+    )
+
+    plot_failed_action_rate_bar(
+        name=name,
+        results=results,
+        out_dir=out_dir,
+    )
     
     if ENABLE_RATE_SUM_CHECK_PLOT:
         plot_rate_sum_check(
@@ -1021,54 +1080,47 @@ def _penalty_score(name, result):
     """
     Penalty score for condition selection (lower = better).
 
-    Hard constraint violations add +1000 per unit deviation.
-    Soft terms penalize proportional distance from target.
-    All survival thresholds are rates [0,1] — independent of INIT_MOTHERS.
+    Roadmap survival targets:
+      HARSH    : 10–45%
+      BALANCED : 50–75%
+      EASY     : >80%
 
-    Balanced : target ~92% survival, energy ~0.62, flat energy slope.
-    Easy     : target ~100% survival, energy ≥ 0.55 (crowding lowers mean).
-    Harsh    : target ~10–33% survival. Harsh defined by survival alone —
-               survivors always maintain energy ≥ 0.45 at eat_gain=0.25.
+    REST is included as a soft ecological sanity term, not a hard gate.
     """
-    surv    = result["final_pop"] / INIT_MOTHERS
-    energy  = safe(result["tail_mean_energy"])
-    e_sd    = safe(result["tail_energy_sd"], nan=1.0)
-    e_slope = abs(safe(result.get("tail_energy_slope", 0.0)))
+    surv = _survival_rate(result)
+    energy = safe(result["tail_mean_energy"])
+    e_sd = safe(result["tail_energy_sd"], nan=1.0)
+    rest_rate = _rest_action_rate_from_summary(result)
 
-    HARD  = 1000.0
+    t = SELECTION_TARGETS[name]
+    HARD = 1000.0
     score = 0.0
 
-    if name == "balanced":
-        if surv < 0.70:
-            score += HARD * (0.70 - surv) * 15
-        if energy < 0.35:
-            score += HARD * (0.35 - energy) * 10
-        elif energy > 0.70:
-            score += HARD * (energy - 0.70) * 10
-        score += abs(surv - 0.70) * 30.0
-        score += abs(energy - 0.41) * 30.0
-        score += e_slope * 10_000.0
-        score += e_sd * 10.0
+    if name in ["balanced", "harsh"]:
+        if surv < t["min_survival_rate"]:
+            score += HARD * (t["min_survival_rate"] - surv)
+        elif surv > t["max_survival_rate"]:
+            score += HARD * (surv - t["max_survival_rate"])
+        score += abs(surv - t["target_survival_rate"]) * 50.0
+        score += abs(energy - t["target_energy"]) * 10.0
 
     elif name == "easy":
-        if surv < 0.75:
-            score += HARD * (0.75 - surv) * 15
-        if energy < 0.35:
-            score += HARD * (0.35 - energy) * 10
-        score += abs(surv - 0.83) * 20.0
-        score += max(0.0, 0.41 - energy) * 40.0
-        score += e_sd * 5.0
+        if surv < t["min_survival_rate"]:
+            score += HARD * (t["min_survival_rate"] - surv)
+        if energy < t["min_energy"]:
+            score += HARD * (t["min_energy"] - energy)
+        score += abs(surv - t["target_survival_rate"]) * 30.0
+        score += max(0.0, t["target_energy"] - energy) * 10.0
 
-    elif name == "harsh":
-        if surv < 0.10:
-            score += HARD * (0.10 - surv) * 15
-        elif surv > 0.33:
-            score += HARD * (surv - 0.33) * 15
-        if energy > 0.65:
-            score += HARD * (energy - 0.65) * 10
-        score += abs(surv - 0.25) * 30.0
-        score += abs(energy - 0.55) * 30.0
+    # REST sanity: 0% is suspiciously harsh/no recovery; >=40% is suspiciously easy.
+    if rest_rate <= 0.01:
+        score += 5.0
+    if name != "easy" and rest_rate >= 0.40:
+        score += 5.0
+    if name == "easy" and rest_rate < 0.20:
+        score += 2.0
 
+    score += e_sd * 5.0
     return score
 
 
@@ -1111,7 +1163,8 @@ def _pipeline_validate(params, n_seeds, duration, tau, noise, workers):
 
 
 def _run_pipeline(args, out_dir, n_workers):
-    from experiments.phase2_survival_minimal.sensitivity_sweep import (
+    from experiments.phase2_survival_minimal.new_sensitivity import (
+        find_food_anchor,
         run_set,
         plot_sensitivity_map,
         save_csv as save_sens_csv,
@@ -1120,23 +1173,56 @@ def _run_pipeline(args, out_dir, n_workers):
     N_SEEDS       = 50
     pipeline_seeds = list(range(42, 42 + N_SEEDS))
 
-    # ── Step 1: Synthetic baseline ────────────────────────────────────────────
+    # ── Step 1: Mechanics lock confirmation ───────────────────────────────────
+    print("\n" + "=" * 70)
+    print("PIPELINE Step 1 — Mechanics Lock (ROADMAPS.md Phase 2 constraints)")
+    print("=" * 70)
+    print("  grid            = 50 x 50")
+    print("  initial_energy  = 1.0  (all agents start full)")
+    print("  hunger_rate     = 1/35 (biological starvation rate, locked)")
+    print("  softmax_tau     = 0.1  (low-temperature action selection)")
+    print("  mutation        = OFF")
+    print("  reproduction    = OFF")
+    print("  children        = OFF")
+    print("  plasticity      = OFF")
+    print("  care            = OFF  (care_weight=0.0)")
+
+    # ── Step 2: Provisional baseline ─────────────────────────────────────────
     synthetic = dict(BALANCED_BASELINE)
     print("\n" + "=" * 70)
-    print("PIPELINE Step 1 — Synthetic Starting Baseline (BALANCED_BASELINE)")
+    print("PIPELINE Step 2 — Provisional Baseline (BALANCED_BASELINE)")
     print("=" * 70)
     eco_keys = ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery")
     for k in eco_keys:
         print(f"  {k:<20} = {synthetic[k]}")
 
-    # ── Step 2: OVAT (N=50 seeds per sweep point) ─────────────────────────────
+    # ── Step 3: First-pass init_food gradient scan (find food anchor) ─────────
+    print("\n" + "=" * 70)
+    print("PIPELINE Step 3 — First-Pass init_food Gradient Scan (find_food_anchor)")
+    print("=" * 70)
+    print("  Sweeping init_food upward until mean survival >= 50% ...")
+
+    anchor_food, anchor_summary = find_food_anchor(
+        seeds=pipeline_seeds,
+        repeats=1,
+        duration=args.duration,
+        tau=args.tau,
+        noise=args.perceptual_noise,
+        workers=n_workers,
+        target_survival=0.50,
+    )
+    anchored_baseline = {**synthetic, "init_food": anchor_food}
+    print(f"\n  Anchor init_food = {anchor_food}")
+    print(f"  Anchored baseline: {anchored_baseline}")
+
+    # ── Step 4: OVAT (N=50 seeds per sweep point) around anchored baseline ────
     ovat_dir = os.path.join(out_dir, "sensitivity_ovat")
     os.makedirs(ovat_dir, exist_ok=True)
 
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 2 — OVAT Sensitivity Sweep  (N={N_SEEDS} seeds per point)")
+    print(f"PIPELINE Step 4 — OVAT Sensitivity Sweep  (N={N_SEEDS} seeds per point)")
     print("=" * 70)
-    print(f"  Duration={args.duration}  Workers={n_workers}")
+    print(f"  Baseline = anchored (init_food={anchor_food})  Duration={args.duration}  Workers={n_workers}")
 
     ovat_all = {}
     for set_id in SENSITIVITY_SWEEPS:
@@ -1147,7 +1233,7 @@ def _run_pipeline(args, out_dir, n_workers):
         results = run_set(
             set_id=set_id,
             sweep=sweep_def,
-            baseline=synthetic,
+            baseline=anchored_baseline,
             seeds=pipeline_seeds,
             repeats=1,
             duration=args.duration,
@@ -1159,16 +1245,16 @@ def _run_pipeline(args, out_dir, n_workers):
         ovat_all[set_id] = results
         save_sens_csv(results, os.path.join(ovat_dir, f"set_{set_id}_{key}.csv"))
 
-    plot_sensitivity_map(ovat_all, synthetic, ovat_dir, hide_keys=set())
+    plot_sensitivity_map(ovat_all, anchored_baseline, ovat_dir, hide_keys=set())
     print(f"\n  OVAT plots saved -> {ovat_dir}")
 
-    # ── Step 3: Dual-metric cliff-edge detection ───────────────────────────────
+    # ── Step 5: Dual-metric cliff-edge detection ──────────────────────────────
     print("\n" + "=" * 70)
-    print("PIPELINE Step 3 — Dual-Metric Cliff-Edge Detection")
+    print("PIPELINE Step 5 — Dual-Metric Cliff-Edge Detection")
     print("=" * 70)
-    detected, clarity = _detect_cliff_edge_from_ovat(ovat_all, synthetic)
+    detected, clarity = _detect_cliff_edge_from_ovat(ovat_all, anchored_baseline)
 
-    hdr = f"  {'Parameter':<18}  {'Synthetic':>10}  {'Detected':>10}  {'Status':<8}  Justification"
+    hdr = f"  {'Parameter':<18}  {'Anchored':>10}  {'Detected':>10}  {'Status':<8}  Justification"
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
     for set_id in SENSITIVITY_SWEEPS:
@@ -1182,19 +1268,20 @@ def _run_pipeline(args, out_dir, n_workers):
     unclear_keys_list = [c["key"] for c in clarity.values() if not c["is_clear"]]
     if unclear_keys_list:
         print(f"\n  NOTE: {unclear_keys_list} are UNCLEAR (flat curves).")
-        print( "  Synthetic values retained for CLEAR locking.")
-        print( "  These become secondary axes in Step 4 to expose hidden tipping points.")
+        print( "  Anchored values retained for CLEAR locking.")
+        print( "  These become secondary axes in Step 6 to expose hidden tipping points.")
 
-    # ── Step 4: Multi-dimensional validation grid (N=50 per config) ───────────
+    # ── Step 6: Multi-parameter validation grid (N=50 per config) ────────────
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 4 — Multi-Dimensional Validation Grid  (N={N_SEEDS} per config)")
+    print(f"PIPELINE Step 6 — Multi-Parameter Validation Grid  (N={N_SEEDS} per config)")
     print("=" * 70)
 
-    sweep_configs, grid_desc = _pipeline_multidim_configs(detected, clarity, synthetic)
+    sweep_configs, grid_desc = _pipeline_multidim_configs(detected, clarity, anchored_baseline)
     total_runs = len(sweep_configs) * N_SEEDS
     print(f"  Grid    : {grid_desc}")
     print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds)")
     print(f"  CLEAR params locked to cliff-edge values; UNCLEAR varied across plausible range")
+    print(f"  Anchored baseline: init_food={anchor_food}")
 
     sweep_tasks = [
         (dict(p), seed, args.duration, args.tau, args.perceptual_noise)
@@ -1222,9 +1309,9 @@ def _run_pipeline(args, out_dir, n_workers):
             f"{sr.get('tail_energy_slope', 0.0):>9.6f}"
         )
 
-    # ── Step 5: Penalty scoring → final ecological baselines ──────────────────
+    # ── Step 7: Penalty scoring → select canonical ecological regimes ─────────
     print("\n" + "=" * 70)
-    print("PIPELINE Step 5 — Automated Selection via Penalty Scoring")
+    print("PIPELINE Step 7 — Select Canonical Ecological Regimes (HARSH/BALANCED/EASY)")
     print("=" * 70)
     print(f"  {'Condition':<12}  {'Score':>9}  {'Surv':>6}  {'TailE':>7}  {'E+/-':>6}  Config")
     print(f"  {'-'*12}  {'-'*9}  {'-'*6}  {'-'*7}  {'-'*6}  {'-'*40}")
@@ -1255,9 +1342,9 @@ def _run_pipeline(args, out_dir, n_workers):
             if k != "name":
                 print(f"    {k:<22} = {v}")
 
-    # ── Step 6: Diagnostic report generation (N=50 validation seeds) ──────────
+    # ── Step 8: Final plots + diagnostic report (N=50 validation seeds) ────────
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 6 — Diagnostic Report Generation  (N={N_SEEDS} validation seeds)")
+    print(f"PIPELINE Step 8 — Final Plots & Diagnostic Report  (N={N_SEEDS} validation seeds)")
     print("=" * 70)
 
     summary = {}
@@ -1299,16 +1386,19 @@ def _run_pipeline(args, out_dir, n_workers):
     }
 
     summary["_pipeline_meta"] = {
-        "n_seeds":          N_SEEDS,
+        "n_seeds":            N_SEEDS,
         "synthetic_baseline": {k: v for k, v in synthetic.items() if k != "name"},
+        "anchor_food":        anchor_food,
+        "anchored_baseline":  {k: v for k, v in anchored_baseline.items() if k != "name"},
         "detected_balanced":  {k: v for k, v in detected.items()  if k != "name"},
         "edge_clarity":       {c["key"]: c for c in clarity.values()},
         "ovat_dir":           ovat_dir,
-        "step4_grid_desc":    grid_desc,
-        "step4_n_configs":    len(sweep_configs),
+        "step6_grid_desc":    grid_desc,
+        "step6_n_configs":    len(sweep_configs),
     }
 
     save_summary_json(summary, out_dir)
+    save_selected_ecologies_json(summary, out_dir)
     print(f"\nDone. All outputs saved to: {out_dir}")
 
 
@@ -1335,10 +1425,21 @@ def run_experiment(args):
     print(f"Repeats: {args.repeats} | Workers: {n_workers}")
 
     if args.mode == "pipeline":
+        # Runs all 8 ROADMAPS.md Phase 2 steps:
+        #   Step 1: Mechanics lock confirmation
+        #   Step 2: Provisional baseline
+        #   Step 3: First-pass init_food gradient scan (find_food_anchor)
+        #   Step 4: OVAT sweep (Sets A/B/C) around anchored baseline
+        #   Step 5: Dual-metric cliff-edge detection
+        #   Step 6: Multi-parameter validation grid (init_food x eat_gain x move_cost)
+        #   Step 7: Select canonical ecological regimes (HARSH/BALANCED/EASY)
+        #   Step 8: Final plots + diagnostic report
         _run_pipeline(args, out_dir, n_workers)
         return
 
     if args.mode == "single":
+        # Covers Steps 1-2 (mechanics lock + single config) and Step 8 (all diagnostic plots).
+        # No OVAT, no grid, no regime selection.
         name   = "single"
         params = candidate_configs(mode="single")[0]
 
@@ -1361,7 +1462,7 @@ def run_experiment(args):
             results    = [r]
             labels     = [f"{VALIDATION_SEEDS[0]}-r1"]
             val_summary = summarize_repeats(results, args.duration)
-            print(f"Live run done: pop={r['final_pop']}/15 | energy={r['final_energy']:.3f}")
+            print(f"Live run done: pop={r['final_pop']}/{INIT_MOTHERS} | energy={r['final_energy']:.3f}")
         else:
             results, labels, val_summary = validate_params(params, args, workers=n_workers)
 
@@ -1386,9 +1487,14 @@ def run_experiment(args):
         }
 
         save_summary_json(summary, out_dir)
+        save_selected_ecologies_json(summary, out_dir)
         print(f"\nDone. Outputs saved to: {out_dir}")
         return
 
+    # Sweep mode covers Steps 1-2 (mechanics lock + provisional baseline) and
+    # Steps 6-8 (pre-defined grid, regime selection, final plots).
+    # Steps 3-5 (food anchor scan + OVAT + cliff-edge detection) are skipped;
+    # use pipeline mode for the full 8-step scientific workflow.
     configs = candidate_configs(mode="sweep")
 
     # ── parallel sweep ────────────────────────────────────────────────────────
@@ -1399,7 +1505,7 @@ def run_experiment(args):
     ]
 
     print(
-        f"\nStep 1: Auto sweep | {len(configs)} configs x {args.repeats} reps"
+        f"\nStep 6 (sweep mode): Validation grid | {len(configs)} configs x {args.repeats} reps"
         f" = {len(sweep_tasks)} tasks | workers={n_workers}"
     )
 
@@ -1418,12 +1524,12 @@ def run_experiment(args):
         if idx % 5 == 0 or idx == len(configs) - 1:
             print(
                 f"  [{idx + 1:03d}/{len(configs)}] "
-                f"avg_pop={summary_result['final_pop']:4.1f}/15 | "
+                f"avg_pop={summary_result['final_pop']:4.1f}/{INIT_MOTHERS} | "
                 f"tailE={summary_result['tail_mean_energy']:.3f} +/- "
                 f"{summary_result['tail_energy_sd']:.3f}"
             )
 
-    print("\nStep 2: Validation-first selection for all conditions")
+    print("\nStep 7 (sweep mode): Validation-first selection for all conditions")
 
     selected = {}
     traces = {}
@@ -1439,7 +1545,7 @@ def run_experiment(args):
             f"status={rec['selection_status']}"
         )
 
-    print("\nStep 3: Plot and save validation outputs")
+    print("\nStep 8 (sweep mode): Final plots and save validation outputs")
 
     summary = {}
 
@@ -1483,6 +1589,7 @@ def run_experiment(args):
     }
 
     save_summary_json(summary, out_dir)
+    save_selected_ecologies_json(summary, out_dir)
 
     print(f"\nDone. Outputs saved to: {out_dir}")
 

@@ -104,7 +104,7 @@ Do NOT re-run `sensitivity_sweep.py` before completing Step 2 — it would auto-
 
 **Command:**
 ```
-python experiments/phase2_survival_minimal/run.py --mode sweep --duration 500 --repeats 3 --workers 8
+python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --workers 4
 ```
 
 **Expected selection:**
@@ -145,9 +145,10 @@ python experiments/phase2_survival_minimal/run.py --mode sweep --duration 500 --
 
 | File | Role |
 |------|------|
-| `experiments/phase2_survival_minimal/run.py` | Main entry point; contains 1:1 food replacement and pop-weighted energy metric |
-| `experiments/phase2_survival_minimal/config.py` | Sweep grid, selection targets, BALANCED_BASELINE |
-| `experiments/phase2_survival_minimal/plot.py` | All plot functions |
+| `experiments/phase2_survival_minimal/new_run.py` | Main entry point; 8-step pipeline, sweep, and single modes |
+| `experiments/phase2_survival_minimal/new_config.py` | Sweep grid, selection targets, BALANCED_BASELINE, SENSITIVITY_SWEEPS |
+| `experiments/phase2_survival_minimal/new_plot.py` | All plot functions |
+| `experiments/phase2_survival_minimal/new_sensitivity.py` | OVAT standalone runner + find_food_anchor |
 | `agents/mother.py` | MotherAgent with `choose_motivation()` |
 | `config.py` (root) | Global defaults |
 
