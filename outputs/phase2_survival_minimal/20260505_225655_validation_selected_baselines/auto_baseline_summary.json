@@ -1,0 +1,5485 @@
+{
+  "balanced": {
+    "selected_config": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.8,
+      "init_food": 40,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "balanced"
+    },
+    "penalty_score": 7.336411895170102,
+    "sweep_summary": {
+      "final_pop": 9.8,
+      "final_pop_sd": 1.8547236990991407,
+      "mean_energy": 0.4732998385471645,
+      "final_energy": 0.3728500350582897,
+      "tail_mean_energy": 0.4099961162049314,
+      "tail_energy_sd": 0.06395681329082299,
+      "tail_energy_slope": -0.00038149044561509035,
+      "tail_pop_slope": -0.009985584639616024,
+      "rest_action_rate": 0.004508332259394219,
+      "failed_forage_rate": 0.03297712881482138,
+      "total_actions_mean": 4714.46
+    },
+    "validation_summary": {
+      "final_pop": 9.8,
+      "final_pop_sd": 1.8547236990991407,
+      "mean_energy": 0.4732998385471645,
+      "final_energy": 0.3728500350582897,
+      "tail_mean_energy": 0.4099961162049314,
+      "tail_energy_sd": 0.06395681329082299,
+      "tail_energy_slope": -0.00038149044561509035,
+      "tail_pop_slope": -0.009985584639616024,
+      "rest_action_rate": 0.004508332259394219,
+      "failed_forage_rate": 0.03297712881482138,
+      "total_actions_mean": 4714.46
+    },
+    "validation_runs": [
+      {
+        "seed": 42,
+        "repeat": 1,
+        "run_seed": 42,
+        "final_pop": 10,
+        "mean_energy": 0.5012727362225801,
+        "final_energy": 0.3316772639349485,
+        "actions": {
+          "MOVE": 4110,
+          "PICK": 665,
+          "EAT": 272,
+          "REST": 14
+        },
+        "motivations": {
+          "FORAGE": 4933,
+          "SELF": 286
+        },
+        "failed": {
+          "FAILED_FORAGE": 158,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0027662517289073307,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 43,
+        "repeat": 1,
+        "run_seed": 43,
+        "final_pop": 10,
+        "mean_energy": 0.4592271334454414,
+        "final_energy": 0.43596017073259496,
+        "actions": {
+          "MOVE": 3692,
+          "PICK": 532,
+          "EAT": 246,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 4385,
+          "SELF": 268
+        },
+        "failed": {
+          "FAILED_FORAGE": 161,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004897595725734639,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 44,
+        "repeat": 1,
+        "run_seed": 44,
+        "final_pop": 7,
+        "mean_energy": 0.4136615320696022,
+        "final_energy": 0.2782857142857142,
+        "actions": {
+          "MOVE": 3360,
+          "PICK": 556,
+          "EAT": 217,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4022,
+          "SELF": 235
+        },
+        "failed": {
+          "FAILED_FORAGE": 106,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004336304504938569,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 45,
+        "repeat": 1,
+        "run_seed": 45,
+        "final_pop": 10,
+        "mean_energy": 0.43953355582371595,
+        "final_energy": 0.3800822561450615,
+        "actions": {
+          "MOVE": 3576,
+          "PICK": 536,
+          "EAT": 235,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4247,
+          "SELF": 248
+        },
+        "failed": {
+          "FAILED_FORAGE": 135,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002981651376146789,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "run_seed": 46,
+        "final_pop": 8,
+        "mean_energy": 0.41666140743737146,
+        "final_energy": 0.2534625967839204,
+        "actions": {
+          "MOVE": 3454,
+          "PICK": 486,
+          "EAT": 223,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 4074,
+          "SELF": 242
+        },
+        "failed": {
+          "FAILED_FORAGE": 134,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004543280726924916,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 47,
+        "repeat": 1,
+        "run_seed": 47,
+        "final_pop": 9,
+        "mean_energy": 0.4670207476270559,
+        "final_energy": 0.3513025074039103,
+        "actions": {
+          "MOVE": 3770,
+          "PICK": 579,
+          "EAT": 246,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 4496,
+          "SELF": 261
+        },
+        "failed": {
+          "FAILED_FORAGE": 147,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0032537960954446853,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 48,
+        "repeat": 1,
+        "run_seed": 48,
+        "final_pop": 6,
+        "mean_energy": 0.4159478252659292,
+        "final_energy": 0.15508093030748746,
+        "actions": {
+          "MOVE": 3325,
+          "PICK": 563,
+          "EAT": 214,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 4054,
+          "SELF": 233
+        },
+        "failed": {
+          "FAILED_FORAGE": 166,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00461053142441155,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 49,
+        "repeat": 1,
+        "run_seed": 49,
+        "final_pop": 10,
+        "mean_energy": 0.4589001079020555,
+        "final_energy": 0.3936364453088063,
+        "actions": {
+          "MOVE": 3833,
+          "PICK": 558,
+          "EAT": 250,
+          "REST": 11
+        },
+        "motivations": {
+          "FORAGE": 4521,
+          "SELF": 261
+        },
+        "failed": {
+          "FAILED_FORAGE": 130,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0023645743766122097,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 50,
+        "repeat": 1,
+        "run_seed": 50,
+        "final_pop": 10,
+        "mean_energy": 0.47749040712096047,
+        "final_energy": 0.3295162145580127,
+        "actions": {
+          "MOVE": 3929,
+          "PICK": 664,
+          "EAT": 257,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4732,
+          "SELF": 275
+        },
+        "failed": {
+          "FAILED_FORAGE": 139,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0036976170912078883,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 51,
+        "repeat": 1,
+        "run_seed": 51,
+        "final_pop": 8,
+        "mean_energy": 0.4540574088586773,
+        "final_energy": 0.24774308709270468,
+        "actions": {
+          "MOVE": 3663,
+          "PICK": 552,
+          "EAT": 242,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4373,
+          "SELF": 255
+        },
+        "failed": {
+          "FAILED_FORAGE": 158,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0029082774049217002,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 52,
+        "repeat": 1,
+        "run_seed": 52,
+        "final_pop": 15,
+        "mean_energy": 0.5869932608290075,
+        "final_energy": 0.5428669422159071,
+        "actions": {
+          "MOVE": 4706,
+          "PICK": 762,
+          "EAT": 324,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 5651,
+          "SELF": 349
+        },
+        "failed": {
+          "FAILED_FORAGE": 183,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0042977479800584495,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 53,
+        "repeat": 1,
+        "run_seed": 53,
+        "final_pop": 13,
+        "mean_energy": 0.5357400289352735,
+        "final_energy": 0.46800621689018956,
+        "actions": {
+          "MOVE": 4357,
+          "PICK": 652,
+          "EAT": 291,
+          "REST": 27
+        },
+        "motivations": {
+          "FORAGE": 5175,
+          "SELF": 318
+        },
+        "failed": {
+          "FAILED_FORAGE": 166,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005068518866153557,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 54,
+        "repeat": 1,
+        "run_seed": 54,
+        "final_pop": 9,
+        "mean_energy": 0.4266704697365909,
+        "final_energy": 0.32499266491739154,
+        "actions": {
+          "MOVE": 3477,
+          "PICK": 439,
+          "EAT": 226,
+          "REST": 28
+        },
+        "motivations": {
+          "FORAGE": 4057,
+          "SELF": 254
+        },
+        "failed": {
+          "FAILED_FORAGE": 141,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00671462829736211,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 55,
+        "repeat": 1,
+        "run_seed": 55,
+        "final_pop": 11,
+        "mean_energy": 0.47438638393478916,
+        "final_energy": 0.46498592575204933,
+        "actions": {
+          "MOVE": 3892,
+          "PICK": 517,
+          "EAT": 255,
+          "REST": 11
+        },
+        "motivations": {
+          "FORAGE": 4591,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 182,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002352941176470588,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 56,
+        "repeat": 1,
+        "run_seed": 56,
+        "final_pop": 10,
+        "mean_energy": 0.48350204879892955,
+        "final_energy": 0.33146041155208184,
+        "actions": {
+          "MOVE": 3938,
+          "PICK": 595,
+          "EAT": 262,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4714,
+          "SELF": 282
+        },
+        "failed": {
+          "FAILED_FORAGE": 181,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004153686396677051,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 57,
+        "repeat": 1,
+        "run_seed": 57,
+        "final_pop": 12,
+        "mean_energy": 0.5348827939663076,
+        "final_energy": 0.5150381591711636,
+        "actions": {
+          "MOVE": 4299,
+          "PICK": 664,
+          "EAT": 293,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 5178,
+          "SELF": 315
+        },
+        "failed": {
+          "FAILED_FORAGE": 215,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004168245547555892,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 58,
+        "repeat": 1,
+        "run_seed": 58,
+        "final_pop": 13,
+        "mean_energy": 0.5312171116749477,
+        "final_energy": 0.5439305090713044,
+        "actions": {
+          "MOVE": 4301,
+          "PICK": 680,
+          "EAT": 293,
+          "REST": 24
+        },
+        "motivations": {
+          "FORAGE": 5161,
+          "SELF": 317
+        },
+        "failed": {
+          "FAILED_FORAGE": 180,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004530011325028313,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 59,
+        "repeat": 1,
+        "run_seed": 59,
+        "final_pop": 8,
+        "mean_energy": 0.44674629997760884,
+        "final_energy": 0.35325211912894816,
+        "actions": {
+          "MOVE": 3626,
+          "PICK": 621,
+          "EAT": 241,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4364,
+          "SELF": 257
+        },
+        "failed": {
+          "FAILED_FORAGE": 117,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003552397868561279,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 60,
+        "repeat": 1,
+        "run_seed": 60,
+        "final_pop": 13,
+        "mean_energy": 0.5632081604408752,
+        "final_energy": 0.49764985207292234,
+        "actions": {
+          "MOVE": 4630,
+          "PICK": 603,
+          "EAT": 313,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 5445,
+          "SELF": 338
+        },
+        "failed": {
+          "FAILED_FORAGE": 212,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004487524681385748,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 61,
+        "repeat": 1,
+        "run_seed": 61,
+        "final_pop": 9,
+        "mean_energy": 0.46650749878736264,
+        "final_energy": 0.3555861998969564,
+        "actions": {
+          "MOVE": 3913,
+          "PICK": 551,
+          "EAT": 251,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 4647,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 183,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003171247357293869,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 62,
+        "repeat": 1,
+        "run_seed": 62,
+        "final_pop": 10,
+        "mean_energy": 0.48677431348208827,
+        "final_energy": 0.36024987484495935,
+        "actions": {
+          "MOVE": 3945,
+          "PICK": 551,
+          "EAT": 258,
+          "REST": 12
+        },
+        "motivations": {
+          "FORAGE": 4653,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 157,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002517834662190516,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 63,
+        "repeat": 1,
+        "run_seed": 63,
+        "final_pop": 10,
+        "mean_energy": 0.5065451147176705,
+        "final_energy": 0.3154094550167071,
+        "actions": {
+          "MOVE": 4158,
+          "PICK": 621,
+          "EAT": 276,
+          "REST": 26
+        },
+        "motivations": {
+          "FORAGE": 4958,
+          "SELF": 302
+        },
+        "failed": {
+          "FAILED_FORAGE": 179,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005117102932493603,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 64,
+        "repeat": 1,
+        "run_seed": 64,
+        "final_pop": 10,
+        "mean_energy": 0.4586020523681599,
+        "final_energy": 0.4175141509650289,
+        "actions": {
+          "MOVE": 3830,
+          "PICK": 478,
+          "EAT": 252,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4487,
+          "SELF": 281
+        },
+        "failed": {
+          "FAILED_FORAGE": 179,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006319459577249945,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 65,
+        "repeat": 1,
+        "run_seed": 65,
+        "final_pop": 9,
+        "mean_energy": 0.4313595244425018,
+        "final_energy": 0.35831698539445517,
+        "actions": {
+          "MOVE": 3587,
+          "PICK": 508,
+          "EAT": 237,
+          "REST": 33
+        },
+        "motivations": {
+          "FORAGE": 4283,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 188,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.007560137457044674,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 66,
+        "repeat": 1,
+        "run_seed": 66,
+        "final_pop": 11,
+        "mean_energy": 0.47002159906833385,
+        "final_energy": 0.48651778503569904,
+        "actions": {
+          "MOVE": 3803,
+          "PICK": 516,
+          "EAT": 255,
+          "REST": 36
+        },
+        "motivations": {
+          "FORAGE": 4479,
+          "SELF": 291
+        },
+        "failed": {
+          "FAILED_FORAGE": 160,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0078091106290672455,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 67,
+        "repeat": 1,
+        "run_seed": 67,
+        "final_pop": 12,
+        "mean_energy": 0.5561900811831362,
+        "final_energy": 0.4552271079702901,
+        "actions": {
+          "MOVE": 4510,
+          "PICK": 660,
+          "EAT": 306,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 5369,
+          "SELF": 325
+        },
+        "failed": {
+          "FAILED_FORAGE": 199,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003457688808007279,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 68,
+        "repeat": 1,
+        "run_seed": 68,
+        "final_pop": 11,
+        "mean_energy": 0.4859298823563709,
+        "final_energy": 0.4028234167702228,
+        "actions": {
+          "MOVE": 3933,
+          "PICK": 617,
+          "EAT": 263,
+          "REST": 12
+        },
+        "motivations": {
+          "FORAGE": 4744,
+          "SELF": 275
+        },
+        "failed": {
+          "FAILED_FORAGE": 194,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002487046632124352,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 69,
+        "repeat": 1,
+        "run_seed": 69,
+        "final_pop": 8,
+        "mean_energy": 0.4757642190620616,
+        "final_energy": 0.3183549885832082,
+        "actions": {
+          "MOVE": 3899,
+          "PICK": 536,
+          "EAT": 256,
+          "REST": 23
+        },
+        "motivations": {
+          "FORAGE": 4622,
+          "SELF": 279
+        },
+        "failed": {
+          "FAILED_FORAGE": 187,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00487908358082308,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 70,
+        "repeat": 1,
+        "run_seed": 70,
+        "final_pop": 8,
+        "mean_energy": 0.47504924792250486,
+        "final_energy": 0.28848356482130766,
+        "actions": {
+          "MOVE": 3861,
+          "PICK": 630,
+          "EAT": 256,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4666,
+          "SELF": 272
+        },
+        "failed": {
+          "FAILED_FORAGE": 175,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003359227377703128,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 71,
+        "repeat": 1,
+        "run_seed": 71,
+        "final_pop": 7,
+        "mean_energy": 0.42403993018680114,
+        "final_energy": 0.34230334554586245,
+        "actions": {
+          "MOVE": 3418,
+          "PICK": 528,
+          "EAT": 226,
+          "REST": 17
+        },
+        "motivations": {
+          "FORAGE": 4092,
+          "SELF": 243
+        },
+        "failed": {
+          "FAILED_FORAGE": 146,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00405824779183576,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 72,
+        "repeat": 1,
+        "run_seed": 72,
+        "final_pop": 9,
+        "mean_energy": 0.42131809756045074,
+        "final_energy": 0.28291579131436034,
+        "actions": {
+          "MOVE": 3486,
+          "PICK": 485,
+          "EAT": 222,
+          "REST": 28
+        },
+        "motivations": {
+          "FORAGE": 4089,
+          "SELF": 250
+        },
+        "failed": {
+          "FAILED_FORAGE": 118,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006633499170812604,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 73,
+        "repeat": 1,
+        "run_seed": 73,
+        "final_pop": 10,
+        "mean_energy": 0.47364629539523434,
+        "final_energy": 0.37611365909273253,
+        "actions": {
+          "MOVE": 3865,
+          "PICK": 516,
+          "EAT": 257,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4523,
+          "SELF": 286
+        },
+        "failed": {
+          "FAILED_FORAGE": 142,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006213841868437969,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 74,
+        "repeat": 1,
+        "run_seed": 74,
+        "final_pop": 11,
+        "mean_energy": 0.502997395960455,
+        "final_energy": 0.43065855104687334,
+        "actions": {
+          "MOVE": 4027,
+          "PICK": 622,
+          "EAT": 270,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4814,
+          "SELF": 290
+        },
+        "failed": {
+          "FAILED_FORAGE": 165,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004049402713099818,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 75,
+        "repeat": 1,
+        "run_seed": 75,
+        "final_pop": 10,
+        "mean_energy": 0.4494389242424485,
+        "final_energy": 0.38915427765334987,
+        "actions": {
+          "MOVE": 3720,
+          "PICK": 584,
+          "EAT": 244,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4475,
+          "SELF": 260
+        },
+        "failed": {
+          "FAILED_FORAGE": 171,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0035056967572304996,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 76,
+        "repeat": 1,
+        "run_seed": 76,
+        "final_pop": 8,
+        "mean_energy": 0.4399237314369548,
+        "final_energy": 0.3667264051899077,
+        "actions": {
+          "MOVE": 3669,
+          "PICK": 521,
+          "EAT": 235,
+          "REST": 23
+        },
+        "motivations": {
+          "FORAGE": 4342,
+          "SELF": 258
+        },
+        "failed": {
+          "FAILED_FORAGE": 152,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005170863309352518,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 77,
+        "repeat": 1,
+        "run_seed": 77,
+        "final_pop": 10,
+        "mean_energy": 0.465480521182619,
+        "final_energy": 0.3966334951294141,
+        "actions": {
+          "MOVE": 3820,
+          "PICK": 548,
+          "EAT": 253,
+          "REST": 27
+        },
+        "motivations": {
+          "FORAGE": 4517,
+          "SELF": 280
+        },
+        "failed": {
+          "FAILED_FORAGE": 149,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00580895008605852,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 78,
+        "repeat": 1,
+        "run_seed": 78,
+        "final_pop": 8,
+        "mean_energy": 0.4162726902952144,
+        "final_energy": 0.27738423102967386,
+        "actions": {
+          "MOVE": 3405,
+          "PICK": 463,
+          "EAT": 223,
+          "REST": 33
+        },
+        "motivations": {
+          "FORAGE": 4035,
+          "SELF": 256
+        },
+        "failed": {
+          "FAILED_FORAGE": 167,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.008001939864209506,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 79,
+        "repeat": 1,
+        "run_seed": 79,
+        "final_pop": 9,
+        "mean_energy": 0.4649588101479077,
+        "final_energy": 0.4140436951689929,
+        "actions": {
+          "MOVE": 3840,
+          "PICK": 482,
+          "EAT": 254,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4507,
+          "SELF": 283
+        },
+        "failed": {
+          "FAILED_FORAGE": 185,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006297502714440825,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 80,
+        "repeat": 1,
+        "run_seed": 80,
+        "final_pop": 9,
+        "mean_energy": 0.4504681720058595,
+        "final_energy": 0.26254837151694344,
+        "actions": {
+          "MOVE": 3713,
+          "PICK": 553,
+          "EAT": 239,
+          "REST": 31
+        },
+        "motivations": {
+          "FORAGE": 4402,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 136,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0068342151675485005,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 81,
+        "repeat": 1,
+        "run_seed": 81,
+        "final_pop": 11,
+        "mean_energy": 0.4941714751950799,
+        "final_energy": 0.42171995993968775,
+        "actions": {
+          "MOVE": 4053,
+          "PICK": 610,
+          "EAT": 266,
+          "REST": 14
+        },
+        "motivations": {
+          "FORAGE": 4813,
+          "SELF": 280
+        },
+        "failed": {
+          "FAILED_FORAGE": 150,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0028322880841594174,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 82,
+        "repeat": 1,
+        "run_seed": 82,
+        "final_pop": 8,
+        "mean_energy": 0.43062763389051767,
+        "final_energy": 0.29469624194398486,
+        "actions": {
+          "MOVE": 3554,
+          "PICK": 577,
+          "EAT": 233,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 4266,
+          "SELF": 255
+        },
+        "failed": {
+          "FAILED_FORAGE": 135,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005015959872321021,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 83,
+        "repeat": 1,
+        "run_seed": 83,
+        "final_pop": 13,
+        "mean_energy": 0.5488019375428789,
+        "final_energy": 0.5174292309847343,
+        "actions": {
+          "MOVE": 4457,
+          "PICK": 647,
+          "EAT": 301,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 5304,
+          "SELF": 317
+        },
+        "failed": {
+          "FAILED_FORAGE": 200,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002951484965873455,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 84,
+        "repeat": 1,
+        "run_seed": 84,
+        "final_pop": 8,
+        "mean_energy": 0.44975632056059917,
+        "final_energy": 0.3399694818719133,
+        "actions": {
+          "MOVE": 3728,
+          "PICK": 484,
+          "EAT": 244,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4362,
+          "SELF": 264
+        },
+        "failed": {
+          "FAILED_FORAGE": 150,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004468275245755138,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 85,
+        "repeat": 1,
+        "run_seed": 85,
+        "final_pop": 8,
+        "mean_energy": 0.4114250879649513,
+        "final_energy": 0.34464690504406037,
+        "actions": {
+          "MOVE": 3342,
+          "PICK": 511,
+          "EAT": 215,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 3991,
+          "SELF": 240
+        },
+        "failed": {
+          "FAILED_FORAGE": 138,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00610798924993892,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 86,
+        "repeat": 1,
+        "run_seed": 86,
+        "final_pop": 7,
+        "mean_energy": 0.38287985006977565,
+        "final_energy": 0.2679782682778274,
+        "actions": {
+          "MOVE": 3107,
+          "PICK": 496,
+          "EAT": 201,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 3715,
+          "SELF": 216
+        },
+        "failed": {
+          "FAILED_FORAGE": 112,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003927729772191673,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 87,
+        "repeat": 1,
+        "run_seed": 87,
+        "final_pop": 12,
+        "mean_energy": 0.5321018125454839,
+        "final_energy": 0.49123840851476774,
+        "actions": {
+          "MOVE": 4358,
+          "PICK": 585,
+          "EAT": 291,
+          "REST": 17
+        },
+        "motivations": {
+          "FORAGE": 5129,
+          "SELF": 308
+        },
+        "failed": {
+          "FAILED_FORAGE": 186,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003237478575509427,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 88,
+        "repeat": 1,
+        "run_seed": 88,
+        "final_pop": 10,
+        "mean_energy": 0.5177160610917259,
+        "final_energy": 0.3540334483978754,
+        "actions": {
+          "MOVE": 4242,
+          "PICK": 603,
+          "EAT": 277,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4994,
+          "SELF": 295
+        },
+        "failed": {
+          "FAILED_FORAGE": 149,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003501945525291829,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 89,
+        "repeat": 1,
+        "run_seed": 89,
+        "final_pop": 11,
+        "mean_energy": 0.49854982049657887,
+        "final_energy": 0.3982444352582295,
+        "actions": {
+          "MOVE": 3997,
+          "PICK": 698,
+          "EAT": 272,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4875,
+          "SELF": 301
+        },
+        "failed": {
+          "FAILED_FORAGE": 180,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005804643714971977,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 90,
+        "repeat": 1,
+        "run_seed": 90,
+        "final_pop": 9,
+        "mean_energy": 0.4470172823182115,
+        "final_energy": 0.18563019112047088,
+        "actions": {
+          "MOVE": 3722,
+          "PICK": 522,
+          "EAT": 239,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4391,
+          "SELF": 252
+        },
+        "failed": {
+          "FAILED_FORAGE": 147,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002891459074733096,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 91,
+        "repeat": 1,
+        "run_seed": 91,
+        "final_pop": 12,
+        "mean_energy": 0.5435371238105705,
+        "final_energy": 0.531019842248869,
+        "actions": {
+          "MOVE": 4448,
+          "PICK": 625,
+          "EAT": 297,
+          "REST": 31
+        },
+        "motivations": {
+          "FORAGE": 5232,
+          "SELF": 328
+        },
+        "failed": {
+          "FAILED_FORAGE": 159,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005739677837437511,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      }
+    ]
+  },
+  "easy": {
+    "selected_config": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.8,
+      "init_food": 40,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "easy"
+    },
+    "penalty_score": 162.2864895710714,
+    "sweep_summary": {
+      "final_pop": 9.8,
+      "final_pop_sd": 1.8547236990991407,
+      "mean_energy": 0.4732998385471645,
+      "final_energy": 0.3728500350582897,
+      "tail_mean_energy": 0.4099961162049314,
+      "tail_energy_sd": 0.06395681329082299,
+      "tail_energy_slope": -0.00038149044561509035,
+      "tail_pop_slope": -0.009985584639616024,
+      "rest_action_rate": 0.004508332259394219,
+      "failed_forage_rate": 0.03297712881482138,
+      "total_actions_mean": 4714.46
+    },
+    "validation_summary": {
+      "final_pop": 9.8,
+      "final_pop_sd": 1.8547236990991407,
+      "mean_energy": 0.4732998385471645,
+      "final_energy": 0.3728500350582897,
+      "tail_mean_energy": 0.4099961162049314,
+      "tail_energy_sd": 0.06395681329082299,
+      "tail_energy_slope": -0.00038149044561509035,
+      "tail_pop_slope": -0.009985584639616024,
+      "rest_action_rate": 0.004508332259394219,
+      "failed_forage_rate": 0.03297712881482138,
+      "total_actions_mean": 4714.46
+    },
+    "validation_runs": [
+      {
+        "seed": 42,
+        "repeat": 1,
+        "run_seed": 42,
+        "final_pop": 10,
+        "mean_energy": 0.5012727362225801,
+        "final_energy": 0.3316772639349485,
+        "actions": {
+          "MOVE": 4110,
+          "PICK": 665,
+          "EAT": 272,
+          "REST": 14
+        },
+        "motivations": {
+          "FORAGE": 4933,
+          "SELF": 286
+        },
+        "failed": {
+          "FAILED_FORAGE": 158,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0027662517289073307,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 43,
+        "repeat": 1,
+        "run_seed": 43,
+        "final_pop": 10,
+        "mean_energy": 0.4592271334454414,
+        "final_energy": 0.43596017073259496,
+        "actions": {
+          "MOVE": 3692,
+          "PICK": 532,
+          "EAT": 246,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 4385,
+          "SELF": 268
+        },
+        "failed": {
+          "FAILED_FORAGE": 161,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004897595725734639,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 44,
+        "repeat": 1,
+        "run_seed": 44,
+        "final_pop": 7,
+        "mean_energy": 0.4136615320696022,
+        "final_energy": 0.2782857142857142,
+        "actions": {
+          "MOVE": 3360,
+          "PICK": 556,
+          "EAT": 217,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4022,
+          "SELF": 235
+        },
+        "failed": {
+          "FAILED_FORAGE": 106,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004336304504938569,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 45,
+        "repeat": 1,
+        "run_seed": 45,
+        "final_pop": 10,
+        "mean_energy": 0.43953355582371595,
+        "final_energy": 0.3800822561450615,
+        "actions": {
+          "MOVE": 3576,
+          "PICK": 536,
+          "EAT": 235,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4247,
+          "SELF": 248
+        },
+        "failed": {
+          "FAILED_FORAGE": 135,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002981651376146789,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "run_seed": 46,
+        "final_pop": 8,
+        "mean_energy": 0.41666140743737146,
+        "final_energy": 0.2534625967839204,
+        "actions": {
+          "MOVE": 3454,
+          "PICK": 486,
+          "EAT": 223,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 4074,
+          "SELF": 242
+        },
+        "failed": {
+          "FAILED_FORAGE": 134,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004543280726924916,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 47,
+        "repeat": 1,
+        "run_seed": 47,
+        "final_pop": 9,
+        "mean_energy": 0.4670207476270559,
+        "final_energy": 0.3513025074039103,
+        "actions": {
+          "MOVE": 3770,
+          "PICK": 579,
+          "EAT": 246,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 4496,
+          "SELF": 261
+        },
+        "failed": {
+          "FAILED_FORAGE": 147,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0032537960954446853,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 48,
+        "repeat": 1,
+        "run_seed": 48,
+        "final_pop": 6,
+        "mean_energy": 0.4159478252659292,
+        "final_energy": 0.15508093030748746,
+        "actions": {
+          "MOVE": 3325,
+          "PICK": 563,
+          "EAT": 214,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 4054,
+          "SELF": 233
+        },
+        "failed": {
+          "FAILED_FORAGE": 166,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00461053142441155,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 49,
+        "repeat": 1,
+        "run_seed": 49,
+        "final_pop": 10,
+        "mean_energy": 0.4589001079020555,
+        "final_energy": 0.3936364453088063,
+        "actions": {
+          "MOVE": 3833,
+          "PICK": 558,
+          "EAT": 250,
+          "REST": 11
+        },
+        "motivations": {
+          "FORAGE": 4521,
+          "SELF": 261
+        },
+        "failed": {
+          "FAILED_FORAGE": 130,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0023645743766122097,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 50,
+        "repeat": 1,
+        "run_seed": 50,
+        "final_pop": 10,
+        "mean_energy": 0.47749040712096047,
+        "final_energy": 0.3295162145580127,
+        "actions": {
+          "MOVE": 3929,
+          "PICK": 664,
+          "EAT": 257,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4732,
+          "SELF": 275
+        },
+        "failed": {
+          "FAILED_FORAGE": 139,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0036976170912078883,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 51,
+        "repeat": 1,
+        "run_seed": 51,
+        "final_pop": 8,
+        "mean_energy": 0.4540574088586773,
+        "final_energy": 0.24774308709270468,
+        "actions": {
+          "MOVE": 3663,
+          "PICK": 552,
+          "EAT": 242,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4373,
+          "SELF": 255
+        },
+        "failed": {
+          "FAILED_FORAGE": 158,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0029082774049217002,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 52,
+        "repeat": 1,
+        "run_seed": 52,
+        "final_pop": 15,
+        "mean_energy": 0.5869932608290075,
+        "final_energy": 0.5428669422159071,
+        "actions": {
+          "MOVE": 4706,
+          "PICK": 762,
+          "EAT": 324,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 5651,
+          "SELF": 349
+        },
+        "failed": {
+          "FAILED_FORAGE": 183,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0042977479800584495,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 53,
+        "repeat": 1,
+        "run_seed": 53,
+        "final_pop": 13,
+        "mean_energy": 0.5357400289352735,
+        "final_energy": 0.46800621689018956,
+        "actions": {
+          "MOVE": 4357,
+          "PICK": 652,
+          "EAT": 291,
+          "REST": 27
+        },
+        "motivations": {
+          "FORAGE": 5175,
+          "SELF": 318
+        },
+        "failed": {
+          "FAILED_FORAGE": 166,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005068518866153557,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 54,
+        "repeat": 1,
+        "run_seed": 54,
+        "final_pop": 9,
+        "mean_energy": 0.4266704697365909,
+        "final_energy": 0.32499266491739154,
+        "actions": {
+          "MOVE": 3477,
+          "PICK": 439,
+          "EAT": 226,
+          "REST": 28
+        },
+        "motivations": {
+          "FORAGE": 4057,
+          "SELF": 254
+        },
+        "failed": {
+          "FAILED_FORAGE": 141,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00671462829736211,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 55,
+        "repeat": 1,
+        "run_seed": 55,
+        "final_pop": 11,
+        "mean_energy": 0.47438638393478916,
+        "final_energy": 0.46498592575204933,
+        "actions": {
+          "MOVE": 3892,
+          "PICK": 517,
+          "EAT": 255,
+          "REST": 11
+        },
+        "motivations": {
+          "FORAGE": 4591,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 182,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002352941176470588,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 56,
+        "repeat": 1,
+        "run_seed": 56,
+        "final_pop": 10,
+        "mean_energy": 0.48350204879892955,
+        "final_energy": 0.33146041155208184,
+        "actions": {
+          "MOVE": 3938,
+          "PICK": 595,
+          "EAT": 262,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4714,
+          "SELF": 282
+        },
+        "failed": {
+          "FAILED_FORAGE": 181,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004153686396677051,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 57,
+        "repeat": 1,
+        "run_seed": 57,
+        "final_pop": 12,
+        "mean_energy": 0.5348827939663076,
+        "final_energy": 0.5150381591711636,
+        "actions": {
+          "MOVE": 4299,
+          "PICK": 664,
+          "EAT": 293,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 5178,
+          "SELF": 315
+        },
+        "failed": {
+          "FAILED_FORAGE": 215,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004168245547555892,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 58,
+        "repeat": 1,
+        "run_seed": 58,
+        "final_pop": 13,
+        "mean_energy": 0.5312171116749477,
+        "final_energy": 0.5439305090713044,
+        "actions": {
+          "MOVE": 4301,
+          "PICK": 680,
+          "EAT": 293,
+          "REST": 24
+        },
+        "motivations": {
+          "FORAGE": 5161,
+          "SELF": 317
+        },
+        "failed": {
+          "FAILED_FORAGE": 180,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004530011325028313,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 59,
+        "repeat": 1,
+        "run_seed": 59,
+        "final_pop": 8,
+        "mean_energy": 0.44674629997760884,
+        "final_energy": 0.35325211912894816,
+        "actions": {
+          "MOVE": 3626,
+          "PICK": 621,
+          "EAT": 241,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4364,
+          "SELF": 257
+        },
+        "failed": {
+          "FAILED_FORAGE": 117,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003552397868561279,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 60,
+        "repeat": 1,
+        "run_seed": 60,
+        "final_pop": 13,
+        "mean_energy": 0.5632081604408752,
+        "final_energy": 0.49764985207292234,
+        "actions": {
+          "MOVE": 4630,
+          "PICK": 603,
+          "EAT": 313,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 5445,
+          "SELF": 338
+        },
+        "failed": {
+          "FAILED_FORAGE": 212,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004487524681385748,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 61,
+        "repeat": 1,
+        "run_seed": 61,
+        "final_pop": 9,
+        "mean_energy": 0.46650749878736264,
+        "final_energy": 0.3555861998969564,
+        "actions": {
+          "MOVE": 3913,
+          "PICK": 551,
+          "EAT": 251,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 4647,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 183,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003171247357293869,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 62,
+        "repeat": 1,
+        "run_seed": 62,
+        "final_pop": 10,
+        "mean_energy": 0.48677431348208827,
+        "final_energy": 0.36024987484495935,
+        "actions": {
+          "MOVE": 3945,
+          "PICK": 551,
+          "EAT": 258,
+          "REST": 12
+        },
+        "motivations": {
+          "FORAGE": 4653,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 157,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002517834662190516,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 63,
+        "repeat": 1,
+        "run_seed": 63,
+        "final_pop": 10,
+        "mean_energy": 0.5065451147176705,
+        "final_energy": 0.3154094550167071,
+        "actions": {
+          "MOVE": 4158,
+          "PICK": 621,
+          "EAT": 276,
+          "REST": 26
+        },
+        "motivations": {
+          "FORAGE": 4958,
+          "SELF": 302
+        },
+        "failed": {
+          "FAILED_FORAGE": 179,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005117102932493603,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 64,
+        "repeat": 1,
+        "run_seed": 64,
+        "final_pop": 10,
+        "mean_energy": 0.4586020523681599,
+        "final_energy": 0.4175141509650289,
+        "actions": {
+          "MOVE": 3830,
+          "PICK": 478,
+          "EAT": 252,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4487,
+          "SELF": 281
+        },
+        "failed": {
+          "FAILED_FORAGE": 179,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006319459577249945,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 65,
+        "repeat": 1,
+        "run_seed": 65,
+        "final_pop": 9,
+        "mean_energy": 0.4313595244425018,
+        "final_energy": 0.35831698539445517,
+        "actions": {
+          "MOVE": 3587,
+          "PICK": 508,
+          "EAT": 237,
+          "REST": 33
+        },
+        "motivations": {
+          "FORAGE": 4283,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 188,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.007560137457044674,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 66,
+        "repeat": 1,
+        "run_seed": 66,
+        "final_pop": 11,
+        "mean_energy": 0.47002159906833385,
+        "final_energy": 0.48651778503569904,
+        "actions": {
+          "MOVE": 3803,
+          "PICK": 516,
+          "EAT": 255,
+          "REST": 36
+        },
+        "motivations": {
+          "FORAGE": 4479,
+          "SELF": 291
+        },
+        "failed": {
+          "FAILED_FORAGE": 160,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0078091106290672455,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 67,
+        "repeat": 1,
+        "run_seed": 67,
+        "final_pop": 12,
+        "mean_energy": 0.5561900811831362,
+        "final_energy": 0.4552271079702901,
+        "actions": {
+          "MOVE": 4510,
+          "PICK": 660,
+          "EAT": 306,
+          "REST": 19
+        },
+        "motivations": {
+          "FORAGE": 5369,
+          "SELF": 325
+        },
+        "failed": {
+          "FAILED_FORAGE": 199,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003457688808007279,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 68,
+        "repeat": 1,
+        "run_seed": 68,
+        "final_pop": 11,
+        "mean_energy": 0.4859298823563709,
+        "final_energy": 0.4028234167702228,
+        "actions": {
+          "MOVE": 3933,
+          "PICK": 617,
+          "EAT": 263,
+          "REST": 12
+        },
+        "motivations": {
+          "FORAGE": 4744,
+          "SELF": 275
+        },
+        "failed": {
+          "FAILED_FORAGE": 194,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002487046632124352,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 69,
+        "repeat": 1,
+        "run_seed": 69,
+        "final_pop": 8,
+        "mean_energy": 0.4757642190620616,
+        "final_energy": 0.3183549885832082,
+        "actions": {
+          "MOVE": 3899,
+          "PICK": 536,
+          "EAT": 256,
+          "REST": 23
+        },
+        "motivations": {
+          "FORAGE": 4622,
+          "SELF": 279
+        },
+        "failed": {
+          "FAILED_FORAGE": 187,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00487908358082308,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 70,
+        "repeat": 1,
+        "run_seed": 70,
+        "final_pop": 8,
+        "mean_energy": 0.47504924792250486,
+        "final_energy": 0.28848356482130766,
+        "actions": {
+          "MOVE": 3861,
+          "PICK": 630,
+          "EAT": 256,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4666,
+          "SELF": 272
+        },
+        "failed": {
+          "FAILED_FORAGE": 175,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003359227377703128,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 71,
+        "repeat": 1,
+        "run_seed": 71,
+        "final_pop": 7,
+        "mean_energy": 0.42403993018680114,
+        "final_energy": 0.34230334554586245,
+        "actions": {
+          "MOVE": 3418,
+          "PICK": 528,
+          "EAT": 226,
+          "REST": 17
+        },
+        "motivations": {
+          "FORAGE": 4092,
+          "SELF": 243
+        },
+        "failed": {
+          "FAILED_FORAGE": 146,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00405824779183576,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 72,
+        "repeat": 1,
+        "run_seed": 72,
+        "final_pop": 9,
+        "mean_energy": 0.42131809756045074,
+        "final_energy": 0.28291579131436034,
+        "actions": {
+          "MOVE": 3486,
+          "PICK": 485,
+          "EAT": 222,
+          "REST": 28
+        },
+        "motivations": {
+          "FORAGE": 4089,
+          "SELF": 250
+        },
+        "failed": {
+          "FAILED_FORAGE": 118,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006633499170812604,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 73,
+        "repeat": 1,
+        "run_seed": 73,
+        "final_pop": 10,
+        "mean_energy": 0.47364629539523434,
+        "final_energy": 0.37611365909273253,
+        "actions": {
+          "MOVE": 3865,
+          "PICK": 516,
+          "EAT": 257,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4523,
+          "SELF": 286
+        },
+        "failed": {
+          "FAILED_FORAGE": 142,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006213841868437969,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 74,
+        "repeat": 1,
+        "run_seed": 74,
+        "final_pop": 11,
+        "mean_energy": 0.502997395960455,
+        "final_energy": 0.43065855104687334,
+        "actions": {
+          "MOVE": 4027,
+          "PICK": 622,
+          "EAT": 270,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4814,
+          "SELF": 290
+        },
+        "failed": {
+          "FAILED_FORAGE": 165,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004049402713099818,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 75,
+        "repeat": 1,
+        "run_seed": 75,
+        "final_pop": 10,
+        "mean_energy": 0.4494389242424485,
+        "final_energy": 0.38915427765334987,
+        "actions": {
+          "MOVE": 3720,
+          "PICK": 584,
+          "EAT": 244,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 4475,
+          "SELF": 260
+        },
+        "failed": {
+          "FAILED_FORAGE": 171,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0035056967572304996,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 76,
+        "repeat": 1,
+        "run_seed": 76,
+        "final_pop": 8,
+        "mean_energy": 0.4399237314369548,
+        "final_energy": 0.3667264051899077,
+        "actions": {
+          "MOVE": 3669,
+          "PICK": 521,
+          "EAT": 235,
+          "REST": 23
+        },
+        "motivations": {
+          "FORAGE": 4342,
+          "SELF": 258
+        },
+        "failed": {
+          "FAILED_FORAGE": 152,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005170863309352518,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 77,
+        "repeat": 1,
+        "run_seed": 77,
+        "final_pop": 10,
+        "mean_energy": 0.465480521182619,
+        "final_energy": 0.3966334951294141,
+        "actions": {
+          "MOVE": 3820,
+          "PICK": 548,
+          "EAT": 253,
+          "REST": 27
+        },
+        "motivations": {
+          "FORAGE": 4517,
+          "SELF": 280
+        },
+        "failed": {
+          "FAILED_FORAGE": 149,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00580895008605852,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 78,
+        "repeat": 1,
+        "run_seed": 78,
+        "final_pop": 8,
+        "mean_energy": 0.4162726902952144,
+        "final_energy": 0.27738423102967386,
+        "actions": {
+          "MOVE": 3405,
+          "PICK": 463,
+          "EAT": 223,
+          "REST": 33
+        },
+        "motivations": {
+          "FORAGE": 4035,
+          "SELF": 256
+        },
+        "failed": {
+          "FAILED_FORAGE": 167,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.008001939864209506,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 79,
+        "repeat": 1,
+        "run_seed": 79,
+        "final_pop": 9,
+        "mean_energy": 0.4649588101479077,
+        "final_energy": 0.4140436951689929,
+        "actions": {
+          "MOVE": 3840,
+          "PICK": 482,
+          "EAT": 254,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4507,
+          "SELF": 283
+        },
+        "failed": {
+          "FAILED_FORAGE": 185,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.006297502714440825,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 80,
+        "repeat": 1,
+        "run_seed": 80,
+        "final_pop": 9,
+        "mean_energy": 0.4504681720058595,
+        "final_energy": 0.26254837151694344,
+        "actions": {
+          "MOVE": 3713,
+          "PICK": 553,
+          "EAT": 239,
+          "REST": 31
+        },
+        "motivations": {
+          "FORAGE": 4402,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 136,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0068342151675485005,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 81,
+        "repeat": 1,
+        "run_seed": 81,
+        "final_pop": 11,
+        "mean_energy": 0.4941714751950799,
+        "final_energy": 0.42171995993968775,
+        "actions": {
+          "MOVE": 4053,
+          "PICK": 610,
+          "EAT": 266,
+          "REST": 14
+        },
+        "motivations": {
+          "FORAGE": 4813,
+          "SELF": 280
+        },
+        "failed": {
+          "FAILED_FORAGE": 150,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0028322880841594174,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 82,
+        "repeat": 1,
+        "run_seed": 82,
+        "final_pop": 8,
+        "mean_energy": 0.43062763389051767,
+        "final_energy": 0.29469624194398486,
+        "actions": {
+          "MOVE": 3554,
+          "PICK": 577,
+          "EAT": 233,
+          "REST": 22
+        },
+        "motivations": {
+          "FORAGE": 4266,
+          "SELF": 255
+        },
+        "failed": {
+          "FAILED_FORAGE": 135,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005015959872321021,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 83,
+        "repeat": 1,
+        "run_seed": 83,
+        "final_pop": 13,
+        "mean_energy": 0.5488019375428789,
+        "final_energy": 0.5174292309847343,
+        "actions": {
+          "MOVE": 4457,
+          "PICK": 647,
+          "EAT": 301,
+          "REST": 16
+        },
+        "motivations": {
+          "FORAGE": 5304,
+          "SELF": 317
+        },
+        "failed": {
+          "FAILED_FORAGE": 200,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002951484965873455,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 84,
+        "repeat": 1,
+        "run_seed": 84,
+        "final_pop": 8,
+        "mean_energy": 0.44975632056059917,
+        "final_energy": 0.3399694818719133,
+        "actions": {
+          "MOVE": 3728,
+          "PICK": 484,
+          "EAT": 244,
+          "REST": 20
+        },
+        "motivations": {
+          "FORAGE": 4362,
+          "SELF": 264
+        },
+        "failed": {
+          "FAILED_FORAGE": 150,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.004468275245755138,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 85,
+        "repeat": 1,
+        "run_seed": 85,
+        "final_pop": 8,
+        "mean_energy": 0.4114250879649513,
+        "final_energy": 0.34464690504406037,
+        "actions": {
+          "MOVE": 3342,
+          "PICK": 511,
+          "EAT": 215,
+          "REST": 25
+        },
+        "motivations": {
+          "FORAGE": 3991,
+          "SELF": 240
+        },
+        "failed": {
+          "FAILED_FORAGE": 138,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.00610798924993892,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 86,
+        "repeat": 1,
+        "run_seed": 86,
+        "final_pop": 7,
+        "mean_energy": 0.38287985006977565,
+        "final_energy": 0.2679782682778274,
+        "actions": {
+          "MOVE": 3107,
+          "PICK": 496,
+          "EAT": 201,
+          "REST": 15
+        },
+        "motivations": {
+          "FORAGE": 3715,
+          "SELF": 216
+        },
+        "failed": {
+          "FAILED_FORAGE": 112,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003927729772191673,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 87,
+        "repeat": 1,
+        "run_seed": 87,
+        "final_pop": 12,
+        "mean_energy": 0.5321018125454839,
+        "final_energy": 0.49123840851476774,
+        "actions": {
+          "MOVE": 4358,
+          "PICK": 585,
+          "EAT": 291,
+          "REST": 17
+        },
+        "motivations": {
+          "FORAGE": 5129,
+          "SELF": 308
+        },
+        "failed": {
+          "FAILED_FORAGE": 186,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003237478575509427,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 88,
+        "repeat": 1,
+        "run_seed": 88,
+        "final_pop": 10,
+        "mean_energy": 0.5177160610917259,
+        "final_energy": 0.3540334483978754,
+        "actions": {
+          "MOVE": 4242,
+          "PICK": 603,
+          "EAT": 277,
+          "REST": 18
+        },
+        "motivations": {
+          "FORAGE": 4994,
+          "SELF": 295
+        },
+        "failed": {
+          "FAILED_FORAGE": 149,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.003501945525291829,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 89,
+        "repeat": 1,
+        "run_seed": 89,
+        "final_pop": 11,
+        "mean_energy": 0.49854982049657887,
+        "final_energy": 0.3982444352582295,
+        "actions": {
+          "MOVE": 3997,
+          "PICK": 698,
+          "EAT": 272,
+          "REST": 29
+        },
+        "motivations": {
+          "FORAGE": 4875,
+          "SELF": 301
+        },
+        "failed": {
+          "FAILED_FORAGE": 180,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005804643714971977,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 90,
+        "repeat": 1,
+        "run_seed": 90,
+        "final_pop": 9,
+        "mean_energy": 0.4470172823182115,
+        "final_energy": 0.18563019112047088,
+        "actions": {
+          "MOVE": 3722,
+          "PICK": 522,
+          "EAT": 239,
+          "REST": 13
+        },
+        "motivations": {
+          "FORAGE": 4391,
+          "SELF": 252
+        },
+        "failed": {
+          "FAILED_FORAGE": 147,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.002891459074733096,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 91,
+        "repeat": 1,
+        "run_seed": 91,
+        "final_pop": 12,
+        "mean_energy": 0.5435371238105705,
+        "final_energy": 0.531019842248869,
+        "actions": {
+          "MOVE": 4448,
+          "PICK": 625,
+          "EAT": 297,
+          "REST": 31
+        },
+        "motivations": {
+          "FORAGE": 5232,
+          "SELF": 328
+        },
+        "failed": {
+          "FAILED_FORAGE": 159,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.005739677837437511,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      }
+    ]
+  },
+  "harsh": {
+    "selected_config": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.5,
+      "init_food": 20,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "harsh"
+    },
+    "penalty_score": 2.690646194028536,
+    "sweep_summary": {
+      "final_pop": 3.2,
+      "final_pop_sd": 1.2649110640673518,
+      "mean_energy": 0.23393779989684893,
+      "final_energy": 0.09728292865907122,
+      "tail_mean_energy": 0.13553985766892154,
+      "tail_energy_sd": 0.042542287476883704,
+      "tail_energy_slope": -0.0004188021763306484,
+      "tail_pop_slope": -0.01294040351008777,
+      "rest_action_rate": 0.024205253738512587,
+      "failed_forage_rate": 0.022148795805866643,
+      "total_actions_mean": 2788.8
+    },
+    "validation_summary": {
+      "final_pop": 3.2,
+      "final_pop_sd": 1.2649110640673518,
+      "mean_energy": 0.23393779989684893,
+      "final_energy": 0.09728292865907122,
+      "tail_mean_energy": 0.13553985766892154,
+      "tail_energy_sd": 0.042542287476883704,
+      "tail_energy_slope": -0.0004188021763306484,
+      "tail_pop_slope": -0.01294040351008777,
+      "rest_action_rate": 0.024205253738512587,
+      "failed_forage_rate": 0.022148795805866643,
+      "total_actions_mean": 2788.8
+    },
+    "validation_runs": [
+      {
+        "seed": 42,
+        "repeat": 1,
+        "run_seed": 42,
+        "final_pop": 4,
+        "mean_energy": 0.24755315452066123,
+        "final_energy": 0.12524724864699915,
+        "actions": {
+          "MOVE": 2406,
+          "PICK": 270,
+          "EAT": 218,
+          "REST": 64
+        },
+        "motivations": {
+          "FORAGE": 2760,
+          "SELF": 282
+        },
+        "failed": {
+          "FAILED_FORAGE": 84,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.021636240703177823,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 43,
+        "repeat": 1,
+        "run_seed": 43,
+        "final_pop": 5,
+        "mean_energy": 0.24358595094733065,
+        "final_energy": 0.12893204720981244,
+        "actions": {
+          "MOVE": 2403,
+          "PICK": 243,
+          "EAT": 214,
+          "REST": 61
+        },
+        "motivations": {
+          "FORAGE": 2728,
+          "SELF": 275
+        },
+        "failed": {
+          "FAILED_FORAGE": 82,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.020883259157822662,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 44,
+        "repeat": 1,
+        "run_seed": 44,
+        "final_pop": 2,
+        "mean_energy": 0.20843082135717222,
+        "final_energy": 0.042721507730546754,
+        "actions": {
+          "MOVE": 2038,
+          "PICK": 189,
+          "EAT": 168,
+          "REST": 60
+        },
+        "motivations": {
+          "FORAGE": 2288,
+          "SELF": 228
+        },
+        "failed": {
+          "FAILED_FORAGE": 61,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.024439918533604887,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 45,
+        "repeat": 1,
+        "run_seed": 45,
+        "final_pop": 5,
+        "mean_energy": 0.23376753151563812,
+        "final_energy": 0.12771952802164804,
+        "actions": {
+          "MOVE": 2336,
+          "PICK": 240,
+          "EAT": 212,
+          "REST": 58
+        },
+        "motivations": {
+          "FORAGE": 2662,
+          "SELF": 270
+        },
+        "failed": {
+          "FAILED_FORAGE": 86,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.020379479971890373,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "run_seed": 46,
+        "final_pop": 6,
+        "mean_energy": 0.31753487538717706,
+        "final_energy": 0.19480531116729352,
+        "actions": {
+          "MOVE": 3075,
+          "PICK": 341,
+          "EAT": 288,
+          "REST": 53
+        },
+        "motivations": {
+          "FORAGE": 3503,
+          "SELF": 341
+        },
+        "failed": {
+          "FAILED_FORAGE": 87,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.014107000266169817,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 47,
+        "repeat": 1,
+        "run_seed": 47,
+        "final_pop": 3,
+        "mean_energy": 0.2564311939265974,
+        "final_energy": 0.09671793190633096,
+        "actions": {
+          "MOVE": 2470,
+          "PICK": 259,
+          "EAT": 214,
+          "REST": 57
+        },
+        "motivations": {
+          "FORAGE": 2780,
+          "SELF": 271
+        },
+        "failed": {
+          "FAILED_FORAGE": 51,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.019,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 48,
+        "repeat": 1,
+        "run_seed": 48,
+        "final_pop": 2,
+        "mean_energy": 0.23309750468559567,
+        "final_energy": 0.07960942681019469,
+        "actions": {
+          "MOVE": 2274,
+          "PICK": 257,
+          "EAT": 199,
+          "REST": 52
+        },
+        "motivations": {
+          "FORAGE": 2608,
+          "SELF": 251
+        },
+        "failed": {
+          "FAILED_FORAGE": 77,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.018691588785046728,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 49,
+        "repeat": 1,
+        "run_seed": 49,
+        "final_pop": 2,
+        "mean_energy": 0.2644681240296919,
+        "final_energy": 0.0781930030960661,
+        "actions": {
+          "MOVE": 2565,
+          "PICK": 263,
+          "EAT": 226,
+          "REST": 68
+        },
+        "motivations": {
+          "FORAGE": 2895,
+          "SELF": 294
+        },
+        "failed": {
+          "FAILED_FORAGE": 67,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.021780909673286355,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 50,
+        "repeat": 1,
+        "run_seed": 50,
+        "final_pop": 6,
+        "mean_energy": 0.3250284787087804,
+        "final_energy": 0.20240748615665263,
+        "actions": {
+          "MOVE": 3207,
+          "PICK": 349,
+          "EAT": 300,
+          "REST": 51
+        },
+        "motivations": {
+          "FORAGE": 3669,
+          "SELF": 351
+        },
+        "failed": {
+          "FAILED_FORAGE": 113,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.013053493729203993,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 51,
+        "repeat": 1,
+        "run_seed": 51,
+        "final_pop": 3,
+        "mean_energy": 0.19927210133099094,
+        "final_energy": 0.11257445670459927,
+        "actions": {
+          "MOVE": 1940,
+          "PICK": 217,
+          "EAT": 164,
+          "REST": 59
+        },
+        "motivations": {
+          "FORAGE": 2195,
+          "SELF": 223
+        },
+        "failed": {
+          "FAILED_FORAGE": 38,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.024789915966386553,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 52,
+        "repeat": 1,
+        "run_seed": 52,
+        "final_pop": 2,
+        "mean_energy": 0.27996760308924096,
+        "final_energy": 0.09493635697482133,
+        "actions": {
+          "MOVE": 2733,
+          "PICK": 251,
+          "EAT": 239,
+          "REST": 73
+        },
+        "motivations": {
+          "FORAGE": 3054,
+          "SELF": 312
+        },
+        "failed": {
+          "FAILED_FORAGE": 70,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.022148058252427185,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 53,
+        "repeat": 1,
+        "run_seed": 53,
+        "final_pop": 3,
+        "mean_energy": 0.24171748657843403,
+        "final_energy": 0.10161743537485567,
+        "actions": {
+          "MOVE": 2352,
+          "PICK": 235,
+          "EAT": 207,
+          "REST": 71
+        },
+        "motivations": {
+          "FORAGE": 2659,
+          "SELF": 278
+        },
+        "failed": {
+          "FAILED_FORAGE": 72,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.024781849912739965,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 54,
+        "repeat": 1,
+        "run_seed": 54,
+        "final_pop": 4,
+        "mean_energy": 0.21363395584535652,
+        "final_energy": 0.12075202987193144,
+        "actions": {
+          "MOVE": 2124,
+          "PICK": 229,
+          "EAT": 182,
+          "REST": 84
+        },
+        "motivations": {
+          "FORAGE": 2384,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 31,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.032073310423825885,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 55,
+        "repeat": 1,
+        "run_seed": 55,
+        "final_pop": 6,
+        "mean_energy": 0.2678313747561075,
+        "final_energy": 0.18735790572874939,
+        "actions": {
+          "MOVE": 2596,
+          "PICK": 309,
+          "EAT": 238,
+          "REST": 52
+        },
+        "motivations": {
+          "FORAGE": 2969,
+          "SELF": 290
+        },
+        "failed": {
+          "FAILED_FORAGE": 64,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.016275430359937403,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 56,
+        "repeat": 1,
+        "run_seed": 56,
+        "final_pop": 2,
+        "mean_energy": 0.19191970117795368,
+        "final_energy": 0.031589517219207754,
+        "actions": {
+          "MOVE": 1861,
+          "PICK": 196,
+          "EAT": 156,
+          "REST": 87
+        },
+        "motivations": {
+          "FORAGE": 2099,
+          "SELF": 243
+        },
+        "failed": {
+          "FAILED_FORAGE": 42,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.03782608695652174,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 57,
+        "repeat": 1,
+        "run_seed": 57,
+        "final_pop": 2,
+        "mean_energy": 0.18427107717380992,
+        "final_energy": 0.05640121599665712,
+        "actions": {
+          "MOVE": 1801,
+          "PICK": 207,
+          "EAT": 148,
+          "REST": 61
+        },
+        "motivations": {
+          "FORAGE": 2032,
+          "SELF": 209
+        },
+        "failed": {
+          "FAILED_FORAGE": 24,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02751465944970681,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 58,
+        "repeat": 1,
+        "run_seed": 58,
+        "final_pop": 4,
+        "mean_energy": 0.27635603926971497,
+        "final_energy": 0.11552374167101628,
+        "actions": {
+          "MOVE": 2706,
+          "PICK": 293,
+          "EAT": 246,
+          "REST": 68
+        },
+        "motivations": {
+          "FORAGE": 3074,
+          "SELF": 314
+        },
+        "failed": {
+          "FAILED_FORAGE": 75,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02052520374283127,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 59,
+        "repeat": 1,
+        "run_seed": 59,
+        "final_pop": 2,
+        "mean_energy": 0.17155118728022195,
+        "final_energy": 0.044850119480494124,
+        "actions": {
+          "MOVE": 1682,
+          "PICK": 173,
+          "EAT": 135,
+          "REST": 68
+        },
+        "motivations": {
+          "FORAGE": 1897,
+          "SELF": 203
+        },
+        "failed": {
+          "FAILED_FORAGE": 42,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.03304178814382896,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 60,
+        "repeat": 1,
+        "run_seed": 60,
+        "final_pop": 1,
+        "mean_energy": 0.19150846826655574,
+        "final_energy": 0.0557363399218637,
+        "actions": {
+          "MOVE": 1919,
+          "PICK": 191,
+          "EAT": 160,
+          "REST": 62
+        },
+        "motivations": {
+          "FORAGE": 2176,
+          "SELF": 222
+        },
+        "failed": {
+          "FAILED_FORAGE": 66,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.026586620926243566,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 61,
+        "repeat": 1,
+        "run_seed": 61,
+        "final_pop": 2,
+        "mean_energy": 0.18357602728953248,
+        "final_energy": 0.0664739089774013,
+        "actions": {
+          "MOVE": 1818,
+          "PICK": 179,
+          "EAT": 151,
+          "REST": 60
+        },
+        "motivations": {
+          "FORAGE": 2059,
+          "SELF": 211
+        },
+        "failed": {
+          "FAILED_FORAGE": 62,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02717391304347826,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 62,
+        "repeat": 1,
+        "run_seed": 62,
+        "final_pop": 2,
+        "mean_energy": 0.21331451703923343,
+        "final_energy": 0.03531406971037348,
+        "actions": {
+          "MOVE": 2093,
+          "PICK": 220,
+          "EAT": 181,
+          "REST": 79
+        },
+        "motivations": {
+          "FORAGE": 2369,
+          "SELF": 260
+        },
+        "failed": {
+          "FAILED_FORAGE": 56,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.03070345899727944,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 63,
+        "repeat": 1,
+        "run_seed": 63,
+        "final_pop": 3,
+        "mean_energy": 0.23084354243335878,
+        "final_energy": 0.12923077145461773,
+        "actions": {
+          "MOVE": 2255,
+          "PICK": 234,
+          "EAT": 196,
+          "REST": 67
+        },
+        "motivations": {
+          "FORAGE": 2529,
+          "SELF": 263
+        },
+        "failed": {
+          "FAILED_FORAGE": 40,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02434593023255814,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 64,
+        "repeat": 1,
+        "run_seed": 64,
+        "final_pop": 2,
+        "mean_energy": 0.20406363752359064,
+        "final_energy": 0.062331418024633885,
+        "actions": {
+          "MOVE": 2032,
+          "PICK": 215,
+          "EAT": 172,
+          "REST": 52
+        },
+        "motivations": {
+          "FORAGE": 2304,
+          "SELF": 224
+        },
+        "failed": {
+          "FAILED_FORAGE": 57,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02104411169566977,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 65,
+        "repeat": 1,
+        "run_seed": 65,
+        "final_pop": 2,
+        "mean_energy": 0.23676269838627234,
+        "final_energy": 0.0853221637297543,
+        "actions": {
+          "MOVE": 2327,
+          "PICK": 225,
+          "EAT": 202,
+          "REST": 89
+        },
+        "motivations": {
+          "FORAGE": 2615,
+          "SELF": 291
+        },
+        "failed": {
+          "FAILED_FORAGE": 63,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.03130495954977137,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 66,
+        "repeat": 1,
+        "run_seed": 66,
+        "final_pop": 2,
+        "mean_energy": 0.22037543456114186,
+        "final_energy": 0.03639812304109686,
+        "actions": {
+          "MOVE": 2096,
+          "PICK": 235,
+          "EAT": 180,
+          "REST": 52
+        },
+        "motivations": {
+          "FORAGE": 2401,
+          "SELF": 232
+        },
+        "failed": {
+          "FAILED_FORAGE": 70,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.020288724151385096,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 67,
+        "repeat": 1,
+        "run_seed": 67,
+        "final_pop": 3,
+        "mean_energy": 0.2342194331108356,
+        "final_energy": 0.07138129797349928,
+        "actions": {
+          "MOVE": 2335,
+          "PICK": 243,
+          "EAT": 205,
+          "REST": 83
+        },
+        "motivations": {
+          "FORAGE": 2622,
+          "SELF": 288
+        },
+        "failed": {
+          "FAILED_FORAGE": 44,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02896022330774599,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 68,
+        "repeat": 1,
+        "run_seed": 68,
+        "final_pop": 4,
+        "mean_energy": 0.24431206038399242,
+        "final_energy": 0.09731158446234556,
+        "actions": {
+          "MOVE": 2374,
+          "PICK": 244,
+          "EAT": 210,
+          "REST": 75
+        },
+        "motivations": {
+          "FORAGE": 2685,
+          "SELF": 285
+        },
+        "failed": {
+          "FAILED_FORAGE": 67,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02583534274888047,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 69,
+        "repeat": 1,
+        "run_seed": 69,
+        "final_pop": 3,
+        "mean_energy": 0.22741096966851096,
+        "final_energy": 0.07911774367209105,
+        "actions": {
+          "MOVE": 2209,
+          "PICK": 251,
+          "EAT": 194,
+          "REST": 67
+        },
+        "motivations": {
+          "FORAGE": 2518,
+          "SELF": 261
+        },
+        "failed": {
+          "FAILED_FORAGE": 58,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02462330025725836,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 70,
+        "repeat": 1,
+        "run_seed": 70,
+        "final_pop": 3,
+        "mean_energy": 0.28647494198353485,
+        "final_energy": 0.12293093825051245,
+        "actions": {
+          "MOVE": 2773,
+          "PICK": 286,
+          "EAT": 245,
+          "REST": 60
+        },
+        "motivations": {
+          "FORAGE": 3120,
+          "SELF": 305
+        },
+        "failed": {
+          "FAILED_FORAGE": 61,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0178359096313912,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 71,
+        "repeat": 1,
+        "run_seed": 71,
+        "final_pop": 2,
+        "mean_energy": 0.23320802888841385,
+        "final_energy": 0.04461475229423135,
+        "actions": {
+          "MOVE": 2264,
+          "PICK": 211,
+          "EAT": 200,
+          "REST": 82
+        },
+        "motivations": {
+          "FORAGE": 2573,
+          "SELF": 282
+        },
+        "failed": {
+          "FAILED_FORAGE": 98,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02974247370330069,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 72,
+        "repeat": 1,
+        "run_seed": 72,
+        "final_pop": 3,
+        "mean_energy": 0.18374870822084538,
+        "final_energy": 0.07994047081382577,
+        "actions": {
+          "MOVE": 1783,
+          "PICK": 184,
+          "EAT": 147,
+          "REST": 64
+        },
+        "motivations": {
+          "FORAGE": 2006,
+          "SELF": 211
+        },
+        "failed": {
+          "FAILED_FORAGE": 39,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02938475665748393,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 73,
+        "repeat": 1,
+        "run_seed": 73,
+        "final_pop": 4,
+        "mean_energy": 0.22774144717243508,
+        "final_energy": 0.13115360056426564,
+        "actions": {
+          "MOVE": 2227,
+          "PICK": 260,
+          "EAT": 196,
+          "REST": 70
+        },
+        "motivations": {
+          "FORAGE": 2531,
+          "SELF": 266
+        },
+        "failed": {
+          "FAILED_FORAGE": 44,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.025426807119505995,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 74,
+        "repeat": 1,
+        "run_seed": 74,
+        "final_pop": 5,
+        "mean_energy": 0.2884816061690773,
+        "final_energy": 0.172848241058665,
+        "actions": {
+          "MOVE": 2737,
+          "PICK": 273,
+          "EAT": 245,
+          "REST": 67
+        },
+        "motivations": {
+          "FORAGE": 3100,
+          "SELF": 312
+        },
+        "failed": {
+          "FAILED_FORAGE": 90,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0201685731487056,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 75,
+        "repeat": 1,
+        "run_seed": 75,
+        "final_pop": 3,
+        "mean_energy": 0.1736807664344645,
+        "final_energy": 0.07822118433938595,
+        "actions": {
+          "MOVE": 1709,
+          "PICK": 167,
+          "EAT": 139,
+          "REST": 81
+        },
+        "motivations": {
+          "FORAGE": 1896,
+          "SELF": 220
+        },
+        "failed": {
+          "FAILED_FORAGE": 20,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.03864503816793893,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 76,
+        "repeat": 1,
+        "run_seed": 76,
+        "final_pop": 4,
+        "mean_energy": 0.2537128994812313,
+        "final_energy": 0.10317757929703515,
+        "actions": {
+          "MOVE": 2547,
+          "PICK": 279,
+          "EAT": 229,
+          "REST": 68
+        },
+        "motivations": {
+          "FORAGE": 2895,
+          "SELF": 297
+        },
+        "failed": {
+          "FAILED_FORAGE": 69,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.021773935318603905,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 77,
+        "repeat": 1,
+        "run_seed": 77,
+        "final_pop": 3,
+        "mean_energy": 0.20988452324500723,
+        "final_energy": 0.054947948882743486,
+        "actions": {
+          "MOVE": 2054,
+          "PICK": 214,
+          "EAT": 176,
+          "REST": 52
+        },
+        "motivations": {
+          "FORAGE": 2336,
+          "SELF": 228
+        },
+        "failed": {
+          "FAILED_FORAGE": 68,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.020833333333333332,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 78,
+        "repeat": 1,
+        "run_seed": 78,
+        "final_pop": 5,
+        "mean_energy": 0.32464651977160774,
+        "final_energy": 0.22486383617820987,
+        "actions": {
+          "MOVE": 3163,
+          "PICK": 349,
+          "EAT": 294,
+          "REST": 48
+        },
+        "motivations": {
+          "FORAGE": 3619,
+          "SELF": 342
+        },
+        "failed": {
+          "FAILED_FORAGE": 107,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.012454592631032694,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 79,
+        "repeat": 1,
+        "run_seed": 79,
+        "final_pop": 4,
+        "mean_energy": 0.29824226895601263,
+        "final_energy": 0.08914895547448921,
+        "actions": {
+          "MOVE": 2919,
+          "PICK": 314,
+          "EAT": 265,
+          "REST": 57
+        },
+        "motivations": {
+          "FORAGE": 3319,
+          "SELF": 322
+        },
+        "failed": {
+          "FAILED_FORAGE": 86,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.016033755274261603,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 80,
+        "repeat": 1,
+        "run_seed": 80,
+        "final_pop": 4,
+        "mean_energy": 0.23334813615955977,
+        "final_energy": 0.0980937388268919,
+        "actions": {
+          "MOVE": 2303,
+          "PICK": 229,
+          "EAT": 201,
+          "REST": 75
+        },
+        "motivations": {
+          "FORAGE": 2580,
+          "SELF": 276
+        },
+        "failed": {
+          "FAILED_FORAGE": 48,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.026709401709401708,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 81,
+        "repeat": 1,
+        "run_seed": 81,
+        "final_pop": 5,
+        "mean_energy": 0.27162253093290334,
+        "final_energy": 0.1629608412473697,
+        "actions": {
+          "MOVE": 2683,
+          "PICK": 270,
+          "EAT": 243,
+          "REST": 51
+        },
+        "motivations": {
+          "FORAGE": 3048,
+          "SELF": 294
+        },
+        "failed": {
+          "FAILED_FORAGE": 95,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.015706806282722512,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 82,
+        "repeat": 1,
+        "run_seed": 82,
+        "final_pop": 1,
+        "mean_energy": 0.20102174968540276,
+        "final_energy": 0.017883132686746735,
+        "actions": {
+          "MOVE": 1964,
+          "PICK": 209,
+          "EAT": 162,
+          "REST": 64
+        },
+        "motivations": {
+          "FORAGE": 2230,
+          "SELF": 226
+        },
+        "failed": {
+          "FAILED_FORAGE": 57,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.026677782409337224,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 83,
+        "repeat": 1,
+        "run_seed": 83,
+        "final_pop": 4,
+        "mean_energy": 0.2541541112712018,
+        "final_energy": 0.12412051313384413,
+        "actions": {
+          "MOVE": 2516,
+          "PICK": 259,
+          "EAT": 225,
+          "REST": 76
+        },
+        "motivations": {
+          "FORAGE": 2846,
+          "SELF": 301
+        },
+        "failed": {
+          "FAILED_FORAGE": 71,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.0247074122236671,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 84,
+        "repeat": 1,
+        "run_seed": 84,
+        "final_pop": 3,
+        "mean_energy": 0.20369498599829464,
+        "final_energy": 0.09869096655415126,
+        "actions": {
+          "MOVE": 1987,
+          "PICK": 198,
+          "EAT": 168,
+          "REST": 67
+        },
+        "motivations": {
+          "FORAGE": 2226,
+          "SELF": 235
+        },
+        "failed": {
+          "FAILED_FORAGE": 41,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.02768595041322314,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 85,
+        "repeat": 1,
+        "run_seed": 85,
+        "final_pop": 3,
+        "mean_energy": 0.23051077450593724,
+        "final_energy": 0.10216787926991713,
+        "actions": {
+          "MOVE": 2237,
+          "PICK": 211,
+          "EAT": 193,
+          "REST": 78
+        },
+        "motivations": {
+          "FORAGE": 2518,
+          "SELF": 271
+        },
+        "failed": {
+          "FAILED_FORAGE": 70,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.028687017285766826,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 86,
+        "repeat": 1,
+        "run_seed": 86,
+        "final_pop": 4,
+        "mean_energy": 0.2363876947928128,
+        "final_energy": 0.0833833410702421,
+        "actions": {
+          "MOVE": 2327,
+          "PICK": 249,
+          "EAT": 205,
+          "REST": 60
+        },
+        "motivations": {
+          "FORAGE": 2661,
+          "SELF": 265
+        },
+        "failed": {
+          "FAILED_FORAGE": 85,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.021119324181626188,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 87,
+        "repeat": 1,
+        "run_seed": 87,
+        "final_pop": 2,
+        "mean_energy": 0.17988146069662536,
+        "final_energy": 0.09619934901951262,
+        "actions": {
+          "MOVE": 1750,
+          "PICK": 175,
+          "EAT": 141,
+          "REST": 49
+        },
+        "motivations": {
+          "FORAGE": 1976,
+          "SELF": 190
+        },
+        "failed": {
+          "FAILED_FORAGE": 51,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.023167848699763592,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 88,
+        "repeat": 1,
+        "run_seed": 88,
+        "final_pop": 2,
+        "mean_energy": 0.17199634869867456,
+        "final_energy": 0.027641469572579406,
+        "actions": {
+          "MOVE": 1655,
+          "PICK": 183,
+          "EAT": 134,
+          "REST": 65
+        },
+        "motivations": {
+          "FORAGE": 1883,
+          "SELF": 199
+        },
+        "failed": {
+          "FAILED_FORAGE": 45,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.031909671084928815,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 89,
+        "repeat": 1,
+        "run_seed": 89,
+        "final_pop": 4,
+        "mean_energy": 0.2392246265948211,
+        "final_energy": 0.12774988760222455,
+        "actions": {
+          "MOVE": 2283,
+          "PICK": 250,
+          "EAT": 205,
+          "REST": 79
+        },
+        "motivations": {
+          "FORAGE": 2602,
+          "SELF": 284
+        },
+        "failed": {
+          "FAILED_FORAGE": 69,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.028044018459353923,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 90,
+        "repeat": 1,
+        "run_seed": 90,
+        "final_pop": 2,
+        "mean_energy": 0.22849179913743067,
+        "final_energy": 0.06440005803566438,
+        "actions": {
+          "MOVE": 2207,
+          "PICK": 211,
+          "EAT": 187,
+          "REST": 81
+        },
+        "motivations": {
+          "FORAGE": 2478,
+          "SELF": 268
+        },
+        "failed": {
+          "FAILED_FORAGE": 60,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.030156366344005956,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      },
+      {
+        "seed": 91,
+        "repeat": 1,
+        "run_seed": 91,
+        "final_pop": 3,
+        "mean_energy": 0.22392911580265476,
+        "final_energy": 0.09843405804549937,
+        "actions": {
+          "MOVE": 2108,
+          "PICK": 217,
+          "EAT": 179,
+          "REST": 50
+        },
+        "motivations": {
+          "FORAGE": 2398,
+          "SELF": 229
+        },
+        "failed": {
+          "FAILED_FORAGE": 73,
+          "FAILED_SELF": 0
+        },
+        "rest_action_rate": 0.01957713390759593,
+        "failed_self_note": "N/A: SELF falls back to REST in Phase 2"
+      }
+    ]
+  },
+  "_penalty_score_trace": {
+    "balanced": [
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 7.336411895170102,
+        "result": {
+          "final_pop": 9.8,
+          "final_pop_sd": 1.8547236990991407,
+          "mean_energy": 0.4732998385471645,
+          "final_energy": 0.3728500350582897,
+          "tail_mean_energy": 0.4099961162049314,
+          "tail_energy_sd": 0.06395681329082299,
+          "tail_energy_slope": -0.00038149044561509035,
+          "tail_pop_slope": -0.009985584639616024,
+          "rest_action_rate": 0.004508332259394219,
+          "failed_forage_rate": 0.03297712881482138,
+          "total_actions_mean": 4714.46
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 8.547682129966837,
+        "result": {
+          "final_pop": 8.46,
+          "final_pop_sd": 2.1091230405075945,
+          "mean_energy": 0.4454818495579883,
+          "final_energy": 0.3141411134068057,
+          "tail_mean_energy": 0.36599140885496406,
+          "tail_energy_sd": 0.06755360828343986,
+          "tail_energy_slope": -0.0005537383706018844,
+          "tail_pop_slope": -0.015426565664141636,
+          "rest_action_rate": 0.002738082221326787,
+          "failed_forage_rate": 0.03381962483540859,
+          "total_actions_mean": 4529.16
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 20.08472679364336,
+        "result": {
+          "final_pop": 7.38,
+          "final_pop_sd": 1.5606408939919523,
+          "mean_energy": 0.4166232544602523,
+          "final_energy": 0.2779301967514471,
+          "tail_mean_energy": 0.3356271900868491,
+          "tail_energy_sd": 0.05819973890236812,
+          "tail_energy_slope": -0.0005801161347713094,
+          "tail_pop_slope": -0.015981024525613178,
+          "rest_action_rate": 0.005128952373465702,
+          "failed_forage_rate": 0.031119918281434848,
+          "total_actions_mean": 4223.6
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 33.59128953216457,
+        "result": {
+          "final_pop": 7.12,
+          "final_pop_sd": 2.371834732859775,
+          "mean_energy": 0.3961612284398183,
+          "final_energy": 0.2750694108079859,
+          "tail_mean_energy": 0.31876582287747063,
+          "tail_energy_sd": 0.0857895521878607,
+          "tail_energy_slope": -0.00042819297569919313,
+          "tail_pop_slope": -0.011356843921098059,
+          "rest_action_rate": 0.013879721036938106,
+          "failed_forage_rate": 0.025307869225644687,
+          "total_actions_mean": 3913.1
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 49.61199414922284,
+        "result": {
+          "final_pop": 6.96,
+          "final_pop_sd": 1.799555500672319,
+          "mean_energy": 0.41973206421882475,
+          "final_energy": 0.2506675878995584,
+          "tail_mean_energy": 0.32599876965289404,
+          "tail_energy_sd": 0.06439636915036057,
+          "tail_energy_slope": -0.0007563325257222016,
+          "tail_pop_slope": -0.020263886597164965,
+          "rest_action_rate": 0.002072233897211605,
+          "failed_forage_rate": 0.030276517247025677,
+          "total_actions_mean": 4331.5
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 55.350278070603274,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.9456618411224496,
+          "mean_energy": 0.40365782765079067,
+          "final_energy": 0.24840072773928137,
+          "tail_mean_energy": 0.3120832828123095,
+          "tail_energy_sd": 0.06422217974527133,
+          "tail_energy_slope": -0.0006318309232013814,
+          "tail_pop_slope": -0.01692904822620569,
+          "rest_action_rate": 0.002571894001297601,
+          "failed_forage_rate": 0.031594547999594894,
+          "total_actions_mean": 4163.6
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 55.87040135543816,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.8508376482014839,
+          "mean_energy": 0.3342364390248978,
+          "final_energy": 0.21184983467594173,
+          "tail_mean_energy": 0.2553627633707866,
+          "tail_energy_sd": 0.05480579782920538,
+          "tail_energy_slope": -0.000499205323102688,
+          "tail_pop_slope": -0.016613305332633343,
+          "rest_action_rate": 0.007924903750115325,
+          "failed_forage_rate": 0.029228538680606916,
+          "total_actions_mean": 4118.88
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 83.9142071834215,
+        "result": {
+          "final_pop": 6.48,
+          "final_pop_sd": 1.8356470248934025,
+          "mean_energy": 0.3371217778759564,
+          "final_energy": 0.19645195636837978,
+          "tail_mean_energy": 0.24818425633336338,
+          "tail_energy_sd": 0.04920994935103713,
+          "tail_energy_slope": -0.0006308293874988418,
+          "tail_pop_slope": -0.02196839420985528,
+          "rest_action_rate": 0.003729760545222703,
+          "failed_forage_rate": 0.03249152545383586,
+          "total_actions_mean": 4246.38
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 106.06168484972822,
+        "result": {
+          "final_pop": 6.16,
+          "final_pop_sd": 2.0234623791906783,
+          "mean_energy": 0.380635277876369,
+          "final_energy": 0.21731247517641808,
+          "tail_mean_energy": 0.2835002327047955,
+          "tail_energy_sd": 0.06933743535524066,
+          "tail_energy_slope": -0.0006220302081847485,
+          "tail_pop_slope": -0.017369174229355765,
+          "rest_action_rate": 0.002016107205651725,
+          "failed_forage_rate": 0.027232749368688546,
+          "total_actions_mean": 3994.2
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 168.25808920670266,
+        "result": {
+          "final_pop": 5.28,
+          "final_pop_sd": 1.7209299811439163,
+          "mean_energy": 0.3081015816191893,
+          "final_energy": 0.15263483728665184,
+          "tail_mean_energy": 0.21317195792888546,
+          "tail_energy_sd": 0.047961757198306594,
+          "tail_energy_slope": -0.0007008397315467995,
+          "tail_pop_slope": -0.025088277206930205,
+          "rest_action_rate": 0.002437951708038269,
+          "failed_forage_rate": 0.0262560855818528,
+          "total_actions_mean": 3998.36
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 171.48389906605024,
+        "result": {
+          "final_pop": 5.16,
+          "final_pop_sd": 1.7012936254509392,
+          "mean_energy": 0.3320244691106953,
+          "final_energy": 0.2023332251679815,
+          "tail_mean_energy": 0.23960411833174597,
+          "tail_energy_sd": 0.06598804987354318,
+          "tail_energy_slope": -0.00047059017247492107,
+          "tail_pop_slope": -0.012429505737643468,
+          "rest_action_rate": 0.014979448406336327,
+          "failed_forage_rate": 0.0244533379638299,
+          "total_actions_mean": 3339.98
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 212.00182793853855,
+        "result": {
+          "final_pop": 4.66,
+          "final_pop_sd": 1.8505134422640652,
+          "mean_energy": 0.27468731466494484,
+          "final_energy": 0.13744388530445067,
+          "tail_mean_energy": 0.18095825062307797,
+          "tail_energy_sd": 0.052282088953877724,
+          "tail_energy_slope": -0.0005232762556811187,
+          "tail_pop_slope": -0.017346613665341657,
+          "rest_action_rate": 0.008685084774625816,
+          "failed_forage_rate": 0.027167920434545013,
+          "total_actions_mean": 3446.84
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 234.41184719337775,
+        "result": {
+          "final_pop": 4.34,
+          "final_pop_sd": 1.8067650649710936,
+          "mean_energy": 0.28094669365299535,
+          "final_energy": 0.12590814236869718,
+          "tail_mean_energy": 0.1794875038038253,
+          "tail_energy_sd": 0.05134444628319962,
+          "tail_energy_slope": -0.0006171012608539689,
+          "tail_pop_slope": -0.021606195154878896,
+          "rest_action_rate": 0.003465604392950281,
+          "failed_forage_rate": 0.028771623228115092,
+          "total_actions_mean": 3615.62
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 272.1046021846627,
+        "result": {
+          "final_pop": 3.8,
+          "final_pop_sd": 1.8220867158288596,
+          "mean_energy": 0.3082493249891947,
+          "final_energy": 0.13379062098606045,
+          "tail_mean_energy": 0.19774278813381246,
+          "tail_energy_sd": 0.06640601320015944,
+          "tail_energy_slope": -0.0006783802685258914,
+          "tail_pop_slope": -0.018510942773569364,
+          "rest_action_rate": 0.006217551153707918,
+          "failed_forage_rate": 0.02746691105184112,
+          "total_actions_mean": 3201.3
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 309.6073128606952,
+        "result": {
+          "final_pop": 3.2,
+          "final_pop_sd": 1.2649110640673518,
+          "mean_energy": 0.23393779989684893,
+          "final_energy": 0.09728292865907122,
+          "tail_mean_energy": 0.13553985766892154,
+          "tail_energy_sd": 0.042542287476883704,
+          "tail_energy_slope": -0.0004188021763306484,
+          "tail_pop_slope": -0.01294040351008777,
+          "rest_action_rate": 0.024205253738512587,
+          "failed_forage_rate": 0.022148795805866643,
+          "total_actions_mean": 2788.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 327.233169433256,
+        "result": {
+          "final_pop": 3.02,
+          "final_pop_sd": 1.6672132437093943,
+          "mean_energy": 0.2486355045101872,
+          "final_energy": 0.0830352118322948,
+          "tail_mean_energy": 0.13636594308728509,
+          "tail_energy_sd": 0.0493657728257876,
+          "tail_energy_slope": -0.0006227783664587327,
+          "tail_pop_slope": -0.02208314707867699,
+          "rest_action_rate": 0.002043581200345797,
+          "failed_forage_rate": 0.024439817032865706,
+          "total_actions_mean": 3244.7
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 331.1654181090432,
+        "result": {
+          "final_pop": 2.96,
+          "final_pop_sd": 1.535708305636197,
+          "mean_energy": 0.2889141432958944,
+          "final_energy": 0.10287125531748618,
+          "tail_mean_energy": 0.16347966629456065,
+          "tail_energy_sd": 0.05004295439777212,
+          "tail_energy_slope": -0.0006841794027888058,
+          "tail_pop_slope": -0.01904449111227783,
+          "rest_action_rate": 0.0025993964582172184,
+          "failed_forage_rate": 0.026913464939926385,
+          "total_actions_mean": 3053.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 346.0679641532834,
+        "result": {
+          "final_pop": 2.68,
+          "final_pop_sd": 1.2400000000000002,
+          "mean_energy": 0.23853470392340037,
+          "final_energy": 0.10468939883969386,
+          "tail_mean_energy": 0.1368550442986672,
+          "tail_energy_sd": 0.05730291925401024,
+          "tail_energy_slope": -0.0004284134712469824,
+          "tail_pop_slope": -0.011455621390534777,
+          "rest_action_rate": 0.020141889384167052,
+          "failed_forage_rate": 0.021081850437171697,
+          "total_actions_mean": 2441.52
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 10,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 354.5628633295985,
+        "result": {
+          "final_pop": 2.56,
+          "final_pop_sd": 1.2026637102698325,
+          "mean_energy": 0.22675790578986785,
+          "final_energy": 0.10398656961597094,
+          "tail_mean_energy": 0.12258476406080604,
+          "tail_energy_sd": 0.04774219404128734,
+          "tail_energy_slope": -0.00025205305680919994,
+          "tail_pop_slope": -0.007238085952148817,
+          "rest_action_rate": 0.04200039178536905,
+          "failed_forage_rate": 0.015554321030383749,
+          "total_actions_mean": 2243.54
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 363.538963546869,
+        "result": {
+          "final_pop": 2.5,
+          "final_pop_sd": 1.5132745950421556,
+          "mean_energy": 0.27700441876426213,
+          "final_energy": 0.0854758256896998,
+          "tail_mean_energy": 0.14884995227707,
+          "tail_energy_sd": 0.05549261392793758,
+          "tail_energy_slope": -0.0007417709905467464,
+          "tail_pop_slope": -0.020714992874821883,
+          "rest_action_rate": 0.0016227006408174487,
+          "failed_forage_rate": 0.02412473465893696,
+          "total_actions_mean": 2948.0
+        }
+      }
+    ],
+    "easy": [
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 162.2864895710714,
+        "result": {
+          "final_pop": 9.8,
+          "final_pop_sd": 1.8547236990991407,
+          "mean_energy": 0.4732998385471645,
+          "final_energy": 0.3728500350582897,
+          "tail_mean_energy": 0.4099961162049314,
+          "tail_energy_sd": 0.06395681329082299,
+          "tail_energy_slope": -0.00038149044561509035,
+          "tail_pop_slope": -0.009985584639616024,
+          "rest_action_rate": 0.004508332259394219,
+          "failed_forage_rate": 0.03297712881482138,
+          "total_actions_mean": 4714.46
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 254.75785395286755,
+        "result": {
+          "final_pop": 8.46,
+          "final_pop_sd": 2.1091230405075945,
+          "mean_energy": 0.4454818495579883,
+          "final_energy": 0.3141411134068057,
+          "tail_mean_energy": 0.36599140885496406,
+          "tail_energy_sd": 0.06755360828343986,
+          "tail_energy_slope": -0.0005537383706018844,
+          "tail_pop_slope": -0.015426565664141636,
+          "rest_action_rate": 0.002738082221326787,
+          "failed_forage_rate": 0.03381962483540859,
+          "total_actions_mean": 4529.16
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 329.1747267936434,
+        "result": {
+          "final_pop": 7.38,
+          "final_pop_sd": 1.5606408939919523,
+          "mean_energy": 0.4166232544602523,
+          "final_energy": 0.2779301967514471,
+          "tail_mean_energy": 0.3356271900868491,
+          "tail_energy_sd": 0.05819973890236812,
+          "tail_energy_slope": -0.0005801161347713094,
+          "tail_pop_slope": -0.015981024525613178,
+          "rest_action_rate": 0.005128952373465702,
+          "failed_forage_rate": 0.031119918281434848,
+          "total_actions_mean": 4223.6
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 342.334622865498,
+        "result": {
+          "final_pop": 7.12,
+          "final_pop_sd": 2.371834732859775,
+          "mean_energy": 0.3961612284398183,
+          "final_energy": 0.2750694108079859,
+          "tail_mean_energy": 0.31876582287747063,
+          "tail_energy_sd": 0.0857895521878607,
+          "tail_energy_slope": -0.00042819297569919313,
+          "tail_pop_slope": -0.011356843921098059,
+          "rest_action_rate": 0.013879721036938106,
+          "failed_forage_rate": 0.025307869225644687,
+          "total_actions_mean": 3913.1
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 358.14199414922285,
+        "result": {
+          "final_pop": 6.96,
+          "final_pop_sd": 1.799555500672319,
+          "mean_energy": 0.41973206421882475,
+          "final_energy": 0.2506675878995584,
+          "tail_mean_energy": 0.32599876965289404,
+          "tail_energy_sd": 0.06439636915036057,
+          "tail_energy_slope": -0.0007563325257222016,
+          "tail_pop_slope": -0.020263886597164965,
+          "rest_action_rate": 0.002072233897211605,
+          "failed_forage_rate": 0.030276517247025677,
+          "total_actions_mean": 4331.5
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 363.7736114039367,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.9456618411224496,
+          "mean_energy": 0.40365782765079067,
+          "final_energy": 0.24840072773928137,
+          "tail_mean_energy": 0.3120832828123095,
+          "tail_energy_sd": 0.06422217974527133,
+          "tail_energy_slope": -0.0006318309232013814,
+          "tail_pop_slope": -0.01692904822620569,
+          "rest_action_rate": 0.002571894001297601,
+          "failed_forage_rate": 0.031594547999594894,
+          "total_actions_mean": 4163.6
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 364.2937346887715,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.8508376482014839,
+          "mean_energy": 0.3342364390248978,
+          "final_energy": 0.21184983467594173,
+          "tail_mean_energy": 0.2553627633707866,
+          "tail_energy_sd": 0.05480579782920538,
+          "tail_energy_slope": -0.000499205323102688,
+          "tail_pop_slope": -0.016613305332633343,
+          "rest_action_rate": 0.007924903750115325,
+          "failed_forage_rate": 0.029228538680606916,
+          "total_actions_mean": 4118.88
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 391.80420718342157,
+        "result": {
+          "final_pop": 6.48,
+          "final_pop_sd": 1.8356470248934025,
+          "mean_energy": 0.3371217778759564,
+          "final_energy": 0.19645195636837978,
+          "tail_mean_energy": 0.24818425633336338,
+          "tail_energy_sd": 0.04920994935103713,
+          "tail_energy_slope": -0.0006308293874988418,
+          "tail_pop_slope": -0.02196839420985528,
+          "rest_action_rate": 0.003729760545222703,
+          "failed_forage_rate": 0.03249152545383586,
+          "total_actions_mean": 4246.38
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 413.5250181830616,
+        "result": {
+          "final_pop": 6.16,
+          "final_pop_sd": 2.0234623791906783,
+          "mean_energy": 0.380635277876369,
+          "final_energy": 0.21731247517641808,
+          "tail_mean_energy": 0.2835002327047955,
+          "tail_energy_sd": 0.06933743535524066,
+          "tail_energy_slope": -0.0006220302081847485,
+          "tail_pop_slope": -0.017369174229355765,
+          "rest_action_rate": 0.002016107205651725,
+          "failed_forage_rate": 0.027232749368688546,
+          "total_actions_mean": 3994.2
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 474.5480892067027,
+        "result": {
+          "final_pop": 5.28,
+          "final_pop_sd": 1.7209299811439163,
+          "mean_energy": 0.3081015816191893,
+          "final_energy": 0.15263483728665184,
+          "tail_mean_energy": 0.21317195792888546,
+          "tail_energy_sd": 0.047961757198306594,
+          "tail_energy_slope": -0.0007008397315467995,
+          "tail_pop_slope": -0.025088277206930205,
+          "rest_action_rate": 0.002437951708038269,
+          "failed_forage_rate": 0.0262560855818528,
+          "total_actions_mean": 3998.36
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 477.6138990660503,
+        "result": {
+          "final_pop": 5.16,
+          "final_pop_sd": 1.7012936254509392,
+          "mean_energy": 0.3320244691106953,
+          "final_energy": 0.2023332251679815,
+          "tail_mean_energy": 0.23960411833174597,
+          "tail_energy_sd": 0.06598804987354318,
+          "tail_energy_slope": -0.00047059017247492107,
+          "tail_pop_slope": -0.012429505737643468,
+          "rest_action_rate": 0.014979448406336327,
+          "failed_forage_rate": 0.0244533379638299,
+          "total_actions_mean": 3339.98
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 517.4651612718719,
+        "result": {
+          "final_pop": 4.66,
+          "final_pop_sd": 1.8505134422640652,
+          "mean_energy": 0.27468731466494484,
+          "final_energy": 0.13744388530445067,
+          "tail_mean_energy": 0.18095825062307797,
+          "tail_energy_sd": 0.052282088953877724,
+          "tail_energy_slope": -0.0005232762556811187,
+          "tail_pop_slope": -0.017346613665341657,
+          "rest_action_rate": 0.008685084774625816,
+          "failed_forage_rate": 0.027167920434545013,
+          "total_actions_mean": 3446.84
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 539.4485138600444,
+        "result": {
+          "final_pop": 4.34,
+          "final_pop_sd": 1.8067650649710936,
+          "mean_energy": 0.28094669365299535,
+          "final_energy": 0.12590814236869718,
+          "tail_mean_energy": 0.1794875038038253,
+          "tail_energy_sd": 0.05134444628319962,
+          "tail_energy_slope": -0.0006171012608539689,
+          "tail_pop_slope": -0.021606195154878896,
+          "rest_action_rate": 0.003465604392950281,
+          "failed_forage_rate": 0.028771623228115092,
+          "total_actions_mean": 3615.62
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 576.4212688513294,
+        "result": {
+          "final_pop": 3.8,
+          "final_pop_sd": 1.8220867158288596,
+          "mean_energy": 0.3082493249891947,
+          "final_energy": 0.13379062098606045,
+          "tail_mean_energy": 0.19774278813381246,
+          "tail_energy_sd": 0.06640601320015944,
+          "tail_energy_slope": -0.0006783802685258914,
+          "tail_pop_slope": -0.018510942773569364,
+          "rest_action_rate": 0.006217551153707918,
+          "failed_forage_rate": 0.02746691105184112,
+          "total_actions_mean": 3201.3
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 613.1239795273618,
+        "result": {
+          "final_pop": 3.2,
+          "final_pop_sd": 1.2649110640673518,
+          "mean_energy": 0.23393779989684893,
+          "final_energy": 0.09728292865907122,
+          "tail_mean_energy": 0.13553985766892154,
+          "tail_energy_sd": 0.042542287476883704,
+          "tail_energy_slope": -0.0004188021763306484,
+          "tail_pop_slope": -0.01294040351008777,
+          "rest_action_rate": 0.024205253738512587,
+          "failed_forage_rate": 0.022148795805866643,
+          "total_actions_mean": 2788.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 630.5098360999227,
+        "result": {
+          "final_pop": 3.02,
+          "final_pop_sd": 1.6672132437093943,
+          "mean_energy": 0.2486355045101872,
+          "final_energy": 0.0830352118322948,
+          "tail_mean_energy": 0.13636594308728509,
+          "tail_energy_sd": 0.0493657728257876,
+          "tail_energy_slope": -0.0006227783664587327,
+          "tail_pop_slope": -0.02208314707867699,
+          "rest_action_rate": 0.002043581200345797,
+          "failed_forage_rate": 0.024439817032865706,
+          "total_actions_mean": 3244.7
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 634.36208477571,
+        "result": {
+          "final_pop": 2.96,
+          "final_pop_sd": 1.535708305636197,
+          "mean_energy": 0.2889141432958944,
+          "final_energy": 0.10287125531748618,
+          "tail_mean_energy": 0.16347966629456065,
+          "tail_energy_sd": 0.05004295439777212,
+          "tail_energy_slope": -0.0006841794027888058,
+          "tail_pop_slope": -0.01904449111227783,
+          "rest_action_rate": 0.0025993964582172184,
+          "failed_forage_rate": 0.026913464939926385,
+          "total_actions_mean": 3053.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 648.8912974866167,
+        "result": {
+          "final_pop": 2.68,
+          "final_pop_sd": 1.2400000000000002,
+          "mean_energy": 0.23853470392340037,
+          "final_energy": 0.10468939883969386,
+          "tail_mean_energy": 0.1368550442986672,
+          "tail_energy_sd": 0.05730291925401024,
+          "tail_energy_slope": -0.0004284134712469824,
+          "tail_pop_slope": -0.011455621390534777,
+          "rest_action_rate": 0.020141889384167052,
+          "failed_forage_rate": 0.021081850437171697,
+          "total_actions_mean": 2441.52
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 10,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 657.2261966629317,
+        "result": {
+          "final_pop": 2.56,
+          "final_pop_sd": 1.2026637102698325,
+          "mean_energy": 0.22675790578986785,
+          "final_energy": 0.10398656961597094,
+          "tail_mean_energy": 0.12258476406080604,
+          "tail_energy_sd": 0.04774219404128734,
+          "tail_energy_slope": -0.00025205305680919994,
+          "tail_pop_slope": -0.007238085952148817,
+          "rest_action_rate": 0.04200039178536905,
+          "failed_forage_rate": 0.015554321030383749,
+          "total_actions_mean": 2243.54
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 666.1222968802024,
+        "result": {
+          "final_pop": 2.5,
+          "final_pop_sd": 1.5132745950421556,
+          "mean_energy": 0.27700441876426213,
+          "final_energy": 0.0854758256896998,
+          "tail_mean_energy": 0.14884995227707,
+          "tail_energy_sd": 0.05549261392793758,
+          "tail_energy_slope": -0.0007417709905467464,
+          "tail_pop_slope": -0.020714992874821883,
+          "rest_action_rate": 0.0016227006408174487,
+          "failed_forage_rate": 0.02412473465893696,
+          "total_actions_mean": 2948.0
+        }
+      }
+    ],
+    "harsh": [
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 2.690646194028536,
+        "result": {
+          "final_pop": 3.2,
+          "final_pop_sd": 1.2649110640673518,
+          "mean_energy": 0.23393779989684893,
+          "final_energy": 0.09728292865907122,
+          "tail_mean_energy": 0.13553985766892154,
+          "tail_energy_sd": 0.042542287476883704,
+          "tail_energy_slope": -0.0004188021763306484,
+          "tail_pop_slope": -0.01294040351008777,
+          "rest_action_rate": 0.024205253738512587,
+          "failed_forage_rate": 0.022148795805866643,
+          "total_actions_mean": 2788.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 4.484630819950046,
+        "result": {
+          "final_pop": 2.68,
+          "final_pop_sd": 1.2400000000000002,
+          "mean_energy": 0.23853470392340037,
+          "final_energy": 0.10468939883969386,
+          "tail_mean_energy": 0.1368550442986672,
+          "tail_energy_sd": 0.05730291925401024,
+          "tail_energy_slope": -0.0004284134712469824,
+          "tail_pop_slope": -0.011455621390534777,
+          "rest_action_rate": 0.020141889384167052,
+          "failed_forage_rate": 0.021081850437171697,
+          "total_actions_mean": 2441.52
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 10,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 4.979529996265043,
+        "result": {
+          "final_pop": 2.56,
+          "final_pop_sd": 1.2026637102698325,
+          "mean_energy": 0.22675790578986785,
+          "final_energy": 0.10398656961597094,
+          "tail_mean_energy": 0.12258476406080604,
+          "tail_energy_sd": 0.04774219404128734,
+          "tail_energy_slope": -0.00025205305680919994,
+          "tail_pop_slope": -0.007238085952148817,
+          "rest_action_rate": 0.04200039178536905,
+          "failed_forage_rate": 0.015554321030383749,
+          "total_actions_mean": 2243.54
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 5.425981432685176,
+        "result": {
+          "final_pop": 5.16,
+          "final_pop_sd": 1.7012936254509392,
+          "mean_energy": 0.3320244691106953,
+          "final_energy": 0.2023332251679815,
+          "tail_mean_energy": 0.23960411833174597,
+          "tail_energy_sd": 0.06598804987354318,
+          "tail_energy_slope": -0.00047059017247492107,
+          "tail_pop_slope": -0.012429505737643468,
+          "rest_action_rate": 0.014979448406336327,
+          "failed_forage_rate": 0.0244533379638299,
+          "total_actions_mean": 3339.98
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 5.521268851329338,
+        "result": {
+          "final_pop": 3.8,
+          "final_pop_sd": 1.8220867158288596,
+          "mean_energy": 0.3082493249891947,
+          "final_energy": 0.13379062098606045,
+          "tail_mean_energy": 0.19774278813381246,
+          "tail_energy_sd": 0.06640601320015944,
+          "tail_energy_slope": -0.0006783802685258914,
+          "tail_pop_slope": -0.018510942773569364,
+          "rest_action_rate": 0.006217551153707918,
+          "failed_forage_rate": 0.02746691105184112,
+          "total_actions_mean": 3201.3
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 10,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 7.120547732682819,
+        "result": {
+          "final_pop": 1.98,
+          "final_pop_sd": 1.0675204916066015,
+          "mean_energy": 0.19874153946597503,
+          "final_energy": 0.0796452070828492,
+          "tail_mean_energy": 0.0997799968715498,
+          "tail_energy_sd": 0.0436695402796634,
+          "tail_energy_slope": -0.00024657056905218156,
+          "tail_pop_slope": -0.00640216005400136,
+          "rest_action_rate": 0.045853473200649,
+          "failed_forage_rate": 0.014844799059180354,
+          "total_actions_mean": 1974.0
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 20,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 7.336310037825764,
+        "result": {
+          "final_pop": 1.94,
+          "final_pop_sd": 0.9676776322722357,
+          "mean_energy": 0.187425408326164,
+          "final_energy": 0.0566762328627304,
+          "tail_mean_energy": 0.08475729900537007,
+          "tail_energy_sd": 0.030109938909226378,
+          "tail_energy_slope": -0.00032102273398246174,
+          "tail_pop_slope": -0.01069964749118729,
+          "rest_action_rate": 0.02779535003610083,
+          "failed_forage_rate": 0.019643562886336313,
+          "total_actions_mean": 2266.3
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 7.428513860044412,
+        "result": {
+          "final_pop": 4.34,
+          "final_pop_sd": 1.8067650649710936,
+          "mean_energy": 0.28094669365299535,
+          "final_energy": 0.12590814236869718,
+          "tail_mean_energy": 0.1794875038038253,
+          "tail_energy_sd": 0.05134444628319962,
+          "tail_energy_slope": -0.0006171012608539689,
+          "tail_pop_slope": -0.021606195154878896,
+          "rest_action_rate": 0.003465604392950281,
+          "failed_forage_rate": 0.028771623228115092,
+          "total_actions_mean": 3615.62
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 8.248751442376587,
+        "result": {
+          "final_pop": 2.96,
+          "final_pop_sd": 1.535708305636197,
+          "mean_energy": 0.2889141432958944,
+          "final_energy": 0.10287125531748618,
+          "tail_mean_energy": 0.16347966629456065,
+          "tail_energy_sd": 0.05004295439777212,
+          "tail_energy_slope": -0.0006841794027888058,
+          "tail_pop_slope": -0.01904449111227783,
+          "rest_action_rate": 0.0025993964582172184,
+          "failed_forage_rate": 0.026913464939926385,
+          "total_actions_mean": 3053.8
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 8.316502766589421,
+        "result": {
+          "final_pop": 3.02,
+          "final_pop_sd": 1.6672132437093943,
+          "mean_energy": 0.2486355045101872,
+          "final_energy": 0.0830352118322948,
+          "tail_mean_energy": 0.13636594308728509,
+          "tail_energy_sd": 0.0493657728257876,
+          "tail_energy_slope": -0.0006227783664587327,
+          "tail_pop_slope": -0.02208314707867699,
+          "rest_action_rate": 0.002043581200345797,
+          "failed_forage_rate": 0.024439817032865706,
+          "total_actions_mean": 3244.7
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 8.485161271871945,
+        "result": {
+          "final_pop": 4.66,
+          "final_pop_sd": 1.8505134422640652,
+          "mean_energy": 0.27468731466494484,
+          "final_energy": 0.13744388530445067,
+          "tail_mean_energy": 0.18095825062307797,
+          "tail_energy_sd": 0.052282088953877724,
+          "tail_energy_slope": -0.0005232762556811187,
+          "tail_pop_slope": -0.017346613665341657,
+          "rest_action_rate": 0.008685084774625816,
+          "failed_forage_rate": 0.027167920434545013,
+          "total_actions_mean": 3446.84
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 8.7858766339317,
+        "result": {
+          "final_pop": 1.54,
+          "final_pop_sd": 1.329812016790343,
+          "mean_energy": 0.19097042889903307,
+          "final_energy": 0.04756192123982035,
+          "tail_mean_energy": 0.07918712900251877,
+          "tail_energy_sd": 0.042216251458044654,
+          "tail_energy_slope": -0.0004079025314035667,
+          "tail_pop_slope": -0.014634785869646756,
+          "rest_action_rate": 0.011635810168687194,
+          "failed_forage_rate": 0.023609351876002205,
+          "total_actions_mean": 2377.72
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 9.955630213535656,
+        "result": {
+          "final_pop": 2.5,
+          "final_pop_sd": 1.5132745950421556,
+          "mean_energy": 0.27700441876426213,
+          "final_energy": 0.0854758256896998,
+          "tail_mean_energy": 0.14884995227707,
+          "tail_energy_sd": 0.05549261392793758,
+          "tail_energy_slope": -0.0007417709905467464,
+          "tail_pop_slope": -0.020714992874821883,
+          "rest_action_rate": 0.0016227006408174487,
+          "failed_forage_rate": 0.02412473465893696,
+          "total_actions_mean": 2948.0
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 10.47152836528039,
+        "result": {
+          "final_pop": 5.28,
+          "final_pop_sd": 1.7209299811439163,
+          "mean_energy": 0.3081015816191893,
+          "final_energy": 0.15263483728665184,
+          "tail_mean_energy": 0.21317195792888546,
+          "tail_energy_sd": 0.047961757198306594,
+          "tail_energy_slope": -0.0007008397315467995,
+          "tail_pop_slope": -0.025088277206930205,
+          "rest_action_rate": 0.002437951708038269,
+          "failed_forage_rate": 0.0262560855818528,
+          "total_actions_mean": 3998.36
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 14.215022837157491,
+        "result": {
+          "final_pop": 6.16,
+          "final_pop_sd": 2.0234623791906783,
+          "mean_energy": 0.380635277876369,
+          "final_energy": 0.21731247517641808,
+          "tail_mean_energy": 0.2835002327047955,
+          "tail_energy_sd": 0.06933743535524066,
+          "tail_energy_slope": -0.0006220302081847485,
+          "tail_pop_slope": -0.017369174229355765,
+          "rest_action_rate": 0.002016107205651725,
+          "failed_forage_rate": 0.027232749368688546,
+          "total_actions_mean": 3994.2
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 14.827892310088822,
+        "result": {
+          "final_pop": 6.48,
+          "final_pop_sd": 1.8356470248934025,
+          "mean_energy": 0.3371217778759564,
+          "final_energy": 0.19645195636837978,
+          "tail_mean_energy": 0.24818425633336338,
+          "tail_energy_sd": 0.04920994935103713,
+          "tail_energy_slope": -0.0006308293874988418,
+          "tail_pop_slope": -0.02196839420985528,
+          "rest_action_rate": 0.003729760545222703,
+          "failed_forage_rate": 0.03249152545383586,
+          "total_actions_mean": 4246.38
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.02,
+          "eat_gain": 0.5,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 20.936196022133,
+        "result": {
+          "final_pop": 1.4,
+          "final_pop_sd": 1.2649110640673518,
+          "mean_energy": 0.19799262556282135,
+          "final_energy": 0.041689154855338965,
+          "tail_mean_energy": 0.07494269897107203,
+          "tail_energy_sd": 0.037124602368741336,
+          "tail_energy_slope": -0.00046594758914493973,
+          "tail_pop_slope": -0.017014655366384177,
+          "rest_action_rate": 0.003517621113773373,
+          "failed_forage_rate": 0.02421645434324219,
+          "total_actions_mean": 2488.92
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.5,
+          "init_food": 40,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 24.92765662285388,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.8508376482014839,
+          "mean_energy": 0.3342364390248978,
+          "final_energy": 0.21184983467594173,
+          "tail_mean_energy": 0.2553627633707866,
+          "tail_energy_sd": 0.05480579782920538,
+          "tail_energy_slope": -0.000499205323102688,
+          "tail_pop_slope": -0.016613305332633343,
+          "rest_action_rate": 0.007924903750115325,
+          "failed_forage_rate": 0.029228538680606916,
+          "total_actions_mean": 4118.88
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.01,
+          "eat_gain": 0.8,
+          "init_food": 80,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 25.54194372684944,
+        "result": {
+          "final_pop": 6.88,
+          "final_pop_sd": 1.9456618411224496,
+          "mean_energy": 0.40365782765079067,
+          "final_energy": 0.24840072773928137,
+          "tail_mean_energy": 0.3120832828123095,
+          "tail_energy_sd": 0.06422217974527133,
+          "tail_energy_slope": -0.0006318309232013814,
+          "tail_pop_slope": -0.01692904822620569,
+          "rest_action_rate": 0.002571894001297601,
+          "failed_forage_rate": 0.031594547999594894,
+          "total_actions_mean": 4163.6
+        }
+      },
+      {
+        "params": {
+          "perception_radius": 50.0,
+          "hunger_rate": 0.02857142857142857,
+          "move_cost": 0.005,
+          "eat_gain": 0.8,
+          "init_food": 150,
+          "rest_recovery": 0.005,
+          "care_weight": 0.0,
+          "forage_weight": 1.0,
+          "self_weight": 1.0,
+          "name": "candidate"
+        },
+        "score": 31.28196954228076,
+        "result": {
+          "final_pop": 6.96,
+          "final_pop_sd": 1.799555500672319,
+          "mean_energy": 0.41973206421882475,
+          "final_energy": 0.2506675878995584,
+          "tail_mean_energy": 0.32599876965289404,
+          "tail_energy_sd": 0.06439636915036057,
+          "tail_energy_slope": -0.0007563325257222016,
+          "tail_pop_slope": -0.020263886597164965,
+          "rest_action_rate": 0.002072233897211605,
+          "failed_forage_rate": 0.030276517247025677,
+          "total_actions_mean": 4331.5
+        }
+      }
+    ]
+  },
+  "_pipeline_meta": {
+    "n_seeds": 50,
+    "synthetic_baseline": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.2,
+      "init_food": 80,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0
+    },
+    "anchor_food": 235,
+    "anchored_baseline": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.2,
+      "init_food": 235,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0
+    },
+    "detected_balanced": {
+      "perception_radius": 50.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.8,
+      "init_food": 235,
+      "rest_recovery": 0.005,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0
+    },
+    "edge_clarity": {
+      "init_food": {
+        "key": "init_food",
+        "is_clear": false,
+        "surv_range": 0.028,
+        "detected_val": 235,
+        "synthetic_val": 235.0,
+        "justification": "Flat \u2014 \u0394survival=0.028 < 0.2; zones: {'10': 'DEAD', '20': 'DEAD', '40': 'DEAD', '80': 'DEAD', '150': 'DEAD'}"
+      },
+      "eat_gain": {
+        "key": "eat_gain",
+        "is_clear": true,
+        "surv_range": 0.403,
+        "detected_val": 0.8,
+        "synthetic_val": 0.2,
+        "justification": "BALANCED-closest=0.8 (surv=0.40); zones: {'0.05': 'DEAD', '0.1': 'DEAD', '0.2': 'DEAD', '0.5': 'HARSH', '0.8': 'HARSH'}"
+      },
+      "move_cost": {
+        "key": "move_cost",
+        "is_clear": false,
+        "surv_range": 0.041,
+        "detected_val": 0.005,
+        "synthetic_val": 0.005,
+        "justification": "Flat \u2014 \u0394survival=0.041 < 0.2; zones: {'0.005': 'DEAD', '0.01': 'DEAD', '0.02': 'DEAD', '0.05': 'DEAD', '0.1': 'DEAD'}"
+      }
+    },
+    "ovat_dir": "C:\\Users\\User\\Desktop\\FIBO_Study\\3Y_2\\FRA361_OPENTOPICS\\Opentopics-Bio-Inspired\\outputs\\phase2_survival_minimal\\20260505_225655_validation_selected_baselines\\sensitivity_ovat",
+    "step6_grid_desc": "5 init_food \u00d7 5 eat_gain \u00d7 5 move_cost = 125 configs",
+    "step6_n_configs": 125
+  }
+}
