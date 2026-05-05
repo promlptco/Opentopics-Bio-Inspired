@@ -229,7 +229,7 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
 
     summary = (
-        f"final alive mean = {np.mean(pop_matrix[:, -1]):.2f}/15\n"
+        f"final alive mean = {np.mean(pop_matrix[:, -1]):.2f}/{INIT_MOTHERS}\n"
         f"final energy mean = {mean_e[-1]:.3f}\n"
         f"final energy SD = {std_e[-1]:.3f}"
     )
