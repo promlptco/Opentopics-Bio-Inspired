@@ -8,6 +8,25 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Academic plot defaults — applied globally before any figure is created
+matplotlib.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["DejaVu Sans", "Arial", "Helvetica"],
+    "axes.titlesize": 12,
+    "axes.labelsize": 11,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": False,
+    "ytick.right": False,
+    "legend.fontsize": 9,
+    "legend.frameon": True,
+    "legend.edgecolor": "#cccccc",
+    "figure.facecolor": "white",
+    "savefig.facecolor": "white",
+})
+
 from experiments.phase2_survival_minimal.new_config import (
     INIT_MOTHERS,
     DEFAULT_PERCEPTION_RADIUS,
@@ -92,7 +111,7 @@ def summarize_repeats(repeat_results, duration, tail_window=TAIL_WINDOW):
 def config_title(params):
     return (
         f"perception={params.get('perception_radius', DEFAULT_PERCEPTION_RADIUS)} | "
-        f"hunger={params['hunger_rate']} | move={params['move_cost']} | "
+        f"hunger={params['hunger_rate']:.4f} | move={params['move_cost']} | "
         f"eat={params['eat_gain']} | food={params['init_food']} | rest={params['rest_recovery']} | "
         f"Fw={params.get('forage_weight', 1.0)} | Sw={params.get('self_weight', 1.0)} | "
         f"Cw={params.get('care_weight', 0.0)}"
@@ -154,13 +173,14 @@ def history_value_matrix(results, history_key, value_key, duration, window=25):
 
 
 _ANNOT_BOX = dict(
-    boxstyle="round,pad=0.4",
+    boxstyle="square,pad=0.5",
     facecolor="white",
-    edgecolor="#cccccc",
-    alpha=0.90,
+    edgecolor="#aaaaaa",
+    alpha=0.95,
+    linewidth=0.8,
 )
 
-_LEGEND_KW = dict(fontsize=8, framealpha=0.92, edgecolor="#cccccc", fancybox=True)
+_LEGEND_KW = dict(fontsize=9, framealpha=0.95, edgecolor="#aaaaaa", fancybox=False)
 
 
 def style_axes(ax):
@@ -168,15 +188,15 @@ def style_axes(ax):
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_linewidth(0.8)
     ax.spines["bottom"].set_linewidth(0.8)
-    ax.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.35, color="#888888")
-    ax.grid(True, which="minor", linestyle=":", linewidth=0.35, alpha=0.2, color="#aaaaaa")
+    ax.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.4, color="#888888")
+    ax.grid(True, which="minor", linestyle=":", linewidth=0.3, alpha=0.2, color="#aaaaaa")
     ax.minorticks_on()
-    ax.tick_params(which="major", labelsize=9, length=4, width=0.8)
-    ax.tick_params(which="minor", labelsize=0, length=2, width=0.5)
-    ax.set_facecolor("#fafafa")
-    ax.xaxis.label.set_size(10)
-    ax.yaxis.label.set_size(10)
-    ax.title.set_size(11)
+    ax.tick_params(which="major", labelsize=9, length=5, width=0.8, direction="in")
+    ax.tick_params(which="minor", labelsize=0, length=2.5, width=0.5, direction="in")
+    ax.set_facecolor("white")
+    ax.xaxis.label.set_size(11)
+    ax.yaxis.label.set_size(11)
+    ax.title.set_size(12)
 
 
 def save_figure(fig, out_dir, filename):
@@ -207,43 +227,50 @@ def plot_multiseed_condition(name, results, params, run_labels, duration, out_di
     mean_p = np.mean(pop_matrix, axis=0)
     std_p = np.std(pop_matrix, axis=0)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
 
     fig.suptitle(
-        f"Phase 2 Multi-Seed Validation — {name.upper()}\n"
-        f"MotherAgent | Runs: {len(results)} total | {config_title(params)}",
+        f"Phase 2 Multi-Seed Validation — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
+        y=0.98,
+    )
+    fig.text(
+        0.5, 0.955,
+        config_title(params),
+        ha="center", va="top",
+        fontsize=9,
+        color="#444444",
     )
 
     for i in range(len(results)):
-        label = "Individual Runs" if i == 0 else "_nolegend_"
-        ax1.plot(ticks, energy_matrix[i], alpha=0.4, linewidth=0.8, color="gray", label=label)
-        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.4, linewidth=0.8, color="gray", label=label)
+        label = "Individual runs" if i == 0 else "_nolegend_"
+        ax1.plot(ticks, energy_matrix[i], alpha=0.2, linewidth=0.7, color="#aaaaaa", label=label)
+        ax2.step(ticks, pop_matrix[i], where="post", alpha=0.2, linewidth=0.7, color="#aaaaaa", label=label)
 
-    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="tab:green", alpha=0.15, label="Mean ± SD")
-    ax1.plot(ticks, mean_e, color="tab:green", linewidth=2.0, label="Group Mean")
+    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e, color="#2ca02c", alpha=0.18, label="Mean ± 1 SD")
+    ax1.plot(ticks, mean_e, color="#2ca02c", linewidth=2.2, label="Group mean")
 
-    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="tab:blue", alpha=0.15, label="Mean ± SD")
-    ax2.plot(ticks, mean_p, color="tab:blue", linewidth=2.0, label="Group Mean")
+    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p, color="#1f77b4", alpha=0.18, label="Mean ± 1 SD")
+    ax2.plot(ticks, mean_p, color="#1f77b4", linewidth=2.2, label="Group mean")
 
     _t = SELECTION_TARGETS.get(name, {})
     _target_e  = _t.get("target_energy",  0.70)
     _ceiling_e = _t.get("energy_high",    _t.get("min_energy", 0.85))
-    ax1.axhline(_target_e,  color="gray", linestyle=":",  label=f"Target E={_target_e:.2f}")
-    ax1.axhline(_ceiling_e, color="gray", linestyle="--", alpha=0.6, label=f"Ceiling E={_ceiling_e:.2f}")
-    ax1.axhline(0.0, color="tab:red", linestyle="--", alpha=0.5, label="Death")
+    ax1.axhline(_target_e,  color="#555555", linestyle=":",  linewidth=1.2, label=f"Target energy = {_target_e:.2f}")
+    ax1.axhline(_ceiling_e, color="#555555", linestyle="--", linewidth=1.0, alpha=0.6, label=f"Energy ceiling = {_ceiling_e:.2f}")
+    ax1.axhline(0.0, color="#d62728", linestyle="--", linewidth=1.0, alpha=0.6, label="Death threshold (E = 0)")
 
-    ax2.axhline(0.0, color="tab:red", linestyle="--", alpha=0.5, label="Extinction")
-    ax2.axhline(INIT_MOTHERS, color="gray", linestyle=":", label="Initial count")
+    ax2.axhline(0.0, color="#d62728", linestyle="--", linewidth=1.0, alpha=0.6, label="Extinction (n = 0)")
+    ax2.axhline(INIT_MOTHERS, color="#555555", linestyle=":", linewidth=1.2, label=f"Initial cohort (n = {INIT_MOTHERS})")
 
-    ax1.set_title("Energy Trajectory: Mean ± SD (green)")
-    ax1.set_ylabel("Mean energy")
+    ax1.set_title("Population-weighted energy trajectory  (green = group mean ± 1 SD)")
+    ax1.set_ylabel("Population-weighted mean energy")
     ax1.set_ylim(-0.05, 1.05)
 
-    ax2.set_title("Survival / Alive Population: Mean ± SD (blue)")
-    ax2.set_ylabel("# alive mothers")
-    ax2.set_xlabel("Tick")
+    ax2.set_title("Alive population over time  (blue = group mean ± 1 SD)")
+    ax2.set_ylabel("Number of alive mothers")
+    ax2.set_xlabel("Simulation tick")
     ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
 
     summary = (
@@ -372,14 +399,17 @@ def plot_event_selection_over_time(
     as_rate=True,
 ):
     event_colors = {
-        "SELF": "tab:blue",
-        "FORAGE": "tab:orange",
-        "MOVE": "tab:blue",
-        "PICK": "tab:orange",
-        "EAT": "tab:green",
-        "REST": "tab:red",
-        "FAILED_FORAGE": "dimgray",
-        "FAILED_SELF": "black",
+        # Motivation colours — warm vs cool to separate ecological drive vs internal state
+        "FORAGE": "#d45b13",   # burnt orange (external foraging drive)
+        "SELF":   "#7b4ea0",   # purple      (internal self-regulation)
+        # Action colours — four distinct hues, colourblind-friendly
+        "MOVE":   "#1f77b4",   # steel blue
+        "PICK":   "#e6902a",   # golden orange
+        "EAT":    "#2a9a3c",   # forest green
+        "REST":   "#c7443a",   # brick red
+        # Failed colours — neutral greys to de-emphasise
+        "FAILED_FORAGE": "#888888",
+        "FAILED_SELF":   "#333333",
     }
 
     per_event_runs = {key: [] for key in event_keys}
@@ -418,10 +448,10 @@ def plot_event_selection_over_time(
             ax.plot(
                 ticks,
                 matrix[i],
-                alpha=0.06,
-                linewidth=0.6,
-                color="gray",
-                label="Individual Runs" if first_individual_label else "_nolegend_",
+                alpha=0.2,
+                linewidth=0.5,
+                color="#aaaaaa",
+                label="Individual runs" if first_individual_label else "_nolegend_",
             )
             first_individual_label = False
 
@@ -439,9 +469,9 @@ def plot_event_selection_over_time(
             ticks,
             mean_y - std_y,
             mean_y + std_y,
-            alpha=0.12,
+            alpha=0.15,
             color=color,
-            label=f"{key} Mean ± SD",
+            label=f"{key} mean ± 1 SD",
         )
 
         ax.plot(
@@ -449,20 +479,19 @@ def plot_event_selection_over_time(
             mean_y,
             linewidth=2.2,
             color=color,
-            label=f"{key} Group Mean",
+            label=f"{key} group mean",
         )
 
     ylabel = "Selection rate per alive mother" if as_rate else "Selection count per tick"
 
     fig.suptitle(
-        f"{title_prefix} Over Time — {name.upper()}\n"
-        f"MotherAgent | Runs: {len(results)} total | smoothing window = {window} ticks",
+        f"{title_prefix} Over Time — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Individual Runs + Group Mean ± SD")
-    ax.set_xlabel("Tick")
+    ax.set_title(f"Individual runs (grey) + group mean ± 1 SD  |  smoothing window = {window} ticks")
+    ax.set_xlabel("Simulation tick")
     ax.set_ylabel(ylabel)
 
     if as_rate:
@@ -528,12 +557,12 @@ def plot_stacked_action_failed_over_time(name, results, duration, out_dir, windo
     keys = ["MOVE", "PICK", "EAT", "REST", "FAILED_FORAGE", "FAILED_SELF"]
 
     color_map = {
-        "MOVE": "tab:blue",
-        "PICK": "tab:orange",
-        "EAT": "tab:green",
-        "REST": "tab:red",
-        "FAILED_FORAGE": "dimgray",
-        "FAILED_SELF": "black",
+        "MOVE":          "#1f77b4",
+        "PICK":          "#e6902a",
+        "EAT":           "#2a9a3c",
+        "REST":          "#c7443a",
+        "FAILED_FORAGE": "#888888",
+        "FAILED_SELF":   "#333333",
     }
 
     per_key_mean = {}
@@ -559,14 +588,13 @@ def plot_stacked_action_failed_over_time(name, results, duration, out_dir, windo
     )
 
     fig.suptitle(
-        f"Stacked Action and Failed Selection — {name.upper()}\n"
-        f"MotherAgent | Mean rate across {len(results)} runs | window = {window}",
+        f"Stacked Action and Failed Selection — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Realized Actions + Failed Motivation Realization")
-    ax.set_xlabel("Tick")
+    ax.set_title(f"Mean rate stacked across all runs  |  smoothing window = {window} ticks")
+    ax.set_xlabel("Simulation tick")
     ax.set_ylabel("Rate per alive mother" if as_rate else "Count per tick")
     ax.set_ylim(0.0, 1.15)
 
@@ -618,12 +646,11 @@ def plot_motivation_action_count_bar(name, results, out_dir):
         )
 
     fig.suptitle(
-        f"Motivation → Action Counts — {name.upper()}\n"
-        "Phase 2 active domains: FORAGE and SELF",
+        f"Motivation → Action Counts — {name.upper()}  |  Phase 2 active domains: FORAGE and SELF",
         fontsize=14,
         fontweight="bold",
     )
-    ax.set_ylabel("Total count across validation runs")
+    ax.set_ylabel("Total action count across all validation runs")
     ax.set_xlabel("Motivation domain and realized action")
     style_axes(ax)
 
@@ -671,15 +698,14 @@ def plot_failed_action_rate_bar(name, results, out_dir):
     )
 
     fig.suptitle(
-        f"Failed-Action Rate Summary — {name.upper()}\n"
-        "Realized actions vs failed motivation realization",
+        f"Failed-Action Rate Summary — {name.upper()}  |  Realized vs failed motivation realization",
         fontsize=14,
         fontweight="bold",
     )
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.set_ylabel("Total count across validation runs")
-    ax.legend(loc="lower left", **_LEGEND_KW)
+    ax.set_ylabel("Total count across all validation runs")
+    ax.legend(loc="upper right", **_LEGEND_KW)
     style_axes(ax)
 
     plt.tight_layout()
@@ -775,15 +801,14 @@ def _plot_failed_energy_correlation(name, results, duration, out_dir, failed_key
         )
 
     fig.suptitle(
-        f"{failed_key} vs Energy Decay — {name.upper()}\n"
-        f"Pearson r = {corr:.3f} | Runs: {len(results)}",
+        f"{failed_key} vs Energy Decay — {name.upper()}  |  Pearson r = {corr:.3f}  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Correlation Diagnostic")
+    ax.set_title("Correlation diagnostic  |  grey dots = tick samples, red = linear fit")
     ax.set_xlabel(f"{failed_key} rate per alive mother")
-    ax.set_ylabel("Energy drop per tick")
+    ax.set_ylabel("Energy drop per tick (smoothed)")
 
     style_axes(ax)
     ax.legend(loc="upper right", **_LEGEND_KW)
@@ -884,17 +909,16 @@ def plot_state_space_energy_action(name, results, duration, out_dir, window=25):
             bin_means.append(float(np.mean(rate_all[mask])) if np.any(mask) else np.nan)
 
         ax.plot(bin_centers, bin_means, color="black", linewidth=2.0, label="Binned mean")
-        ax.set_title(f"Energy vs {label}")
-        ax.set_xlabel("Mean energy")
-        ax.set_ylabel("Selection rate")
+        ax.set_title(f"Energy vs {label}  (black = binned mean)")
+        ax.set_xlabel("Population-weighted mean energy")
+        ax.set_ylabel("Selection rate per alive mother")
         ax.set_xlim(-0.02, 1.02)
         ax.set_ylim(-0.05, 1.05)
         style_axes(ax)
         ax.legend(loc="upper right", **_LEGEND_KW)
 
     fig.suptitle(
-        f"State Space: Energy vs Action/Motivation — {name.upper()}\n"
-        f"MotherAgent | Tick samples across {len(results)} runs | window = {window}",
+        f"State Space: Energy vs Action / Motivation — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
@@ -932,10 +956,10 @@ def plot_food_consumption_over_time(name, results, duration, out_dir, window=25)
         ax1.plot(
             ticks,
             eat_matrix[i],
-            alpha=0.06,
+            alpha=0.2,
             linewidth=0.6,
-            color="gray",
-            label="Individual Runs" if i == 0 else "_nolegend_",
+            color="#aaaaaa",
+            label="Individual runs" if i == 0 else "_nolegend_",
         )
 
     ax1.fill_between(ticks, eat_mean - eat_sd, eat_mean + eat_sd, color="tab:green", alpha=0.12, label="EAT Mean ± SD")
@@ -948,16 +972,15 @@ def plot_food_consumption_over_time(name, results, duration, out_dir, window=25)
     ax2.plot(ticks, food_mean, color="tab:blue", linestyle="--", linewidth=2.0, label="Food Available")
 
     fig.suptitle(
-        f"Food Consumption Rate Over Time — {name.upper()}\n"
-        f"Runs: {len(results)} total | smoothing window = {window} ticks",
+        f"Food Consumption Rate Over Time — {name.upper()}  |  n = {len(results)} runs  |  window = {window} ticks",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax1.set_title("PICK/EAT Rates and Available Food")
-    ax1.set_xlabel("Tick")
+    ax1.set_title("PICK / EAT rates (left axis) and available food count (right axis, dashed)")
+    ax1.set_xlabel("Simulation tick")
     ax1.set_ylabel("Action rate per alive mother")
-    ax2.set_ylabel("Food available count")
+    ax2.set_ylabel("Food items available on grid")
 
     ax1.set_ylim(-0.05, 1.05)
 
@@ -1007,15 +1030,14 @@ def plot_spatial_heatmap_population(name, results, out_dir):
     cbar.set_label("Normalized visit density", fontsize=9)
 
     fig.suptitle(
-        f"Spatial Heatmap of Mother Population — {name.upper()}\n"
-        f"Mean visitation density across {len(results)} runs",
+        f"Spatial Heatmap of Mother Population — {name.upper()}  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Population Occupancy Heatmap")
-    ax.set_xlabel("Grid X")
-    ax.set_ylabel("Grid Y")
+    ax.set_title("Mean normalised visit density across all runs")
+    ax.set_xlabel("Grid x-coordinate")
+    ax.set_ylabel("Grid y-coordinate")
     style_axes(ax)
 
     plt.tight_layout()
@@ -1075,16 +1097,15 @@ def plot_energy_expenditure_breakdown(name, results, out_dir):
     ax.bar(x, values, yerr=errors, capsize=5, color=colors, alpha=0.82)
 
     fig.suptitle(
-        f"Energy Expenditure Breakdown — {name.upper()}\n"
-        f"Mean ± SD across {len(results)} runs",
+        f"Energy Expenditure Breakdown — {name.upper()}  |  Mean ± SD across n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Episode-Level Energy Flow")
+    ax.set_title("Episode-level energy flow (bar = mean, whisker = SD)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=15, ha="right")
-    ax.set_ylabel("Total energy over episode")
+    ax.set_ylabel("Cumulative energy over episode")
     ax.axhline(0.0, color="black", linewidth=1.0, alpha=0.7)
 
     style_axes(ax)
@@ -1149,13 +1170,13 @@ def plot_homeostatic_balance(name, results, duration, out_dir, window=25):
     ax_fatigue = ax_energy.twinx()
 
     for i in range(len(results)):
-        label = "Individual Runs" if i == 0 else "_nolegend_"
+        label = "Individual runs" if i == 0 else "_nolegend_"
 
         ax_energy.plot(
             ticks,
             energy_matrix[i],
-            color="gray",
-            alpha=0.08,
+            color="#aaaaaa",
+            alpha=0.2,
             linewidth=0.7,
             label=label,
         )
@@ -1163,8 +1184,8 @@ def plot_homeostatic_balance(name, results, duration, out_dir, window=25):
         ax_fatigue.plot(
             ticks,
             fatigue_matrix[i],
-            color="gray",
-            alpha=0.05,
+            color="#aaaaaa",
+            alpha=0.2,
             linewidth=0.7,
         )
 
@@ -1172,71 +1193,70 @@ def plot_homeostatic_balance(name, results, duration, out_dir, window=25):
         ticks,
         mean_energy - std_energy,
         mean_energy + std_energy,
-        color="tab:blue",
-        alpha=0.14,
-        label="Energy Mean ± SD",
+        color="#1f77b4",
+        alpha=0.15,
+        label="Energy mean ± 1 SD",
     )
 
     ax_energy.plot(
         ticks,
         mean_energy,
-        color="tab:blue",
+        color="#1f77b4",
         linewidth=2.3,
-        label="Mean Energy",
+        label="Mean energy",
     )
 
     ax_fatigue.fill_between(
         ticks,
         mean_fatigue - std_fatigue,
         mean_fatigue + std_fatigue,
-        color="tab:red",
-        alpha=0.10,
-        label="Fatigue Mean ± SD",
+        color="#d62728",
+        alpha=0.12,
+        label="Fatigue mean ± 1 SD",
     )
 
     ax_fatigue.plot(
         ticks,
         mean_fatigue,
-        color="tab:red",
+        color="#d62728",
         linestyle="--",
         linewidth=2.3,
-        label="Mean Fatigue",
+        label="Mean fatigue",
     )
 
     fig.suptitle(
-        f"Homeostatic Balance: Energy vs Fatigue — {name.upper()}\n"
-        f"MotherAgent | Runs: {len(results)} total | smoothing window = {window} ticks",
+        f"Homeostatic Balance: Energy vs Fatigue — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax_energy.set_title("Energy–Fatigue Homeostatic Dynamics")
-    ax_energy.set_xlabel("Tick")
-    ax_energy.set_ylabel("Mean Energy", color="tab:blue")
-    ax_fatigue.set_ylabel("Mean Fatigue", color="tab:red")
+    ax_energy.set_title(f"Energy (blue, left) vs fatigue (red, right)  |  smoothing window = {window} ticks")
+    ax_energy.set_xlabel("Simulation tick")
+    ax_energy.set_ylabel("Population-weighted mean energy", color="#1f77b4")
+    ax_fatigue.set_ylabel("Population-weighted mean fatigue", color="#d62728")
 
-    ax_energy.tick_params(axis="y", labelcolor="tab:blue")
-    ax_fatigue.tick_params(axis="y", labelcolor="tab:red")
+    ax_energy.tick_params(axis="y", labelcolor="#1f77b4")
+    ax_fatigue.tick_params(axis="y", labelcolor="#d62728")
 
     ax_energy.set_ylim(-0.05, 1.05)
     ax_fatigue.set_ylim(-0.05, 1.05)
 
     ax_energy.axhline(
         0.70,
-        color="tab:blue",
+        color="#1f77b4",
         linestyle=":",
         alpha=0.55,
-        linewidth=1.1,
-        label="Energy target 0.70",
+        linewidth=1.2,
+        label="Energy target = 0.70",
     )
 
     ax_fatigue.axhline(
         0.0,
-        color="tab:red",
+        color="#d62728",
         linestyle=":",
         alpha=0.35,
         linewidth=1.0,
-        label="Fatigue baseline",
+        label="Fatigue baseline = 0",
     )
 
     style_axes(ax_energy)
@@ -1367,14 +1387,13 @@ def plot_rate_sum_check(
     )
 
     fig.suptitle(
-        f"Rate Sum Check — {name.upper()}\n"
-        f"MotherAgent | Runs: {len(results)} total | no smoothing (NaN-padded ends)",
+        f"Rate Sum Check — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
         fontsize=14,
         fontweight="bold",
     )
 
-    ax.set_title("Check event-rate completeness using processed mothers as denominator")
-    ax.set_xlabel("Tick")
+    ax.set_title("Event-rate completeness check  |  denominator = processed mothers  |  no smoothing, NaN-padded ends")
+    ax.set_xlabel("Simulation tick")
     ax.set_ylabel("Rate sum per processed mother")
     ax.set_ylim(-0.05, 1.25)
 

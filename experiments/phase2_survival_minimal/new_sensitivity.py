@@ -127,6 +127,9 @@ def find_food_anchor(
 
     anchor_food = None
     anchor_summary = None
+    best_food = None
+    best_survival = -1.0
+    best_summary = None
 
     for food in food_range:
         params = {**base, "init_food": int(food)}
@@ -150,6 +153,11 @@ def find_food_anchor(
             f"survival={survival:.2f}  tailE={summary['tail_energy_mean']:.3f}"
         )
 
+        if survival > best_survival:
+            best_survival = survival
+            best_food = int(food)
+            best_summary = summary
+
         if anchor_food is None and survival >= target_survival:
             anchor_food = int(food)
             anchor_summary = summary
@@ -157,8 +165,12 @@ def find_food_anchor(
             break
 
     if anchor_food is None:
-        anchor_food = int(list(food_range)[-1])
-        print(f"\n  Warning: no anchor found up to init_food={anchor_food}. Using last value.")
+        anchor_food = best_food if best_food is not None else int(list(food_range)[-1])
+        anchor_summary = best_summary
+        print(
+            f"\n  Warning: no anchor found up to init_food={int(list(food_range)[-1])}. "
+            f"Using argmax: init_food = {anchor_food} (survival = {best_survival:.2f})"
+        )
 
     return anchor_food, anchor_summary
 
@@ -226,20 +238,20 @@ def save_csv(results, path):
 
 
 def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
-    n_sets = len(SENSITIVITY_SUBPLOT_CONFIG)
-    n_cols = 2
-    n_rows = (n_sets + n_cols - 1) // n_cols  # ceil division → always 2×2 for 4 sets
+    n_sets = len(SENSITIVITY_SUBPLOT_CONFIG)  # 3 sets: A, B, C
+    n_cols = n_sets
+    n_rows = 1
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(13, 9))
-    axes_flat = axes.flatten()
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 5))
+    axes_flat = np.asarray(axes).flatten()
     energy_color = "#2E3440"
 
     fig.suptitle(
-        "Phase 2 · OVAT Sensitivity Analysis\n"
+        "Phase 2 · OVAT Sensitivity Analysis  |  "
         "MotherAgent: Environmental Cue × Genome Weight → Softmax",
-        fontsize=14,
+        fontsize=13,
         fontweight="bold",
-        y=1.01,
+        y=1.02,
     )
 
     if hide_keys is None:
@@ -264,41 +276,32 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
             color=color,
             linewidth=2.0,
             marker="o",
-            markersize=3.5,
-            label="Survival Rate",
+            markersize=4,
+            label="Survival rate",
         )
         ax_surv.fill_between(
             xs,
             np.clip(surv - surv_sd, 0.0, 1.0),
             np.clip(surv + surv_sd, 0.0, 1.0),
             color=color,
-            alpha=0.10,
-        )
-
-        ax_surv.axhspan(0.10, 0.45, color="#BF616A", alpha=0.06, label="HARSH target")
-        ax_surv.axhspan(0.50, 0.75, color="#EBCB8B", alpha=0.08, label="BALANCED target")
-        ax_surv.axhline(
-            0.80,
-            color="#A3BE8C",
-            linestyle=":",
-            linewidth=1.1,
-            alpha=0.75,
-            label="EASY minimum",
+            alpha=0.12,
+            label="Survival mean ± 1 SD",
         )
 
         ax_surv.set_ylim(-0.05, 1.15)
-        ax_surv.set_ylabel("Survival Rate", color=color, fontsize=9)
-        ax_surv.tick_params(axis="y", labelcolor=color)
+        ax_surv.set_ylabel("Survival rate", color=color, fontsize=10)
+        ax_surv.tick_params(axis="y", labelcolor=color, direction="in")
+        ax_surv.tick_params(axis="x", direction="in")
 
         ax_energy.plot(
             xs,
             energy,
             color=energy_color,
-            linewidth=1.7,
+            linewidth=1.8,
             linestyle="--",
             marker="s",
-            markersize=3.2,
-            label="Tail Mean Energy",
+            markersize=3.5,
+            label="Tail mean energy",
         )
         ax_energy.fill_between(
             xs,
@@ -306,35 +309,17 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
             np.clip(energy + energy_sd, 0.0, 1.0),
             color=energy_color,
             alpha=0.07,
-        )
-
-        ax_energy.axhline(
-            0.0,
-            color="black",
-            linestyle=":",
-            linewidth=1.0,
-            alpha=0.35,
-            label="Zero energy",
+            label="Energy mean ± 1 SD",
         )
 
         ax_energy.set_ylim(-0.05, 1.15)
-        ax_energy.set_ylabel("Tail Mean Energy", color=energy_color, fontsize=9)
-        ax_energy.tick_params(axis="y", labelcolor=energy_color)
+        ax_energy.set_ylabel("Tail mean energy", color=energy_color, fontsize=10)
+        ax_energy.tick_params(axis="y", labelcolor=energy_color, direction="in")
 
-        if key not in hide_keys:
-            baseline_val = float(baseline[key])
-            ax_surv.axvline(
-                baseline_val,
-                color="black",
-                linestyle="--",
-                linewidth=1.1,
-                alpha=0.65,
-                label=f"Baseline = {baseline_val:g}",
-            )
-
-        ax_surv.set_xlabel(xlabel, fontsize=9)
-        ax_surv.set_title(f"Set {set_id} · {key}", fontsize=10, fontweight="bold")
-        ax_surv.grid(True, linestyle="--", alpha=0.28)
+        ax_surv.set_xlabel(xlabel, fontsize=10)
+        ax_surv.set_title(f"Set {set_id}  ·  {key}", fontsize=11, fontweight="bold")
+        ax_surv.grid(True, linestyle="--", linewidth=0.5, alpha=0.35)
+        ax_surv.spines["top"].set_visible(False)
 
         lines_surv, labels_surv = ax_surv.get_legend_handles_labels()
         lines_energy, labels_energy = ax_energy.get_legend_handles_labels()
@@ -342,12 +327,14 @@ def plot_sensitivity_map(all_results, baseline, out_dir, hide_keys=None):
         ax_surv.legend(
             lines_surv + lines_energy,
             labels_surv + labels_energy,
-            loc="lower left",
-            fontsize=7,
-            framealpha=0.88,
+            loc="upper left",
+            fontsize=8,
+            framealpha=0.92,
+            edgecolor="#cccccc",
+            fancybox=False,
         )
 
-    # Hide any unused slots (e.g. odd number of sets)
+    # No unused slots (n_sets == n_cols)
     for i in range(n_sets, n_rows * n_cols):
         axes_flat[i].set_visible(False)
 
@@ -503,79 +490,6 @@ def main():
     # ecologies must be selected from the multi-parameter validation grid in run.py.
 
     print("\nDone.")
-
-
-def _auto_update_sweep_grid(set_d_results, summary_path):
-    """
-    Detect HARSH / BALANCED / EASY zones from Set D and patch the
-    init_food sweep grid in config.py automatically.
-
-    Zone definitions (survival rate):
-      HARSH    : 0.10 - 0.33
-      BALANCED : 0.55 - 0.80
-      EASY     : peak survival (>= 0.75, highest food values)
-
-    Selects up to 4 representative init_food values per zone, deduplicates,
-    sorts, and writes them back into the "sweep" grid in config.py.
-    """
-    import re
-
-    harsh, balanced, easy = [], [], []
-
-    for d in set_d_results:
-        surv = d["survival_rate_mean"]
-        food = int(round(d["param_value"]))
-        if 0.10 <= surv <= 0.33:
-            harsh.append(food)
-        elif 0.55 <= surv <= 0.80:
-            balanced.append(food)
-        elif surv > 0.75:
-            easy.append(food)
-
-    def pick(lst, n=3):
-        if not lst:
-            return []
-        lst = sorted(set(lst))
-        if len(lst) <= n:
-            return lst
-        indices = [int(round(i)) for i in np.linspace(0, len(lst) - 1, n)]
-        return [lst[i] for i in indices]
-
-    grid = sorted(set(pick(harsh, 3) + pick(balanced, 4) + pick(easy, 3)))
-
-    if not grid:
-        print("\n[auto-update] WARNING: No init_food candidates detected -- config.py not updated.")
-        return
-
-    grid_str = "[" + ", ".join(str(v) for v in grid) + "]"
-
-    config_path = os.path.join(PROJECT_ROOT, "experiments", "phase2_survival_minimal", "config.py")
-    with open(config_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    new_content = re.sub(
-        r'("init_food"\s*:\s*)\[[\d,\s]+\]',
-        r'\g<1>' + grid_str,
-        content,
-    )
-
-    if new_content == content:
-        print("\n[auto-update] WARNING: Could not find init_food line in config.py -- not updated.")
-        return
-
-    with open(config_path, "w", encoding="utf-8") as f:
-        f.write(new_content)
-
-    harsh_str   = str(pick(harsh, 3))  if harsh   else "[]"
-    bal_str     = str(pick(balanced, 4)) if balanced else "[]"
-    easy_str    = str(pick(easy, 3))  if easy    else "[]"
-
-    print(f"\n[auto-update] config.py sweep grid updated:")
-    print(f"  HARSH    candidates : {harsh_str}")
-    print(f"  BALANCED candidates : {bal_str}")
-    print(f"  EASY     candidates : {easy_str}")
-    print(f"  Final grid          : {grid_str}")
-    print(f"  Source              : {summary_path}")
 
 
 if __name__ == "__main__":

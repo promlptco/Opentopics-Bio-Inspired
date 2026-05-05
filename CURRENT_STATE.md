@@ -1,6 +1,6 @@
 # Phase 2 Current State
 
-Last updated: 2026-05-05
+Last updated: 2026-05-05 (V3 branch)
 
 ---
 
@@ -15,142 +15,142 @@ Actions active: MOVE, PICK, EAT, REST
 
 ---
 
-## Mechanics Fixes Applied (this session)
-
-| Issue | Fix |
-|-------|-----|
-| Batch food replenishment caused tragedy-of-commons — all conditions converged to same energy | Replaced with **1:1 food replacement**: every PICK spawns one new food at a random position. `init_food` is now the permanent food density on the map. |
-| Survivor bias in energy metric — HARSH survivors (elite) appeared healthier than EASY agents | Changed denominator from `len(alive_now)` to `init_mothers` (12). Energy is now **population-weighted**: dead agents count as 0. |
-| `max_abs_pop_slope=0.005` constraint excluded all food values except food=100 | Removed slope constraints from BALANCED selection. With 1:1 replacement, slow population decline (slope -0.005 to -0.015) is inherent — not a failure mode. |
-
----
-
-## Food Ecology — 1:1 Replacement
-
-With 1:1 replacement, the survival curve is **humped** (not monotonic):
-
-| init_food | Survival (sweep seeds) | Pop-weighted tail energy | Zone |
-|-----------|----------------------|--------------------------|------|
-| 50 | 25% (3.0/12) | 0.110 | HARSH |
-| 60 | 44% (5.3/12) | 0.212 | transition |
-| 78 | 58% (7.0/12) | 0.279 | BALANCED |
-| 100 | **81% (9.67/12)** | **0.331** | **EASY (peak)** |
-| 134 | 64% (7.67/12) | 0.262 | declining |
-| 182 | 67% (8.0/12) | 0.263 | declining |
-
-Above food=100, survival **drops** because FORAGE motivation dominates with high food density — agents constantly pick food but rarely switch to SELF to eat, so they slowly starve while holding food.
-
-**Canonical baselines:**
-- HARSH = food=50 (25% survival)
-- BALANCED = food=78 (58% survival)
-- EASY = food=100 (81% survival, ecological peak)
-
----
-
-## Fixed Parameters
-
-| Parameter | Value | Reason |
-|-----------|-------|--------|
-| `hunger_rate` | 1/35 = 0.0286 | Locked: adult starves in 35 ticks = 7 days |
-| `perception_radius` | 15.0 | 30% of 50x50 map |
-| `move_cost` | 0.001 | OVAT Set B: flat lever |
-| `rest_recovery` | 0.005 | OVAT Set E: flat lever |
-| `eat_gain` | 0.25 | Swept default; 1 food = 8.7 ticks of energy |
-| `fatigue_rate` | 0.01 | Root Config default |
-| `init_mothers` | 12 | Matches all phases |
-| `initial_energy` | 1.0 | Full energy at birth |
-| Grid | 50x50 | Standard Phase 2+ |
-
-**Energy equilibrium note:** Agents' per-survivor energy equilibrates at ~0.35-0.45 regardless of condition — determined by eat_gain=0.25 and hunger_rate=1/35. The **ecological gradient shows primarily in survival rate, not per-survivor energy**. This is ecologically realistic: stress manifests as mortality, not as lower metabolic state of survivors. Population-weighted energy (divides by 12) does show a clear gradient: HARSH=0.11, BALANCED=0.24, EASY=0.30.
-
----
-
-## Energy Metric
-
-```python
-# run.py line 354 — population-weighted energy
-avg_energy = sum(m.energy for m in alive_now) / self.config.init_mothers
-```
-
-Dead agents contribute 0. This avoids survivor bias (where HARSH survivors appeared healthier than EASY agents because the weakest had already died). The metric represents "expected energy of a randomly chosen starting agent."
-
----
-
-## Selection Targets (current)
-
-| Condition | Survival hard bounds | Energy hard bounds | Sort preference |
-|-----------|---------------------|--------------------|-----------------|
-| HARSH | 1.2 <= pop <= 4.0 | [0.02, 0.20] | closest to target_pop=3.0 |
-| BALANCED | pop >= 5.5 | [0.18, 0.38] | **lowest init_food** (food=78 over food=100) |
-| EASY | pop >= 7.5 | >= 0.22 | highest tail_energy (food=100 over food=78) |
-
-Slope constraints removed from BALANCED. Energy bounds overlap by design — survival rate is the primary separator; energy is a secondary sanity check.
-
----
-
-## Step 1 — OVAT Sweep
-
-Run previously with batch replenishment. Results are now superseded by the 1:1 replacement ecology. The sweep grid in `candidate_configs("sweep")` has been manually calibrated based on the measured humped curve:
-
-```python
-"init_food": [50, 60, 78, 100, 134, 182]
-```
-
-Do NOT re-run `sensitivity_sweep.py` before completing Step 2 — it would auto-overwrite this calibrated grid.
-
----
-
-## Step 2 — Validate and Select Canonical Baselines (PENDING — running now)
-
-**Command:**
-```
-python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --workers 4
-```
-
-**Expected selection:**
-- HARSH: food=50 (strict pass predicted)
-- BALANCED: food=78 (first in pool by init_food; strict pass predicted)
-- EASY: food=100 (first in pool by highest energy; strict pass predicted)
-
-**Expected gradient:**
-| Condition | Survival | Pop-weighted tail energy |
-|-----------|----------|--------------------------|
-| HARSH | ~25% | ~0.11 |
-| BALANCED | ~55-65% | ~0.22-0.28 |
-| EASY | ~70-80% | ~0.28-0.33 |
-
-**Risk:** If food=78 validation (15 seeds) gives pop < 5.5/12, BALANCED falls back to food=100 and both BALANCED and EASY would be the same config. Check `selection_status` in `auto_baseline_summary.json` — should be `validated_pass` for all three.
-
----
-
-## Step 3 — Diagnostic Plots (auto-generated inside Step 2)
-
-12 plots per condition saved alongside the JSON:
-- `validation_<name>.png` — population-weighted energy + population trajectories
-- `action_selection_<name>.png` — MOVE/PICK/EAT/REST rates over time
-- `motivation_selection_<name>.png` — FORAGE/SELF rates over time
-- `failed_selection_<name>.png` — failed action rates
-- `stacked_action_failed_<name>.png` — stacked area chart
-- `rate_sum_check_<name>.png` — rate normalization check
-- `correlation_failed_forage_energy_<name>.png`
-- `state_space_energy_action_<name>.png`
-- `food_consumption_rate_<name>.png`
-- `spatial_heatmap_population_<name>.png`
-- `energy_expenditure_breakdown_<name>.png`
-- `homeostatic_balance_<name>.png`
-
----
-
-## Key Files
+## Key Files (V3)
 
 | File | Role |
 |------|------|
 | `experiments/phase2_survival_minimal/new_run.py` | Main entry point; 8-step pipeline, sweep, and single modes |
 | `experiments/phase2_survival_minimal/new_config.py` | Sweep grid, selection targets, BALANCED_BASELINE, SENSITIVITY_SWEEPS |
-| `experiments/phase2_survival_minimal/new_plot.py` | All plot functions |
-| `experiments/phase2_survival_minimal/new_sensitivity.py` | OVAT standalone runner + find_food_anchor |
+| `experiments/phase2_survival_minimal/new_plot.py` | All plot functions — academic style, distinct colour palette |
+| `experiments/phase2_survival_minimal/new_sensitivity.py` | OVAT standalone runner + find_food_anchor (user-owned) |
 | `agents/mother.py` | MotherAgent with `choose_motivation()` |
 | `config.py` (root) | Global defaults |
+
+---
+
+## Fixed Parameters (new_config.py — BALANCED_BASELINE)
+
+| Parameter | Value | Reason |
+|-----------|-------|--------|
+| `hunger_rate` | 1/35 ≈ 0.0286 | Adult starves in 35 ticks = 7 days |
+| `perception_radius` | 15.0 | 30% of 50×50 map |
+| `move_cost` | 0.005 | OVAT Set C lever (0.01 produced poor BALANCED/EASY separation) |
+| `eat_gain` | 0.20 | OVAT Set B lever |
+| `rest_recovery` | 0.005 | OVAT Set E lever |
+| `fatigue_rate` | 0.01 | Root config default |
+| `init_food` | 80 | OVAT Set A anchor |
+| `init_mothers` | 15 | Matches all phases |
+| `initial_energy` | 1.0 | Full energy at birth |
+| Grid | 50×50 | Standard Phase 2+ |
+
+---
+
+## BALANCED_BASELINE ecology
+
+With `move_cost=0.005, eat_gain=0.20`. Baseline `move_cost` was lowered from 0.01 after empirical tests showed 0.01 produced poor BALANCED/EASY ecological separation in survival curves.
+
+---
+
+## SENSITIVITY_SWEEPS (new_config.py)
+
+| Set | Key | Values |
+|-----|-----|--------|
+| A | `init_food` | 10, 20, 40, 80, 150 |
+| B | `eat_gain` | 0.05, 0.10, 0.20, 0.50, 0.80 |
+| C | `move_cost` | 0.005, 0.01, 0.02, 0.05, 0.10 |
+
+---
+
+## SELECTION_TARGETS (new_config.py)
+
+| Condition | Survival range |
+|-----------|---------------|
+| HARSH | 10% – 45% |
+| BALANCED | 50% – 75% |
+| EASY | > 80% |
+
+---
+
+## 8-Step Pipeline (ROADMAPS.md)
+
+```
+python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --workers 4
+```
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Mechanics lock (1:1 food replacement, pop-weighted energy) | Done |
+| 2 | Provisional baseline (BALANCED_BASELINE synthetic config) | Done |
+| 3 | Food anchor scan (find_food_anchor) | User-owned fix in progress |
+| 4 | OVAT sweep (Sets A / B / C, 5 values each) | Done |
+| 5 | Zone classification (DEAD / HARSH / BALANCED / EASY per param) | Fixed (Bug 2) |
+| 6 | Full init_food × eat_gain × move_cost grid (5×5×5 = 125 configs) | Fixed (Bug 3) |
+| 7 | Regime selection (HARSH / BALANCED / EASY candidate pick) | Pending Step 3 fix |
+| 8 | Final diagnostic plots | Ready (see Plot Refinements below) |
+
+---
+
+## Bugs Fixed This Session (V3)
+
+### Bug 2 — `_detect_cliff_edge_from_ovat` dead threshold logic
+- **Was**: `surv_lo=0.80, surv_hi=0.95` — unreachable given max survival ≈ 31%; logic always fell back to max-gradient
+- **Fix**: Replaced with ROADMAPS.md zone classification (DEAD / HARSH / BALANCED / EASY); picks value closest to BALANCED target
+
+### Bug 3 — `_pipeline_multidim_configs` not building 3-parameter grid
+- **Was**: Only varied `init_food`; all CLEAR params → single-axis sweep
+- **Fix**: Replaced with full Cartesian product of SENSITIVITY_SWEEPS A × B × C = 5×5×5 = 125 configs per ROADMAPS.md Step 6
+
+### Bug 1 — `find_food_anchor` wrong fallback (user-owned)
+- **Was**: Returns `food_max` (595) on fallback; should return `argmax` (~food=190)
+- **Status**: User is fixing this independently; do not touch `new_sensitivity.py`
+
+---
+
+## Plot Refinements (new_plot.py) — Completed 2026-05-05
+
+### Mandatory Fix
+- `config_title()`: `hunger_rate` now formatted as `:.4f` → displays `0.0286` in all validation plot subtitles
+
+### Global Academic Style
+- `matplotlib.rcParams` block applied at import time: sans-serif font, tick direction `"in"`, consistent size hierarchy (title 12 pt, axis label 11 pt, tick 9 pt), white figure background
+- `style_axes()`: white axes face, inward ticks, font sizes 11/12
+
+### Distinct Colour Palette
+
+| Element | Colour | Hex |
+|---------|--------|-----|
+| MOVE | Steel blue | `#1f77b4` |
+| PICK | Golden orange | `#e6902a` |
+| EAT | Forest green | `#2a9a3c` |
+| REST | Brick red | `#c7443a` |
+| FORAGE | Burnt orange | `#d45b13` |
+| SELF | Purple | `#7b4ea0` |
+| FAILED_FORAGE | Mid grey | `#888888` |
+| FAILED_SELF | Dark grey | `#333333` |
+| Energy (validation) | Steel blue | `#1f77b4` |
+| Population (validation) | Muted blue | `#1f77b4` |
+| Energy trajectory | Forest green | `#2ca02c` |
+
+### Label Improvements
+- All suptitles use `|` separator on a single line; `"n = X runs"` notation
+- All axis labels include context or units (`"Simulation tick"`, `"Population-weighted mean energy"`, etc.)
+- Subplot titles describe shading meaning (e.g., `"green = group mean ± 1 SD"`)
+- Validation plot: long config_title rendered as monospace subtitle via `fig.text()` separate from main suptitle
+
+---
+
+## Commands
+
+```bash
+# Full 8-step pipeline
+python -m experiments.phase2_survival_minimal.new_run --mode pipeline --duration 1000 --workers 4
+
+# OVAT sweep only (Steps 1-2, 6-8)
+python -m experiments.phase2_survival_minimal.new_run --mode sweep --duration 1000 --workers 4
+
+# Single config validation (Steps 1-2, 8)
+python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1000
+```
 
 ---
 

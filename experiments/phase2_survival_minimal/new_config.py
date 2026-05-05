@@ -83,11 +83,11 @@ BALANCED_BASELINE = {
 
     # Locked by LOGIC.md: hunger_rate is a biological starvation constraint,
     # not a free Phase 2 tuning parameter.
-    "hunger_rate": 1 / 35,
+    "hunger_rate": 1.0 / 35.0,
 
     # Provisional values. They make the first scan interpretable, but they
     # are not treated as final calibrated values.
-    "move_cost": 0.01,
+    "move_cost": 0.005, 
     "eat_gain": 0.20,
     "init_food": 80,
 
@@ -194,7 +194,7 @@ SELECTION_TARGETS = {
 # Coarse roadmap grid. This is the default validation grid:
 #     init_food × eat_gain × move_cost
 SWEEP_GRID = {
-    "hunger_rate": [1 / 35],
+    "hunger_rate": [1.0 / 35.0],
     "init_food": [10, 20, 40, 80, 150],
     "eat_gain": [0.05, 0.10, 0.20, 0.50, 0.80],
     "move_cost": [0.005, 0.01, 0.02, 0.05, 0.10],
@@ -204,17 +204,17 @@ SWEEP_GRID = {
 # Denser exploratory grid. Use this only when the coarse grid does not
 # provide enough resolution near the HARSH/BALANCED/EASY boundaries.
 PIPELINE_GRID = {
-    "hunger_rate": [1 / 35],
+    "hunger_rate": [1.0 / 35.0],
     "init_food": [10, 20, 40, 60, 80, 100, 150, 200],
-    "eat_gain": [0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 0.80],
-    "move_cost": [0.0025, 0.005, 0.01, 0.02, 0.05, 0.10],
+    "eat_gain": [0.05, 0.075, 0.10, 0.15, 0.20, 0.30, 0.50, 0.80],
+    "move_cost": [0.001, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.08, 0.10],
     "rest_recovery": [0.005],
 }
 
 SINGLE_CONFIG = {
     "perception_radius": DEFAULT_PERCEPTION_RADIUS,
-    "hunger_rate": 1 / 35,
-    "move_cost": 0.01,
+    "hunger_rate": 1.0 / 35.0,
+    "move_cost": 0.005,
     "eat_gain": 0.20,
     "init_food": 80,
     "rest_recovery": 0.005,

@@ -923,79 +923,62 @@ def generate_diagnostic_plots(name, results, params, labels, args, out_dir):
 # Pipeline helpers
 # ============================================================
 
-def _detect_cliff_edge_from_ovat(ovat_all, synthetic_baseline,
-                                  surv_lo=0.80, surv_hi=0.95,
-                                  energy_lo=0.65, energy_hi=0.75,
-                                  min_surv_range=0.20):
+def _detect_cliff_edge_from_ovat(ovat_all, synthetic_baseline, min_surv_range=0.20):
     """
-    Detect the cliff-edge balanced operating point from OVAT sweeps (N=50).
+    Classify OVAT sweep results into ecological zones (HARSH / BALANCED / EASY).
+
+    ROADMAPS.md Step 5: from OVAT, identify which parameter values fall in each
+    ecological zone. Output is informational — the Step 6 grid is built from the
+    full SENSITIVITY_SWEEPS values regardless of zone classification.
 
     For each parameter:
-      CLEAR (surv range >= min_surv_range):
-        Scan for the last stable point satisfying BOTH dual-metric conditions:
-          - survival in [surv_lo, surv_hi]
-          - tail energy in [energy_lo, energy_hi]
-        Among those, pick the one where the NEXT adjacent x-step shows the
-        steepest drop in survival (i.e., the point right at the cliff edge).
-        Falls back to max-gradient boundary crossing if no dual-metric point exists.
-
-      UNCLEAR (flat curve — surv range < min_surv_range):
-        Retain the synthetic center value. Parameter becomes a secondary axis
-        in the Step 4 multi-dimensional grid to expose hidden tipping points.
+      CLEAR (survival range >= min_surv_range):
+        Parameter shows meaningful ecological sensitivity.
+        Reports the value closest to the BALANCED target (62.5% survival).
+      UNCLEAR (flat curve):
+        Parameter has little effect in isolation; synthetic value retained.
 
     Returns (detected_params dict, clarity dict keyed by set_id).
     """
     detected = dict(synthetic_baseline)
     clarity  = {}
 
+    balanced_target = SELECTION_TARGETS["balanced"]["target_survival_rate"]
+
     for set_id, data in ovat_all.items():
-        key    = SENSITIVITY_SWEEPS[set_id]["key"]
-        xs     = np.array([d["param_value"]        for d in data], dtype=float)
-        surv   = np.array([d["survival_rate_mean"] for d in data], dtype=float)
-        energy = np.array([d["tail_energy_mean"]   for d in data], dtype=float)
+        key  = SENSITIVITY_SWEEPS[set_id]["key"]
+        xs   = np.array([d["param_value"]        for d in data], dtype=float)
+        surv = np.array([d["survival_rate_mean"] for d in data], dtype=float)
 
         surv_range = float(np.nanmax(surv) - np.nanmin(surv))
         is_clear   = surv_range >= min_surv_range
 
-        if not is_clear:
-            justification = f"Flat curve — Δsurvival={surv_range:.3f} < {min_surv_range}"
-            # detected[key] already == synthetic_baseline[key] from dict(synthetic_baseline)
-        else:
-            gradients = np.diff(surv)  # length n-1
-
-            # Find all candidate points satisfying dual-metric boundary conditions
-            candidates = []
-            for i in range(len(xs)):
-                if (surv_lo <= surv[i] <= surv_hi) and (energy_lo <= energy[i] <= energy_hi):
-                    drop_next = abs(gradients[i])     if i < len(gradients) else 0.0
-                    drop_prev = abs(gradients[i - 1]) if i > 0              else 0.0
-                    candidates.append((i, drop_next, drop_prev))
-
-            if candidates:
-                # Select candidate with steepest drop at the *next* adjacent step
-                best     = max(candidates, key=lambda c: c[1])
-                best_i   = best[0]
-                edge_val = float(xs[best_i])
-                justification = (
-                    f"Sharp drop at next step — "
-                    f"Δsurv_next={best[1]:.3f} | "
-                    f"surv@edge={surv[best_i]:.2f}, energy@edge={energy[best_i]:.2f}"
-                )
+        zone_map = {}
+        for x, s in zip(xs, surv):
+            if s < 0.10:
+                zone = "DEAD"
+            elif s <= 0.45:
+                zone = "HARSH"
+            elif s <= 0.75:
+                zone = "BALANCED"
             else:
-                # Fallback: largest absolute gradient — use stable side
-                max_grad_i = int(np.argmax(np.abs(gradients)))
-                if gradients[max_grad_i] < 0:
-                    best_i = max_grad_i               # last stable before drop
-                else:
-                    best_i = min(max_grad_i + 1, len(xs) - 1)  # first stable after rise
-                edge_val = float(xs[best_i])
-                justification = (
-                    f"Dual-metric band not met; max-gradient fallback — "
-                    f"surv={surv[best_i]:.2f}, energy={energy[best_i]:.2f}"
-                )
+                zone = "EASY"
+            zone_map[f"{x:g}"] = zone
 
+        if not is_clear:
+            justification = (
+                f"Flat — Δsurvival={surv_range:.3f} < {min_surv_range}; "
+                f"zones: {zone_map}"
+            )
+        else:
+            best_i   = int(np.argmin(np.abs(surv - balanced_target)))
+            edge_val = float(xs[best_i])
             detected[key] = (
                 int(round(edge_val)) if key == "init_food" else round(edge_val, 6)
+            )
+            justification = (
+                f"BALANCED-closest={edge_val:g} (surv={surv[best_i]:.2f}); "
+                f"zones: {zone_map}"
             )
 
         clarity[set_id] = {
@@ -1012,67 +995,39 @@ def _detect_cliff_edge_from_ovat(ovat_all, synthetic_baseline,
 
 def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
     """
-    Build the multi-dimensional Step 4 validation grid.
+    Build the multi-dimensional Step 6 validation grid.
 
-    Primary axis  : init_food ±4 steps around the detected cliff-edge center.
-    Secondary axes: one axis per UNCLEAR parameter (5 evenly-spaced values from
-                    SENSITIVITY_SWEEPS range) to expose hidden tipping points.
-    CLEAR params  : locked to their detected cliff-edge values throughout.
+    ROADMAPS.md Step 6: init_food × eat_gain × move_cost
+    Uses all values from SENSITIVITY_SWEEPS sets A/B/C directly.
+    Non-swept parameters (hunger_rate, rest_recovery, etc.) are held at
+    synthetic_baseline values.
+
+    detected_params and clarity are accepted for signature compatibility
+    but the grid is always the full SENSITIVITY_SWEEPS product.
 
     Returns (configs list, description string).
     """
     from itertools import product as iproduct
 
-    unclear_keys = {c["key"] for c in clarity.values() if not c["is_clear"]}
-    key_to_setid = {v["key"]: k for k, v in SENSITIVITY_SWEEPS.items()}
+    food_values = SENSITIVITY_SWEEPS["A"]["values"]
+    eat_values  = SENSITIVITY_SWEEPS["B"]["values"]
+    cost_values = SENSITIVITY_SWEEPS["C"]["values"]
 
-    # Base params: synthetic baseline.
-    # Combining all CLEAR cliff-edge values simultaneously creates a super-harsh
-    # operating point (e.g. high hunger + high move_cost + low eat_gain) that drives
-    # total extinction across the whole food axis.  Individual cliff-edge values
-    # are reported in Step 3 for reference but should not all be locked at once.
     base_params = dict(synthetic_baseline)
-
-    # Primary axis: init_food — span from harsh to easy zone.
-    # Anchor between min(detected, synthetic) and max(detected, synthetic) + buffer
-    # so the grid covers all three operating zones.
-    center     = int(detected_params.get("init_food", synthetic_baseline["init_food"]))
-    synth_food = int(synthetic_baseline["init_food"])
-    step       = max(3, max(center, synth_food) // 8)
-    food_lo    = max(10, min(center, synth_food) - 4 * step)
-    food_hi    = max(center, synth_food) + 4 * step
-    food_raw   = np.linspace(food_lo, food_hi, 9)
-    food_values = sorted({int(round(v)) for v in food_raw} | {center, synth_food})
-
-    # Secondary axes for UNCLEAR params (excluding init_food — already on primary axis)
-    extra_keys   = []
-    extra_values = []
-    for key in sorted(unclear_keys):
-        if key == "init_food":
-            continue
-        set_id = key_to_setid.get(key)
-        if set_id:
-            vals    = SENSITIVITY_SWEEPS[set_id]["values"]
-            indices = np.linspace(0, len(vals) - 1, min(5, len(vals)), dtype=int)
-            extra_keys.append(key)
-            extra_values.append([vals[i] for i in indices])
-
-    all_keys   = ["init_food"] + extra_keys
-    all_axes   = [food_values] + extra_values
-
     configs = []
-    for combo in iproduct(*all_axes):
+
+    for food, eat, cost in iproduct(food_values, eat_values, cost_values):
         params = dict(base_params)
-        for k, v in zip(all_keys, combo):
-            params[k] = int(v) if k == "init_food" else float(v)
-        params["name"] = "candidate"
+        params["init_food"] = int(food)
+        params["eat_gain"]  = float(eat)
+        params["move_cost"] = float(cost)
+        params["name"]      = "candidate"
         configs.append(params)
 
-    extra_desc = (
-        " × ".join(f"{len(v)} {k}" for k, v in zip(extra_keys, extra_values))
-        if extra_keys else "no UNCLEAR secondary axes"
+    desc = (
+        f"{len(food_values)} init_food × {len(eat_values)} eat_gain × "
+        f"{len(cost_values)} move_cost = {len(configs)} configs"
     )
-    desc = f"{len(food_values)} food × ({extra_desc}) = {len(configs)} configs"
     return configs, desc
 
 
@@ -1248,28 +1203,27 @@ def _run_pipeline(args, out_dir, n_workers):
     plot_sensitivity_map(ovat_all, anchored_baseline, ovat_dir, hide_keys=set())
     print(f"\n  OVAT plots saved -> {ovat_dir}")
 
-    # ── Step 5: Dual-metric cliff-edge detection ──────────────────────────────
+    # ── Step 5: OVAT zone classification ─────────────────────────────────────
     print("\n" + "=" * 70)
-    print("PIPELINE Step 5 — Dual-Metric Cliff-Edge Detection")
+    print("PIPELINE Step 5 — OVAT Zone Classification (HARSH / BALANCED / EASY)")
     print("=" * 70)
     detected, clarity = _detect_cliff_edge_from_ovat(ovat_all, anchored_baseline)
 
-    hdr = f"  {'Parameter':<18}  {'Anchored':>10}  {'Detected':>10}  {'Status':<8}  Justification"
+    hdr = f"  {'Parameter':<18}  {'Anchored':>10}  {'Balanced@':>10}  {'Sensitivity':<10}  Zones"
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
     for set_id in SENSITIVITY_SWEEPS:
         c      = clarity[set_id]
-        status = "CLEAR" if c["is_clear"] else "UNCLEAR"
+        status = "CLEAR" if c["is_clear"] else "FLAT"
         print(
             f"  {c['key']:<18}  {c['synthetic_val']:>10g}  "
-            f"{c['detected_val']:>10g}  {status:<8}  {c['justification']}"
+            f"{c['detected_val']:>10g}  {status:<10}  {c['justification']}"
         )
 
-    unclear_keys_list = [c["key"] for c in clarity.values() if not c["is_clear"]]
-    if unclear_keys_list:
-        print(f"\n  NOTE: {unclear_keys_list} are UNCLEAR (flat curves).")
-        print( "  Anchored values retained for CLEAR locking.")
-        print( "  These become secondary axes in Step 6 to expose hidden tipping points.")
+    flat_keys = [c["key"] for c in clarity.values() if not c["is_clear"]]
+    if flat_keys:
+        print(f"\n  NOTE: {flat_keys} show flat survival curves — little sensitivity in isolation.")
+    print("\n  Step 6 grid uses all SENSITIVITY_SWEEPS values (independent of zone results).")
 
     # ── Step 6: Multi-parameter validation grid (N=50 per config) ────────────
     print("\n" + "=" * 70)
@@ -1280,8 +1234,8 @@ def _run_pipeline(args, out_dir, n_workers):
     total_runs = len(sweep_configs) * N_SEEDS
     print(f"  Grid    : {grid_desc}")
     print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds)")
-    print(f"  CLEAR params locked to cliff-edge values; UNCLEAR varied across plausible range")
-    print(f"  Anchored baseline: init_food={anchor_food}")
+    print(f"  Full ROADMAPS.md grid: init_food × eat_gain × move_cost")
+    print(f"  Non-swept params (hunger_rate, rest_recovery) held at anchored baseline")
 
     sweep_tasks = [
         (dict(p), seed, args.duration, args.tau, args.perceptual_noise)
@@ -1296,13 +1250,15 @@ def _run_pipeline(args, out_dir, n_workers):
             flat_results = list(pool.map(_run_task, sweep_tasks))
 
     step4_records = []
-    print(f"\n  {'#':>4}  {'food':>5}  {'surv':>6}  {'tailE':>7}  {'E+/-':>6}  {'slope':>9}")
+    print(f"\n  {'#':>4}  {'food':>5}  {'eat':>6}  {'cost':>7}  {'surv':>6}  {'tailE':>7}  {'E+/-':>6}  {'slope':>9}")
     for idx, params in enumerate(sweep_configs):
         reps = flat_results[idx * N_SEEDS : (idx + 1) * N_SEEDS]
         sr   = summarize_repeats(reps, args.duration)
         step4_records.append({"params": dict(params), "result": sr})
         print(
             f"  {idx + 1:>4}  {params['init_food']:>5}  "
+            f"{params['eat_gain']:>6.3f}  "
+            f"{params['move_cost']:>7.4f}  "
             f"{sr['final_pop'] / INIT_MOTHERS:>6.2f}  "
             f"{sr['tail_mean_energy']:>7.3f}  "
             f"{sr['tail_energy_sd']:>6.3f}  "
