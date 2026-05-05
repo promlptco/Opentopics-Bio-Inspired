@@ -98,7 +98,6 @@ from experiments.phase2_survival_minimal.new_plot import (
     print_validation_runs,
     save_summary_json,
     save_validation_csv,
-    plot_3d_survival_surface,
 )
 
 
@@ -1356,7 +1355,6 @@ def _run_pipeline(args, out_dir, n_workers):
 
     save_summary_json(summary, out_dir)
     save_selected_ecologies_json(summary, out_dir)
-    plot_3d_survival_surface(step4_records, selected, out_dir)
     print(f"\nDone. All outputs saved to: {out_dir}")
 
 
