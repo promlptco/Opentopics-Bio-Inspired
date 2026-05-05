@@ -154,6 +154,55 @@ python -m experiments.phase2_survival_minimal.new_run --mode single --duration 1
 
 ---
 
+## Phase 3 Ecological Baselines (LOCKED)
+
+Source: `outputs/phase2_survival_minimal/pin_auto_400_percept15_repeat3_validation_selected_baselines/selected_ecologies.json`  
+Validation seeds: 42–51 (N=10), duration=1000 ticks, perception_radius=15, tau=0.1
+
+### Shared fixed parameters (all three conditions)
+
+| Parameter | Value |
+|-----------|-------|
+| `perception_radius` | 15.0 |
+| `hunger_rate` | 1/35 ≈ 0.02857 |
+| `rest_recovery` | 0.005 |
+| `care_weight` | 0.0 |
+| `forage_weight` | 1.0 |
+| `self_weight` | 1.0 |
+
+### Selected ecological regimes
+
+| Condition | `move_cost` | `eat_gain` | `init_food` | Survival rate | Final pop (mean) | Tail energy (mean) |
+|-----------|-------------|------------|-------------|---------------|------------------|--------------------|
+| **HARSH** | 0.05 | 0.8 | 80 | **24.7%** (3.7 / 15) | 3.7 ± 1.84 | 0.215 ± 0.076 |
+| **BALANCED** | 0.01 | 0.5 | 40 | **62.4%** (9.36 / 15) | 9.36 ± 1.83 | 0.379 ± 0.070 |
+| **EASY** | 0.005 | 0.5 | 80 | **91.6%** (13.74 / 15) | 13.74 ± 1.31 | 0.507 ± 0.039 |
+
+### Ecological gradient validation
+
+- Monotonic survival: HARSH < BALANCED < EASY ✓
+- Monotonic tail energy: HARSH < BALANCED < EASY ✓
+- All within SELECTION_TARGETS bounds ✓
+- Population SD decreases from HARSH → EASY (EASY is most stable) ✓
+
+### HARSH regime notes
+
+`move_cost=0.05` is the primary driver (movement is expensive enough to trigger fatigue cascade).  
+`eat_gain=0.8` is high, so surviving agents eat well — death comes from movement exhaustion, not starvation.  
+REST rate is lowest of all three (2.3%) confirming the fatigue cascade mechanism.
+
+### BALANCED regime notes
+
+`init_food=40` (food-scarce) forces FAILED_FORAGE events, driving occasional SELF switching.  
+REST rate is highest (7.1%) — agents manage fatigue more actively in this regime.
+
+### EASY regime notes
+
+`move_cost=0.005` (cheap movement) and `init_food=80` allow near-full population survival.  
+Near-zero tail energy slope (−0.00012) confirms stable steady state.
+
+---
+
 ## Branch / Git
 
 Branch: `V3`
