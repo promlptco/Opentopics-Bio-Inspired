@@ -203,11 +203,19 @@ class Simulation:
                     if nearest_food is not None
                     else None
                 )
-                care_child = (
-                    mother.choose_child(visible_children)
-                    if (self.config.care_enabled and visible_children)
-                    else None
-                )
+                if self.config.care_enabled:
+                    if visible_children:
+                        care_child = mother.choose_child(visible_children)
+                    elif mother.own_child_id is not None:
+                        # Own child outside perception radius — mother still senses
+                        # distress signal (infant call analog). Gives non-zero CARE
+                        # score so she can be motivated to return.
+                        _own = self._get_child_by_id(mother.own_child_id)
+                        care_child = _own if (_own and _own.alive) else None
+                    else:
+                        care_child = None
+                else:
+                    care_child = None
                 chosen, _, _ = mother.choose_motivation(
                     perception_radius=self.config.perception_radius,
                     tau=self.config.softmax_tau,  # Change G: tau from Config
@@ -304,6 +312,11 @@ class Simulation:
                 target = self._get_child_by_id(mother.target_child_id)
             if target is None or not target.alive:
                 target = mother.choose_child(visible_children)
+                if target is None and mother.own_child_id is not None:
+                    # Fix B: own child outside perception radius — commit to navigate back.
+                    _own = self._get_child_by_id(mother.own_child_id)
+                    if _own and _own.alive:
+                        target = _own
                 if target:
                     mother.set_target(target.id, duration=20)  # Change D: 20-tick max commitment
             
@@ -313,7 +326,7 @@ class Simulation:
                     # Change C: same-cell feed. Children are non-blocking so the mother
                     # can occupy their cell. feed_child() guards dist > 1.
                     total_cost = mother.get_total_cost(self.config.feed_cost)
-                    success, benefit = mother.feed_child(target, self.config.feed_cost, self.world)
+                    success, benefit = mother.feed_child(target, self.config.feed_cost, self.world, self.config.eat_gain)
                     r = self.lineage.get_relatedness(mother.id, target.id)
                     self.logger.log_care(CareRecord(
                         tick=self.tick,

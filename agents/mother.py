@@ -266,18 +266,21 @@ class MotherAgent(Agent):
             self.held_food -= 1
             self.energy = min(1.0, self.energy + eat_gain)
 
-    def feed_child(self, child: ChildAgent, feed_cost: float, world: GridWorld) -> tuple[bool, float]:
+    def feed_child(self, child: ChildAgent, feed_cost: float, world: GridWorld, eat_gain: float = 0.25) -> tuple[bool, float]:
         """Feed child at same cell (dist == 0). Change C: same-cell proximity required.
 
         Children are non-blocking (placed with blocking=False in world), so the mother
         can move onto the child's cell. feed_child() guards dist > 1 so that any
         residual dist-1 approach step cannot trigger a premature feed.
+
+        eat_gain must equal Config.eat_gain — one food unit delivers the same energy
+        to a child as it does to an adult. Callers must pass self.config.eat_gain.
         """
         dist = world.get_distance(self.pos, child.pos)
         if dist > 1:
             return False, 0.0
         self.energy -= feed_cost
-        hunger_reduced = child.receive_food(0.2)
+        hunger_reduced = child.receive_food(eat_gain)
         return True, hunger_reduced
 
     def rest(self, rest_recovery: float) -> None:

@@ -75,6 +75,13 @@ from experiments.phase2_survival_minimal.new_config import (
     ENABLE_ENERGY_EXPENDITURE_PLOT,
     ENABLE_HOMEOSTATIC_BALANCE_PLOT,
     candidate_configs,
+    PHASE3_FOOD_SWEEP_VALUES,
+    PHASE3_FOOD_CAL_GENOME,
+    PHASE3_FOOD_CAL_FLAGS,
+    PHASE3_MOTHER_SURVIVAL_MIN,
+    PHASE3_MOTHER_ENERGY_MIN,
+    PHASE3_CHILD_SURVIVAL_MIN,
+    PHASE3_CARE_CHOICE_MIN,
 )
 
 from experiments.phase2_survival_minimal.new_plot import (
@@ -476,6 +483,57 @@ def _run_task(task):
     """Top-level wrapper required for ProcessPoolExecutor pickling."""
     params, seed, duration, tau, noise = task
     return run_one(params, seed, duration, tau, noise)
+
+
+# ============================================================
+# Phase 3 Food Calibration helpers
+# ============================================================
+
+def make_phase3_config(params, duration):
+    """Build a Phase 3a-compatible Config from a params dict."""
+    import dataclasses
+    cfg = make_config(params, duration)
+    for k, v in PHASE3_FOOD_CAL_FLAGS.items():
+        setattr(cfg, k, v)
+    cfg.care_weight   = PHASE3_FOOD_CAL_GENOME["care_w"]
+    cfg.forage_weight = PHASE3_FOOD_CAL_GENOME["forage_w"]
+    cfg.self_weight   = PHASE3_FOOD_CAL_GENOME["self_w"]
+    return cfg
+
+
+def run_one_phase3(params, seed, duration):
+    """Run one Phase 3a sim with given params and seed; return summary dict."""
+    import dataclasses
+    from simulation.simulation import Simulation
+    cfg = make_phase3_config(params, duration)
+    cfg.seed = seed
+    sim = Simulation(cfg)
+    sim.run()
+
+    alive_m  = [m for m in sim.mothers if m.alive]
+    matured  = sum(
+        1 for r in sim.logger.death_records
+        if r.agent_type == "child" and r.cause == "matured"
+    )
+    tc = len(sim.logger.choice_records)
+    cc = sum(1 for r in sim.logger.choice_records if r.winner_domain == "care")
+
+    return {
+        "init_food":            params["init_food"],
+        "seed":                 seed,
+        "mother_survival_rate": round(len(alive_m) / cfg.init_mothers, 4),
+        "child_survival_rate":  round(matured / cfg.init_mothers, 4),
+        "mean_mother_energy":   round(
+            sum(m.energy for m in alive_m) / len(alive_m) if alive_m else 0.0, 4
+        ),
+        "care_choice_rate":     round(cc / tc if tc else 0.0, 4),
+    }
+
+
+def _run_task_phase3(task):
+    """Top-level wrapper for ProcessPoolExecutor pickling (Phase 3 food sweep)."""
+    params, seed, duration = task
+    return run_one_phase3(params, seed, duration)
 
 
 def _n_workers(w: int) -> int:
@@ -1360,17 +1418,202 @@ def _run_pipeline(args, out_dir, n_workers):
 
 
 # ============================================================
+# Phase 3 Food Calibration — pipeline runner
+# ============================================================
+
+def _run_phase3_food(args, out_dir, n_workers):
+    import csv
+    import json
+    import dataclasses
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    seeds    = list(range(42, 42 + args.repeats))
+    duration = args.duration
+
+    # Build task list: one task per (init_food value, seed)
+    base_params = {
+        "perception_radius": DEFAULT_PERCEPTION_RADIUS,
+        "hunger_rate":       1.0 / 35.0,
+        "move_cost":         0.01,    # BALANCED ecology locked value
+        "eat_gain":          0.50,    # BALANCED ecology locked value
+        "rest_recovery":     0.005,
+        "init_food":         None,    # filled per sweep value
+    }
+
+    tasks = []
+    for food_val in PHASE3_FOOD_SWEEP_VALUES:
+        p = dict(base_params)
+        p["init_food"] = food_val
+        for seed in seeds:
+            tasks.append((p, seed, duration))
+
+    print(
+        f"\nPhase 3 Food Calibration Sweep"
+        f"\n  init_food values : {PHASE3_FOOD_SWEEP_VALUES}"
+        f"\n  seeds per value  : {len(seeds)}  (seeds {seeds[0]}–{seeds[-1]})"
+        f"\n  total runs       : {len(tasks)}"
+        f"\n  duration         : {duration} ticks"
+        f"\n  workers          : {n_workers}"
+    )
+
+    if n_workers <= 1:
+        raw = [_run_task_phase3(t) for t in tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            raw = list(pool.map(_run_task_phase3, tasks))
+
+    # Save raw rows
+    raw_path = os.path.join(out_dir, "food_sweep_raw.csv")
+    fieldnames = ["init_food", "seed", "mother_survival_rate", "child_survival_rate",
+                  "mean_mother_energy", "care_choice_rate"]
+    with open(raw_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(raw)
+    print(f"  raw CSV  -> {raw_path}")
+
+    # Aggregate per init_food
+    from collections import defaultdict
+    buckets = defaultdict(list)
+    for row in raw:
+        buckets[row["init_food"]].append(row)
+
+    agg_rows = []
+    print(f"\n  {'init_food':>10}  {'m_surv_mean':>12}  {'m_surv_sd':>10}  "
+          f"{'c_surv_mean':>12}  {'c_surv_sd':>10}  {'care_rate':>10}  pass?")
+    print("  " + "-" * 82)
+
+    recommended = None
+    for food_val in PHASE3_FOOD_SWEEP_VALUES:
+        rows = buckets[food_val]
+        m_surv = [r["mother_survival_rate"] for r in rows]
+        c_surv = [r["child_survival_rate"]  for r in rows]
+        care   = [r["care_choice_rate"]      for r in rows]
+        m_eng  = [r["mean_mother_energy"]    for r in rows]
+
+        m_mean = float(np.mean(m_surv))
+        m_sd   = float(np.std(m_surv))
+        c_mean = float(np.mean(c_surv))
+        c_sd   = float(np.std(c_surv))
+        cr_mean = float(np.mean(care))
+        me_mean = float(np.mean(m_eng))
+
+        passes = (
+            m_mean >= PHASE3_MOTHER_SURVIVAL_MIN
+            and me_mean >= PHASE3_MOTHER_ENERGY_MIN
+            and c_mean  >  PHASE3_CHILD_SURVIVAL_MIN
+            and cr_mean >= PHASE3_CARE_CHOICE_MIN
+        )
+
+        if passes and recommended is None:
+            recommended = food_val
+
+        agg_rows.append({
+            "init_food":            food_val,
+            "mother_survival_mean": round(m_mean, 4),
+            "mother_survival_sd":   round(m_sd, 4),
+            "child_survival_mean":  round(c_mean, 4),
+            "child_survival_sd":    round(c_sd, 4),
+            "care_choice_rate_mean": round(cr_mean, 4),
+            "mean_mother_energy":   round(me_mean, 4),
+            "passes":               passes,
+        })
+
+        print(
+            f"  {food_val:>10}  {m_mean:>12.4f}  {m_sd:>10.4f}  "
+            f"{c_mean:>12.4f}  {c_sd:>10.4f}  {cr_mean:>10.4f}  {'YES' if passes else 'no'}"
+        )
+
+    # Fallback: pick highest mother_survival if none pass all thresholds
+    if recommended is None:
+        best = max(agg_rows, key=lambda r: (r["mother_survival_mean"], r["child_survival_mean"]))
+        recommended = best["init_food"]
+        print(
+            f"\n  WARNING: No init_food passed all thresholds. "
+            f"Fallback selection: init_food={recommended} (highest mother_survival_mean)."
+        )
+    else:
+        print(f"\n  Recommended init_food = {recommended}  (first value passing all thresholds)")
+
+    # Save aggregated CSV
+    agg_path = os.path.join(out_dir, "food_sweep_agg.csv")
+    agg_fields = ["init_food", "mother_survival_mean", "mother_survival_sd",
+                  "child_survival_mean", "child_survival_sd",
+                  "care_choice_rate_mean", "mean_mother_energy", "passes"]
+    with open(agg_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=agg_fields)
+        writer.writeheader()
+        writer.writerows(agg_rows)
+    print(f"  agg CSV  -> {agg_path}")
+
+    # Save recommended value as JSON
+    sel_path = os.path.join(out_dir, "selected_init_food.json")
+    with open(sel_path, "w") as f:
+        json.dump({"recommended_init_food": recommended}, f, indent=2)
+    print(f"  JSON     -> {sel_path}")
+
+    # Plot: survival_vs_food.png
+    foods   = [r["init_food"]            for r in agg_rows]
+    m_means = [r["mother_survival_mean"] for r in agg_rows]
+    m_sds   = [r["mother_survival_sd"]   for r in agg_rows]
+    c_means = [r["child_survival_mean"]  for r in agg_rows]
+    c_sds   = [r["child_survival_sd"]    for r in agg_rows]
+
+    calibration_passed = any(r["passes"] for r in agg_rows)
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.errorbar(foods, m_means, yerr=m_sds, fmt="o-",
+                color="#1f77b4", label="Mother survival", capsize=4)
+    ax.errorbar(foods, c_means, yerr=c_sds, fmt="s--",
+                color="#2a9a3c", label="Child maturation", capsize=4)
+    ax.axhline(PHASE3_MOTHER_SURVIVAL_MIN, color="#c7443a", ls=":", lw=1,
+               label=f"Mother threshold ({PHASE3_MOTHER_SURVIVAL_MIN})")
+    if calibration_passed:
+        ax.axvline(recommended, color="#888888", ls="--", lw=1,
+                   label=f"Selected init_food={recommended}")
+    else:
+        ax.axvline(recommended, color="#d9534f", ls="--", lw=1.5,
+                   label=f"FALLBACK init_food={recommended} (child threshold never met)")
+        ax.text(0.5, 0.5, "CALIBRATION FAILED\nChild survival = 0% at all food levels",
+                transform=ax.transAxes, ha="center", va="center",
+                fontsize=10, color="#d9534f", alpha=0.6,
+                bbox=dict(boxstyle="round", fc="white", ec="#d9534f", alpha=0.7))
+    ax.set_xlabel("init_food")
+    ax.set_ylabel("Survival / maturation rate")
+    ax.set_title("Phase 3 Food Calibration — survival vs init_food")
+    ax.legend(fontsize=8)
+    ax.set_ylim(0, 1.05)
+    fig.tight_layout()
+    plot_path = os.path.join(out_dir, "survival_vs_food.png")
+    fig.savefig(plot_path, dpi=150)
+    plt.close(fig)
+    print(f"  plot     -> {plot_path}")
+    print(f"\nDone. Phase 3 food calibration outputs saved to: {out_dir}")
+
+
+# ============================================================
 # Main experiment
 # ============================================================
 
 def run_experiment(args):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = os.path.join(
-        PROJECT_ROOT,
-        "outputs",
-        "phase2_survival_minimal",
-        f"{ts}_validation_selected_baselines",
-    )
+
+    if args.mode == "phase3_food":
+        out_dir = os.path.join(
+            PROJECT_ROOT,
+            "outputs",
+            "phase3_food_calibration",
+            f"{ts}_food_sweep",
+        )
+    else:
+        out_dir = os.path.join(
+            PROJECT_ROOT,
+            "outputs",
+            "phase2_survival_minimal",
+            f"{ts}_validation_selected_baselines",
+        )
     os.makedirs(out_dir, exist_ok=True)
 
     n_workers = _n_workers(args.workers)
@@ -1380,6 +1623,10 @@ def run_experiment(args):
     print(f"Duration: {args.duration} | Tau: {args.tau}")
     print(f"Perceptual noise: {args.perceptual_noise}")
     print(f"Repeats: {args.repeats} | Workers: {n_workers}")
+
+    if args.mode == "phase3_food":
+        _run_phase3_food(args, out_dir, n_workers)
+        return
 
     if args.mode == "pipeline":
         # Runs all 8 ROADMAPS.md Phase 2 steps:
@@ -1557,7 +1804,7 @@ if __name__ == "__main__":
     parser.add_argument("--tau", type=float, default=0.1)
     parser.add_argument("--perceptual_noise", type=float, default=0.1)
     parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--mode", type=str, choices=["sweep", "single", "pipeline"], default="sweep")
+    parser.add_argument("--mode", type=str, choices=["sweep", "single", "pipeline", "phase3_food"], default="sweep")
     parser.add_argument("--workers", type=int, default=1,
                         help="Parallel workers (0=auto/cpu_count, 1=sequential)")
     parser.add_argument("--live", action="store_true", default=False,

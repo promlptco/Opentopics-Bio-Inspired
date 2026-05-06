@@ -266,3 +266,39 @@ def candidate_configs(mode="sweep"):
         return _expand_grid(PIPELINE_GRID, name="candidate")
 
     return _expand_grid(SWEEP_GRID, name="candidate")
+
+
+# ============================================================
+# Phase 3 Food Calibration
+# ============================================================
+
+# Fresh calibration range: eat_gain=0.5 (Fix 2) + infant_starvation_multiplier=2.33
+# (LOGIC.md Change J restored) changes the feeding efficiency significantly.
+# Starting from Phase 2 BALANCED baseline (40) upward in coarse steps.
+PHASE3_FOOD_SWEEP_VALUES = [40, 80, 120, 180, 260, 360, 500]
+
+# Calibration genome: care_w must exceed forage_w so CARE can win the tau=0.1 softmax
+# when child distress is high. With (0.2, 0.6): CARE_max=0.2 < FORAGE_min=0.3, care
+# never fires → child_survival=0 at all food levels. (0.6, 0.4) inverts the dominance:
+# CARE_score = 0.6×distress beats FORAGE_score = 0.4×forage_cue when distress > 0.67.
+# self_w=1.0 retained — SELF drive keeps mothers alive when energy falls.
+PHASE3_FOOD_CAL_GENOME = {"care_w": 0.6, "forage_w": 0.4, "self_w": 1.0}
+
+# Phase 3a mode flags — mirrors phase3a_motivation_sweep/config.py.
+PHASE3_FOOD_CAL_FLAGS = {
+    "children_enabled":           True,
+    "care_enabled":               True,
+    "reproduction_enabled":       False,
+    "mutation_enabled":           False,
+    "plasticity_enabled":         False,
+    "mother_max_age":             None,
+    # Restored to LOGIC.md Change J: infant starves in 15 ticks = 3 days
+    "infant_starvation_multiplier": 35 / 15,
+    "init_mothers":               15,
+}
+
+# Pass thresholds (same as Phase 3a).
+PHASE3_MOTHER_SURVIVAL_MIN = 0.5
+PHASE3_MOTHER_ENERGY_MIN   = 0.1
+PHASE3_CHILD_SURVIVAL_MIN  = 0.05  # require meaningful child survival (~1 child/seed average)
+PHASE3_CARE_CHOICE_MIN     = 0.05

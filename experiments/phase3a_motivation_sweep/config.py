@@ -16,19 +16,35 @@ _PHASE2_JSON = (
     / "selected_ecologies.json"
 )
 
+# Phase 3 food calibration result — init_food recalibrated for Phase 3a mechanics.
+# Phase 2 BALANCED used init_food=40 (mothers only). Phase 3a needs more food
+# because 15 children also compete for resources. Selected by food calibration sweep.
+_PHASE3_FOOD_JSON = (
+    Path(__file__).resolve().parent.parent.parent
+    / "outputs/phase3_food_calibration"
+    / "20260506_210302_food_sweep"
+    / "selected_init_food.json"
+)
+
 
 def load_balanced_config() -> Config:
     """Build Phase 3a base Config from the locked Phase 2 BALANCED ecology."""
     with open(_PHASE2_JSON) as f:
         data = json.load(f)
     ec = data["balanced"]["selected_config"]
+
+    with open(_PHASE3_FOOD_JSON) as f:
+        calibrated_food = json.load(f)["recommended_init_food"]
+
     return Config(
         # Ecology — from Phase 2 BALANCED (do not override)
         perception_radius=float(ec["perception_radius"]),
         hunger_rate=float(ec["hunger_rate"]),
         move_cost=float(ec["move_cost"]),
         eat_gain=float(ec["eat_gain"]),
-        init_food=int(ec["init_food"]),
+        # init_food overridden by Phase 3 food calibration (was 40, now 120).
+        # Phase 2 BALANCED had no children; Phase 3a adds 15 children competing for food.
+        init_food=calibrated_food,
         rest_recovery=float(ec["rest_recovery"]),
         # Food replenishment — 1:1 replacement is the universal default (food_replace_on_pick=True).
         # No override needed; Config default keeps food count at init_food across all phases.
@@ -41,7 +57,8 @@ def load_balanced_config() -> Config:
         reproduction_enabled=False,
         mutation_enabled=False,
         plasticity_enabled=False,
-        infant_starvation_multiplier=1.0,
+        # Restored to LOGIC.md Change J: infant starves in 15 ticks = 3 days (35/15 ≈ 2.33)
+        infant_starvation_multiplier=35 / 15,
         max_ticks=400,
         init_mothers=15,
         # Genome weights — overridden per sweep point in run.py

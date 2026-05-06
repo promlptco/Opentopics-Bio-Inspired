@@ -1,0 +1,12 @@
+{
+  "care_w": 0.2,
+  "forage_w": 0.6,
+  "self_w": 1.0,
+  "n_seeds": 15,
+  "mother_survival_rate": 0.5422,
+  "child_survival_rate": 0.0044,
+  "mean_mother_energy": 0.7777,
+  "mean_child_final_energy": 0.0025,
+  "care_choice_rate": 0.2301,
+  "feed_success_rate": 1.0
+}
