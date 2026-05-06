@@ -14,10 +14,24 @@ A simulation of the minimum ecological conditions for the emergence of kin-biase
 ### Running Simulations
 
 #### Main Simulation (Visual)
-Runs the interactive real-time visualization:
+
+Runs the interactive real-time pygame grid world visualization.
+
 ```powershell
+# Phase 2 — survival grid world (mothers only, default)
 python main.py
+
+# Full mother+child simulation
+python main.py --mode maternal
+
+# Headless — no pygame window
+python main.py --mode survival --no-visual
 ```
+
+| Flag | Choices | Default | Description |
+|---|---|---|---|
+| `--mode` | `survival`, `maternal` | `survival` | `survival` = Phase 2 mothers-only grid world; `maternal` = full mother+child simulation |
+| `--no-visual` | — | off | Run headless without opening a pygame window |
 
 ---
 
