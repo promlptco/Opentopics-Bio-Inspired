@@ -302,7 +302,7 @@ if rest = 0% the eco is too harsh, but if rest >= 40% the eco is too easy. must 
    - rest_recovery = fixed fatigue-recovery value
 
    This is not yet the final baseline. It's just used as a starting point for the sweep function to have a reference.
-
+ 
         ↓
 
 #### Sub-Phase Initial Food Gradient
@@ -405,10 +405,10 @@ if rest = 0% the eco is too harsh, but if rest >= 40% the eco is too easy. must 
 
 ### Purpose
 
-Add mother-child interaction and find a reliable genome where both mother and child survive.
+Add mother-child interaction and find the **MVE (Minimum Viable Ecology)** — the least generous set of environmental parameters (food density, move cost, eat gain) under which mothers can still keep their infant alive to maturity.
 
 This phase does not test evolution yet.  
-It defines what functional care looks like in the simulation.
+It defines what functional care looks like in the simulation and establishes the MVE as the ecological baseline for all subsequent phases.
 
 ---
 
@@ -445,9 +445,9 @@ Do not hardcode copied values inside Phase 3 scripts.
 Start with the grid from `EXPERIMENT_DESIGN.md`:
 
 ```text
-care   ∈ {0.3, 0.5, 0.7, 0.9}
-forage ∈ {0.5, 0.7, 0.85, 1.0}
-self   ∈ {0.3, 0.5, 0.7}
+care   ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
+forage ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
+self   ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
 ```
 
 If this grid is too coarse, refine only around passing regions.
@@ -456,7 +456,7 @@ If this grid is too coarse, refine only around passing regions.
 
 - Use 15–30 independent seeds per combination.
 - Single-seed runs are exploratory only.
-- Run long enough to observe infant survival through the intended dependency window.
+- Run 400 duration, so we can watch the infants reach mature by mother
 
 ### Metrics
 
@@ -475,8 +475,8 @@ Record:
 
 Select the canonical genome using this order:
 
-1. Mother survives.
-2. Child survives.
+1. Child survival rate = number of children who reached maturity_age (converted to MotherAgent) / total children born (including those who died before maturity). Aggregated across all lineages. A child that starves before maturity counts as a failed care event regardless of how long it survived.
+2. Mother survival rate. 
 3. Child energy does not collapse.
 4. CARE events are non-trivial and spatially meaningful.
 5. Prefer the lowest `care_weight` that passes.
@@ -530,7 +530,13 @@ Run the selected Phase 3a genome and log actions every tick.
 - Single-agent raster plot.
 - Child energy over time with care-event markers.
 - Distance-to-child overlaid or shown alongside child energy.
-- Optional: child distress over time with care-event markers.
+- child distress over time with care-event markers.
+- Mean survival rate trajectory over horizon (blue, must have sd, individual line alpha=0.4, legend at bottom left)
+- Mean energy trajectory over horizon (green, must have sd, individual line alpha=0.4, legend at bottom left)
+- Relate action count for each motivation (3 motivation with the count of actions as barplot)
+- Failed-action rate plots. (Barplot of overall action and failed compare for each action lebel the actions and its motivation)
+- Food consumption rate. (plot food trajecotory over time)
+- Spatial heatmap
 
 ### Interpretation
 
@@ -881,6 +887,8 @@ For each generation window:
 ```text
 fitness_t    = mean over lineages [survived_children / born_children]
 plasticity_t = mean over lineages [mean learning_rate of living mothers]
+
+survive_children is child reach mature
 ```
 
 Use lineage macro-averaging, not naive population averaging.  

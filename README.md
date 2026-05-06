@@ -354,7 +354,65 @@ Use `--workers N` to run them in parallel via `ProcessPoolExecutor`.
 
 ## 🐣 Phase 3 — Mother-Child Caregiving Baseline
 
-Mother + child simulation. Finds the minimum viable ecology (MVE) where mothers can support a dependent child using motivation weights (FORAGE / CARE / SELF).
+> **MVE (Minimum Viable Ecology):** the least generous set of environmental parameters (food density, move cost, eat gain) under which mothers can still keep their infant alive to maturity.
+
+Mother + child simulation. Finds the MVE where mothers can support a dependent child using motivation weights (FORAGE / CARE / SELF).
+
+---
+
+## 🔬 Phase 3a — Motivation Sweep
+
+Sweeps `care_w × forage_w × self_w` over the locked Phase 2 BALANCED ecology.
+Selects the canonical fixed genome for Phase 3b+.
+
+Ecology is loaded at runtime from:
+`outputs/phase2_survival_minimal/auto_400_percept15_repeat3_validation_selected_baselines/selected_ecologies.json`
+
+```powershell
+# Coarse grid — 6×6×6 = 216 combos (default, recommended first pass)
+python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8
+
+# Fine grid — 11×11×11 = 1331 combos (refine after coarse)
+python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8 --grid fine
+
+# Sequential (no parallelism)
+python -m experiments.phase3a_motivation_sweep.run --seeds 15
+
+# Auto-detect worker count
+python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 0
+```
+
+### Phase 3a CLI reference
+
+| Flag | Default | Description |
+|---|---|---|
+| `--seeds` | `15` | Independent seeds per genome combination |
+| `--duration` | `400` | Ticks per run (covers maturity_age=200 with buffer) |
+| `--workers` | `1` | Parallel workers (`0` = auto) |
+| `--grid` | `coarse` | `coarse` = 6×6×6 = 216 combos; `fine` = 11×11×11 = 1331 |
+
+### Phase 3a output files
+
+All outputs → `outputs/phase3a_motivation_sweep/<timestamp>/`:
+
+| File | Description |
+|---|---|
+| `sweep_raw.csv` | One row per seed per genome combination |
+| `sweep_results.csv` | Aggregated metrics (mean across seeds) per genome |
+| `canonical_genome.json` | Selected genome + metrics |
+| `heatmap_child_survival.png` | `care_w × forage_w` — child survival rate |
+| `heatmap_child_energy.png` | `care_w × forage_w` — mean child final energy |
+| `heatmap_mother_survival.png` | `care_w × forage_w` — mother survival rate |
+| `heatmap_mean_mother_energy.png` | `care_w × forage_w` — mean mother energy |
+
+### Phase 3a selection criteria (applied in order)
+
+1. `child_survival_rate > 0` — at least one child reached maturity
+2. `mother_survival_rate ≥ 0.5` — ecology not collapsing
+3. `mean_mother_energy > 0.1` — mother energy not collapsed
+4. `care_choice_rate > 0.05` — CARE is non-trivial
+5. Lowest `care_w` among passing
+6. Tie-break: highest `mean_mother_energy`
 
 ### Run baseline validation
 

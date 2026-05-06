@@ -206,3 +206,155 @@ Near-zero tail energy slope (−0.00012) confirms stable steady state.
 ## Branch / Git
 
 Branch: `V3`
+
+---
+
+---
+
+# Phase 3 Current State
+
+Last updated: 2026-05-06 (V3 branch)
+
+---
+
+## Phase 3a Status: BLOCKED — awaiting food calibration
+
+Phase 3a (Motivation Sweep) cannot run until `init_food` is re-calibrated for Phase 3a's mechanics.
+
+---
+
+## Phase 3a Bugs Fixed (2026-05-06)
+
+### Bug 1 — `mother_max_age=400` kills all survivors at tick 399
+- **Cause**: Config default `mother_max_age=400` equals `max_ticks=400`. Phase 3's `Simulation.step()` calls `mother.die()` when `age >= 400`, which fires on every survivor at the very last tick.
+- **Effect**: `mother_survival_rate = 0.0` for all 216 genomes. Phase 2's `SurvivalSimulation` has no age cap — the BALANCED ecology was calibrated without it.
+- **Fix**: `mother_max_age=None` added to Phase 3a config (`experiments/phase3a_motivation_sweep/config.py`).
+
+### Bug 2 — FORAGE domain eats food at full energy (wasted gain)
+- **Cause**: Phase 3's FORAGE domain ate held food immediately after picking (energy ~0.95 → gain = `min(1.0, 0.95+0.5)−0.95 = 0.05`, not 0.5). Phase 2's SELF domain ate only when energy was low (~0.4), getting the full 0.5 gain each time. 70–90% of each food's energy was wasted in Phase 3.
+- **Effect**: Phase 3 survival with BALANCED ecology = ~1/15 vs Phase 2's 6–13/15 with identical parameters.
+- **Fix** (`simulation/simulation.py`): FORAGE domain = pick or navigate only (no eating). SELF domain = eat held food if available, else rest. This matches Phase 2's `SurvivalSimulation` behavior.
+
+### Also fixed in this session
+- `food_replace_on_pick: bool = True` added to `Config` as the universal 1:1 replacement default. `food_replenish_threshold_ratio` defaulted to `0.0` (burst disabled). Phase 3a config cleaned up of the workaround values.
+
+---
+
+## Remaining Issue — Ecological pressure from Phase 2 calibration
+
+After both bug fixes, Phase 3a best result is:
+- `mother_survival = 0.41` (below MOTHER_SURVIVAL_MIN = 0.5)
+- `child_survival = 0.00` (no children mature)
+
+**This is ecological pressure, not a code bug.** The BALANCED ecology (`init_food=40`) was designed for Phase 2 (mothers only). Phase 3a adds:
+- 15 children each needing a feed every ~7 ticks to survive 200 ticks to maturity
+- Feed cost: 0.03 energy per feed from mother
+- Care commitment: 20-tick blocks where mothers cannot forage
+
+The Phase 2 BALANCED ecology has no food surplus for child-rearing. Decision: increase `init_food` for Phase 3a (Option A).
+
+---
+
+## NEXT STEP — Phase 3 Food Calibration Sweep
+
+**Goal**: Find minimum `init_food` where Phase 3a ecology is viable: `mother_survival >= 0.5` AND at least some children mature.
+
+**Approach**: Extend Phase 2's `new_run.py` with `--mode phase3_food`. No new directory — reuse existing sweep infrastructure for code efficiency and scalability.
+
+### new_config.py additions (bottom of file)
+
+```python
+# Phase 3 Food Calibration — init_food sweep with Phase 3a mechanics
+PHASE3_FOOD_SWEEP_VALUES = [40, 50, 60, 70, 80, 100, 120, 150]
+
+# Fixed conservative genome (low care, strong forage — stress-tests child survival)
+PHASE3_FOOD_CAL_GENOME = {"care_w": 0.2, "forage_w": 1.0, "self_w": 1.0}
+
+# Phase 3a mode flags — same as phase3a_motivation_sweep/config.py
+PHASE3_FOOD_CAL_FLAGS = {
+    "children_enabled": True, "care_enabled": True,
+    "reproduction_enabled": False, "mutation_enabled": False,
+    "plasticity_enabled": False, "mother_max_age": None,
+    "infant_starvation_multiplier": 1.0, "init_mothers": 15,
+}
+
+# Pass thresholds (same as Phase 3a)
+PHASE3_MOTHER_SURVIVAL_MIN = 0.5
+PHASE3_MOTHER_ENERGY_MIN   = 0.1
+PHASE3_CHILD_SURVIVAL_MIN  = 0.0   # any child matured counts
+PHASE3_CARE_CHOICE_MIN     = 0.05
+```
+
+### new_run.py additions (3 new functions after `_run_task`, mode handler in `run_experiment`)
+
+```python
+def make_phase3_config(params, duration):
+    cfg = make_config(params, duration)          # reuse Phase 2 config builder
+    for k, v in PHASE3_FOOD_CAL_FLAGS.items():
+        setattr(cfg, k, v)
+    cfg.care_weight   = PHASE3_FOOD_CAL_GENOME["care_w"]
+    cfg.forage_weight = PHASE3_FOOD_CAL_GENOME["forage_w"]
+    cfg.self_weight   = PHASE3_FOOD_CAL_GENOME["self_w"]
+    return cfg
+
+def run_one_phase3(params, seed, duration):
+    from simulation.simulation import Simulation
+    cfg = dataclasses.replace(make_phase3_config(params, duration), seed=seed)
+    sim = Simulation(cfg); sim.run()
+    alive_m = [m for m in sim.mothers if m.alive]
+    matured = sum(1 for r in sim.logger.death_records
+                  if r.agent_type == "child" and r.cause == "matured")
+    tc = len(sim.logger.choice_records)
+    cc = sum(1 for r in sim.logger.choice_records if r.winner_domain == "care")
+    return {
+        "init_food":            params["init_food"],
+        "seed":                 seed,
+        "mother_survival_rate": round(len(alive_m) / cfg.init_mothers, 4),
+        "child_survival_rate":  round(matured / cfg.init_mothers, 4),
+        "mean_mother_energy":   round(sum(m.energy for m in alive_m)/len(alive_m) if alive_m else 0.0, 4),
+        "care_choice_rate":     round(cc / tc if tc else 0.0, 4),
+    }
+
+def _run_task_phase3(task):
+    params, seed, duration = task
+    return run_one_phase3(params, seed, duration)
+```
+
+Mode handler in `run_experiment` (alongside `"sweep"`, `"pipeline"`, `"single"`):
+- Builds task list: `[({init_food: v}, seed, duration) for v in PHASE3_FOOD_SWEEP_VALUES for seed in seeds]`
+- Runs via ProcessPoolExecutor with `_run_task_phase3`
+- Aggregates raw rows → per-`init_food` mean ± SD
+- Saves `food_sweep_raw.csv`, `food_sweep_agg.csv`, `selected_init_food.json`, `survival_vs_food.png`
+- Picks minimum `init_food` where `mother_survival_rate >= PHASE3_MOTHER_SURVIVAL_MIN`
+
+CLI:
+```
+python -m experiments.phase2_survival_minimal.new_run --mode phase3_food --duration 400 --repeats 15 --workers 8
+```
+
+### Output directory
+```
+outputs/phase3_food_calibration/{timestamp}_food_sweep/
+├── food_sweep_raw.csv
+├── food_sweep_agg.csv
+├── selected_init_food.json    # {"recommended_init_food": N}
+└── survival_vs_food.png
+```
+
+### After calibration — return to Phase 3a
+Update `experiments/phase3a_motivation_sweep/config.py`:
+- Keep loading ecology params from Phase 2 BALANCED JSON
+- Override `init_food` from `selected_init_food.json`
+- Re-run Phase 3a sweep: `python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8`
+
+---
+
+## Phase 3a Files (current state)
+
+| File | Status |
+|------|--------|
+| `experiments/phase3a_motivation_sweep/config.py` | Bug 1+2 fixed; awaiting food calibration |
+| `experiments/phase3a_motivation_sweep/run.py` | Ready |
+| `experiments/phase3a_motivation_sweep/plot.py` | Ready |
+| `simulation/simulation.py` | Bug 2 fixed (eat moved to SELF domain) |
+| `config.py` | `food_replace_on_pick=True` added |

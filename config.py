@@ -80,13 +80,15 @@ class Config:
     birth_scatter_radius: int = 8
 
     # Phase 5b — Food Ecology Calibration
-    # food_replenish_amount: food units spawned per replenishment event.
-    #   Phase 2 overrides this with proportional replenishment (init_food // 10)
-    #   in SurvivalSimulation.step() to prevent tragedy-of-commons.
+    # food_replace_on_pick: spawn 1 food unit every time a mother picks one.
+    #   True (default) = 1:1 replacement — food count stays near init_food.
+    #   This is the universal rule across all phases, matching Phase 2 SurvivalSimulation.
+    food_replace_on_pick: bool = True
+    # food_replenish_amount: food units spawned per threshold-burst replenishment event.
     food_replenish_amount: int = 5
-    # food_replenish_threshold_ratio: replenish when food_count < init_food * ratio.
-    #   Default 0.5 matches the init_food // 2 threshold used in all prior phases.
-    food_replenish_threshold_ratio: float = 0.5
+    # food_replenish_threshold_ratio: burst fires when food_count < init_food * ratio.
+    #   0.0 disables burst; 1:1 replacement (above) is the primary mechanism.
+    food_replenish_threshold_ratio: float = 0.0
 
     # Phase 5d — Hybrid Food Replenishment
     # continuous_food_rate: food units added per tick unconditionally (fractional

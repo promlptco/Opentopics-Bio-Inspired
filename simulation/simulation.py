@@ -268,6 +268,7 @@ class Simulation:
                 self.logger.log_death(DeathRecord(
                     tick=self.tick, agent_id=c.id, agent_type="child",
                     lineage_id=c.lineage_id, generation=c.generation, cause=cause,
+                    final_energy=c.energy,
                 ))
         for m in self.mothers:
             if not m.alive:
@@ -354,10 +355,14 @@ class Simulation:
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
         
         elif domain == "forage":
-            if mother.held_food > 0:
-                mother.eat(self.config.eat_gain)
-            elif mother.pos in self.world.food_positions:
-                mother.pick_food(self.world)
+            # FORAGE = food procurement only (pick or navigate). Eating is handled in SELF
+            # domain so that food energy is consumed when the mother is actually hungry
+            # (self_cue = 1-energy is high), not immediately after picking when she may
+            # be near full. Matching Phase 2 SurvivalSimulation behaviour prevents the
+            # "eat-at-full-energy → gain wasted by cap" spiral seen when eating is in FORAGE.
+            if mother.pos in self.world.food_positions:
+                if mother.pick_food(self.world) and self.config.food_replace_on_pick:
+                    self._spawn_food(1)
             else:
                 nearest = self._nearest_food(mother.pos)
                 if nearest:
@@ -368,7 +373,12 @@ class Simulation:
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
 
         elif domain == "self":
-            mother.rest(self.config.rest_recovery)
+            # SELF = self-maintenance. Eat held food first (self_cue fires when energy is
+            # low, so the 0.5 gain is used efficiently). Rest only when no food in hand.
+            if mother.held_food > 0:
+                mother.eat(self.config.eat_gain)
+            else:
+                mother.rest(self.config.rest_recovery)
     
     def _nearest_food(self, pos: tuple[int, int]) -> tuple[int, int] | None:
         if not self.world.food_positions:

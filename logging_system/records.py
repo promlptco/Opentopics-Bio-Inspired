@@ -49,4 +49,5 @@ class DeathRecord:
     agent_type: str   # "mother" or "child"
     lineage_id: int
     generation: int
-    cause: str        # "starvation" or "hunger"
+    cause: str        # "starvation", "hunger", or "matured"
+    final_energy: float = 0.0
