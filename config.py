@@ -120,3 +120,23 @@ class Config:
     #   Closes the "become a better learner" escape route so selection can only act on
     #   the genetic care_weight floor. 0.0 = evolvable (all prior phases unaffected).
     lock_learning_rate: bool = False
+
+
+# ── Visual grid world presets (main.py) ───────────────────────────────────────
+# Edit these to change what main.py renders — do not touch main.py itself.
+
+VISUAL_SURVIVAL_CONFIG = Config(
+    width=50, height=50,
+    init_mothers=15,
+    init_food=120,
+    initial_energy=1.0,
+    hunger_rate=1 / 35,
+    move_cost=0.01,
+    eat_gain=0.5,
+    max_ticks=400,
+    seed=42,
+)
+
+VISUAL_MATERNAL_CONFIG = Config(
+    seed=42,
+)

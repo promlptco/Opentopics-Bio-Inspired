@@ -216,6 +216,7 @@ class Simulation:
                     distance_to_food=dist_to_food,
                     care_enabled=self.config.care_enabled,
                 )
+                mother.last_motivation = chosen
                 domain = chosen.lower()
 
             # Option A — distress_sensitivity: cortisol-analog penalty for ignoring own

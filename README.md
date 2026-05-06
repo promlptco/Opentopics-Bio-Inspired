@@ -18,11 +18,17 @@ A simulation of the minimum ecological conditions for the emergence of kin-biase
 Runs the interactive real-time pygame grid world visualization.
 
 ```powershell
-# Phase 2 — survival grid world (mothers only, default)
+# Survival grid world, light theme (default)
 python main.py
+
+# Survival grid world, dark theme (neon gradient)
+python main.py --theme dark
 
 # Full mother+child simulation
 python main.py --mode maternal
+
+# Dark mode + maternal
+python main.py --mode maternal --theme dark
 
 # Headless — no pygame window
 python main.py --mode survival --no-visual
@@ -30,8 +36,40 @@ python main.py --mode survival --no-visual
 
 | Flag | Choices | Default | Description |
 |---|---|---|---|
-| `--mode` | `survival`, `maternal` | `survival` | `survival` = Phase 2 mothers-only grid world; `maternal` = full mother+child simulation |
+| `--mode` | `survival`, `maternal` | `survival` | `survival` = Phase 2 mothers-only; `maternal` = full mother+child simulation |
+| `--theme` | `light`, `dark` | `light` | `light` = white background; `dark` = dark background with neon gradient |
 | `--no-visual` | — | off | Run headless without opening a pygame window |
+
+**Visual encoding (both themes):**
+
+| Element | Meaning |
+|---|---|
+| Agent body color | Energy level — gradient from low (red) to high (blue/cyan) |
+| Ring around mother | Current motivation: yellow = FORAGE, blue = SELF, green = CARE |
+| Mother ring radius | Larger than child ring |
+| Food dot | Small circle on the grid |
+
+**To change simulation parameters** → edit `config.py` (bottom of file):
+
+```python
+VISUAL_SURVIVAL_CONFIG = Config(
+    init_food=120, move_cost=0.01, eat_gain=0.5, max_ticks=400, ...
+)
+VISUAL_MATERNAL_CONFIG = Config(seed=42)
+```
+
+**To change colors or add a new theme** → edit `ui/renderer_config.py`:
+
+```python
+DARK_THEME = RendererTheme(
+    bg_color=(12, 12, 20),
+    ring_forage=(255, 220, 0),   # neon yellow
+    ring_self=(0, 140, 255),     # neon blue
+    ring_care=(0, 255, 120),     # neon green
+    ...
+)
+THEMES = {"light": LIGHT_THEME, "dark": DARK_THEME}
+```
 
 ---
 

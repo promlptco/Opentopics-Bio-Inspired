@@ -269,6 +269,7 @@ class SurvivalSimulation:
             if motivation not in tick_motivations:
                 motivation = "SELF"
 
+            mother.last_motivation = motivation
             tick_motivations[motivation] += 1
             self.motivation_counts[motivation] += 1
 

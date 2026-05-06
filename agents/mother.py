@@ -62,6 +62,7 @@ class MotherAgent(Agent):
         self.commit_ticks: int = 0
 
         self.pending_move_cost: float = 0.0
+        self.last_motivation: str = "FORAGE"
 
     # ============================================================
     # Tracking Movement Cost
