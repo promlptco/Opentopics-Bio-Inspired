@@ -1,0 +1,16 @@
+{
+  "experiment": "phase3b_calibration",
+  "child_survival_possible": false,
+  "regimes": {
+    "BEST_ECOLOGICAL": {
+      "infant_starvation_multiplier": 1.2,
+      "eat_gain": 0.7,
+      "init_food": 600,
+      "move_cost": 0.005,
+      "rest_recovery": 0.005,
+      "c_matr": 0.0,
+      "m_surv": 0.13333333333333333,
+      "child_death_mu": 48.33333333333333
+    }
+  }
+}

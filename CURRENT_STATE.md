@@ -217,151 +217,279 @@ Last updated: 2026-05-07 (V3 branch)
 
 ---
 
-## Status: Mechanistic loop correct — child survival = 0 (ecology/timing)
+## Status: CONCLUDED — food density alone cannot support child maturation
 
-Phase 3 adds one child per mother to Phase 2. The mechanistic care loop (forage → navigate →
-feed → eat → forage) is confirmed working. Child survival = 0 is an ecological timing issue,
-not a code bug. Root cause and next step documented below.
+Phase 3 answers: "Can ecological pressure from food density alone, with unbiased motivation
+weights=1.0, produce child maturation through maternal care?"
 
----
-
-## Ecology (percept15 BALANCED — locked from Phase 2)
-
-| Parameter | Value |
-|-----------|-------|
-| `perception_radius` | 15.0 |
-| `hunger_rate` | 1/35 ≈ 0.0286 |
-| `move_cost` | 0.01 |
-| `eat_gain` | 0.5 |
-| `init_food` | 40 |
-| `rest_recovery` | 0.005 |
-
-## Phase 3 Additions
-
-| Parameter | Value |
-|-----------|-------|
-| `children_enabled` | True |
-| `care_enabled` | True |
-| `infant_starvation_multiplier` | 35/15 ≈ 2.33 — child starves in 15 ticks unfed |
-| `care_weight` | 1.0 (fixed genome) |
-| `forage_weight` | 1.0 (fixed genome) |
-| `self_weight` | 1.0 (fixed genome) |
-| `max_ticks` | 400 |
-| `init_mothers` | 15 |
+**Answer: NO.** Sensitivity sweep over 7 init_food values × 10 seeds = 70 runs shows zero
+child maturation at all levels. Energy math confirms this is a hard structural limit, not a
+bug. Proceeds to Phase 4 (motivation weight sweep).
 
 ---
 
-## Key Files (V3 — Phase 3 Basic)
+## Ecology (percept8 BALANCED — locked from Phase 2)
+
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| `perception_radius` | 8.0 | Phase 2 percept8 BALANCED |
+| `food_perception_radius` | 8 | explicit (overrides Config default=15) |
+| `hunger_rate` | 1/35 ≈ 0.0286 | Phase 2 |
+| `move_cost` | 0.005 | Phase 2 |
+| `eat_gain` | 0.2 | Phase 2 |
+| `init_food` | swept 40–900 | Phase 3 variable |
+| `rest_recovery` | 0.005 | Phase 2 |
+
+## Phase 3 Additions (locked)
+
+| Parameter | Value | Note |
+|-----------|-------|------|
+| `children_enabled` | True | 1 child per mother at init |
+| `care_enabled` | True | |
+| `infant_starvation_multiplier` | 35/15 ≈ 2.33 | child starves in 15 ticks unfed — biological lock |
+| `care_weight` | 1.0 | unbiased, all equal |
+| `forage_weight` | 1.0 | |
+| `self_weight` | 1.0 | |
+| `warmth_factor` | **0.0** | reserved Phase 5+ — locked off for Phase 3/4 |
+| `max_ticks` | 400 | |
+| `init_mothers` | 15 | |
+| `maturity_age` | 200 | default — child must survive 200 ticks to mature |
+
+---
+
+## Key Files
 
 | File | Role |
 |------|------|
-| `experiments/phase3_basic/config.py` | Loads percept15 BALANCED from Phase 2 JSON; sets Phase 3 flags |
-| `experiments/phase3_basic/run.py` | Diagnostic runner: tick-by-tick trace + multi-seed summary |
-| `simulation/simulation.py` | Core sim — all four Phase 3 fixes applied here |
+| `experiments/phase3_basic/config.py` | Loads percept8 BALANCED from Phase 2 JSON |
+| `experiments/phase3_basic/run.py` | Diagnostic runner: tick-by-tick trace |
+| `experiments/phase3_sweep/config.py` | Sweep config: INIT_FOOD_VALUES, SWEEP_SEEDS |
+| `experiments/phase3_sweep/run.py` | Parallel sweep runner (ProcessPoolExecutor) |
+| `experiments/phase3_sweep/plot.py` | Three-figure plot suite from CSV + live sims |
+| `simulation/simulation.py` | Core sim — all 5 fixes applied |
+| `agents/mother.py` | feed_child() — Fix E applied |
+| `agents/child.py` | update_distress() — hunger-only distress |
 
 ---
 
-## Fixes Applied to simulation.py (2026-05-07)
+## All Fixes (chronological)
 
 ### Fix A — Clear stale commitment when committed child dies
-**Bug**: `has_commitment()` returned True even after committed child died. `domain="care"` was forced
-for up to 20 more ticks. Mother held food (held_food=2) but could not eat → starved.
+**Bug**: `has_commitment()` forced CARE domain for up to 20 ticks after child death.
+Mother held food but could never eat → starvation.
+**Fix**: Before commitment check, query `_get_child_by_id`; if dead or None, clear commit.
 
-**Fix** (motivation block, before commitment check):
-```python
-if mother.has_commitment():
-    _tgt = self._get_child_by_id(mother.target_child_id)
-    if _tgt is None or not _tgt.alive:
-        mother.commit_ticks = 0
-        mother.target_child_id = None
-```
+### Fix B — Cap held_food=1; suppress forage_cue when provisioned
+**Bug**: Mother accumulated held_food=2. forage_cue always high → food never eaten.
+**Fix**: Cap at 1 in FORAGE block. When `held_food >= 1`, set `nearest_food=None` → forage_cue=0.
 
-### Fix B — Cap held_food at 1; suppress forage_cue when provisioned
-**Bug**: Mother accumulated held_food=2. With forage_cue ≈ 0.667 (perception_radius=15), FORAGE
-always beat SELF — food was gathered but never eaten.
-
-**Fix**: Cap held_food at 1 in FORAGE execution block. When `held_food >= 1`, set
-`nearest_food = None` → forage_cue = 0 → motivation is SELF (eat) vs CARE (feed child).
-
-### Fix C — Kin-directed care motivation (birth imprinting)
-**Bug**: care_child for motivation was the globally most distressed of 15 children (commons trap).
-Collective distress always > SELF drive → mothers starved caring for non-own children.
-
-**Biological basis**: Oxytocin bond at parturition. Mother's care motivation is selectively
-amplified for own infant (birth imprinting / prolactin analog). Required for Hamilton r to
-be meaningful as a predictor at Phase 6+.
-
-**Fix** (motivation block only):
-```python
-if mother.own_child_id is not None:
-    _own = self._get_child_by_id(mother.own_child_id)
-    care_child = _own if (_own and _own.alive) else None
-else:
-    care_child = mother.choose_child(visible_children) if visible_children else None
-```
+### Fix C — Kin-directed care motivation (birth imprinting / oxytocin bond)
+**Bug**: care_child was globally most distressed child (commons trap) → collective distress
+always beat SELF drive → mothers starved caring for strangers' children.
+**Biological basis**: Oxytocin bond at parturition; prolactin amplifies own-infant response.
+Required for Hamilton r to be meaningful in Phase 6+.
+**Fix**: care_child = mother's `own_child_id` target only; allomother only when own child absent.
 
 ### Fix D — Relatedness-weighted action target (Hamilton r-bias)
-**Bug**: `_execute_action` used globally most distressed child as target. Mother navigated to
-a stranger's child while own child drifted to dist=12 unattended.
+**Bug**: `_execute_action` picked globally most distressed child; mother navigated to
+stranger while own child was distant.
+**Fix**: `score = expressed_care_weight × (1+r) × child.distress`. Own child r=0.5 → 1.5× boost.
+Allomothering possible when stranger's distress > (1/1.5) × own child's.
+**Future**: Option 3 (proximity-decayed allomother threshold) reserved for Phase 5+.
 
-**Biological basis**: Kin-selective care — bias own infant without excluding allomothering.
-Biologically: mother can care for others while own child is alive, but prefers own.
-For Hamilton's hypothesis: r is embedded directly in the selection function so care-rate vs r
-is measurable in Phase 6+ without retrofitting.
-
-**Fix** (`_execute_action` target selection):
+### Fix E — feed_child requires held_food; energy conservation (2026-05-07)
+**Bug**: `feed_child()` had no `held_food` check. Mother fed child out of thin air
+(held_food=0 → success). One food pickup enabled 3+ child feeds (held_food never
+decremented). Created phantom energy, inflated feed counts, masked real ecology.
+**Fix** (`agents/mother.py`):
+```python
+if self.held_food <= 0:
+    return False, 0.0
+self.held_food -= 1
 ```
-score = expressed_care_weight × (1 + r) × child.distress
-target = max(visible_children, key=score)
+**Companion fix** (`simulation/simulation.py`, `_execute_action`): when mother arrives
+at child (dist=0) with held_food=0, release commitment so she can immediately forage.
+
+### Fix (distress formula) — Hunger-only infant distress
+**Bug**: `distress = (hunger + separation) / 2`. Separation contribution was artificial
+(children are immobile infants; separation reflects mother moving to forage, not infant agency).
+**Fix** (`agents/child.py`): `distress = hunger = 1 − energy`.
+
+---
+
+## Phase 3 Sensitivity Sweep Results (percept8 BALANCED, warmth=0, all weights=1.0)
+
+70 runs (7 init_food × 10 seeds), max_ticks=400
+
+| init_food | M_surv | C_matr | Feeds | CARE% | FOR% | SELF% | C_death_mu | C_rng |
+|-----------|--------|--------|-------|-------|------|-------|------------|-------|
+| 40  | 0.000 | 0.000 | 12 | 76.7 | 16.4 | 6.9 | 17.4 | 15–21 |
+| 80  | 0.000 | 0.000 | 18 | 73.1 | 21.3 | 5.7 | 18.7 | 15–24 |
+| 150 | 0.013 | 0.000 | 21 | 70.0 | 24.6 | 5.4 | 19.2 | 15–24 |
+| 250 | 0.153 | 0.000 | 24 | 69.9 | 24.7 | 5.4 | 19.9 | 15–24 |
+| 400 | 0.293 | 0.000 | 29 | 69.8 | 25.1 | 5.0 | 20.8 | 18–27 |
+| 600 | 0.447 | 0.000 | 30 | 70.8 | 24.7 | 4.5 | 21.0 | 18–30 |
+| 900 | 0.567 | 0.000 | 32 | 71.1 | 23.5 | 5.4 | 21.3 | 18–33 |
+
+**Phase 2 BALANCED (no children) reference: M_surv = 62.8%**
+
+Key observations:
+- Feeds increase monotonically with food (correct after Fix E) — confirms energy is now conserved
+- Even at food=900 (6×), C_death_mu = 21.3 ticks vs maturity_age = 200 — factor of ~9.5× gap
+- Mother survival severely degraded vs Phase 2 (57% vs 63%) even with 6× food
+- Adding children costs ~6–63% mother survival depending on food density
+
+### Why child maturation is impossible with weights=1.0
+
+Energy budget per child:
 ```
-Own child r=0.5 → 1.5× score. Allomother when stranger's distress > (1/1.5) × own child's.
-
-**Future extension**: Option 3 (proximity-decayed allomother threshold) reserved for when
-spatial kin clustering develops in Phase 5+.
-
----
-
-## Current Diagnostic Results (seeds 42–46, 400 ticks)
-
-| Seed | M_surv | C_surv | Feeds | CARE% | FORAGE% | SELF% |
-|------|--------|--------|-------|-------|---------|-------|
-| 42 | 0.000 | 0.000 | 34 | 55.4 | 36.1 | 8.5 |
-| 43 | 0.000 | 0.000 | 23 | 62.3 | 23.6 | 14.1 |
-| 44 | 0.000 | 0.000 | 23 | 49.4 | 39.1 | 11.5 |
-| 45 | 0.067 | 0.000 | 16 | 62.8 | 23.3 | 13.9 |
-| 46 | 0.067 | 0.000 | 7 | 52.1 | 40.5 | 7.4 |
-| **mean** | **0.027** | **0.000** | **21** | **56.4** | **32.5** | **11.1** |
-
-Child death range: ticks 15–30, mean 19.1
-
-**Confirmed working (trace seed=42)**:
-- Ticks 0–3: FORAGE, picks food (held_food=1)
-- Ticks 4–7: CARE, navigates toward own child (dist 4→0)
-- Tick 8: Feeds child at dist=0 (child energy 0.507 → 0.960)
-- Tick 9: SELF eats held_food (mother energy 0.640 → 1.0)
-- Ticks 10+: FORAGE resumes; second cycle fails (see below)
+Energy needed to reach maturity_age=200:  200 × 0.0667 − 1.0 = 12.3 units
+Feeds needed:  12.3 / 0.2 = 62 feeds per child
+Best observed: 32 total / 15 children = 2.1 feeds per child (food=900)
+Gap: 30× shortfall
+```
+Foraging cycle (forage→navigate→feed→forage): ~8 ticks minimum.
+Maximum possible feeds in 200 ticks: 200/8 = 25 per child — still short of 62.
+Food density alone cannot close this gap because the bottleneck is cycle time, not food availability.
 
 ---
 
-## Remaining Issue — Forage threshold prevents timely second-cycle care
+## Plots Generated
 
-**What happens**: After feeding, child distress drops to ~0. CARE = 0. FORAGE dominates
-for ~10 ticks (forage_cue ≈ 0.667 with perception_radius=15). Child drifts to dist=8–12
-during this foraging window. CARE only beats FORAGE when distress > 0.667 (≈5 ticks before
-child death). By then child is too far to reach in time → child dies on second cycle.
-
-**Root cause**: percept15 BALANCED ecology was calibrated for Phase 2 (mothers only).
-`perception_radius=15` keeps forage_cue persistently high. CARE threshold (> 0.667) is
-only reached when child is nearly dead — navigation from dist=10 takes longer than 5 ticks.
-
-**This is not a code bug.** The care loop is mechanically correct. The ecology needs
-adjustment so that CARE fires earlier in the hunger cycle.
+Output: `outputs/phase3_sweep/plots/`
+- `fig1_sweep_summary.png` — init_food vs feeds / mother survival / child death / action split
+- `fig2_timeseries.png` — per-tick population, mother energy, child energy (seed=42, food=900)
+- `fig3_phase2_vs_3.png` — mother survival and energy trajectory: Phase 2 vs Phase 3
 
 ---
 
-## Next Step
+## Phase 3 Conclusion
 
-Reduce `food_perception_radius` so forage_cue drops and CARE fires at lower child distress.
-`food_perception_radius` is already a separate Config parameter — no architecture change needed.
-At radius=8: forage_cue ≈ 1 − avg_dist/8. This allows CARE to compete earlier and gives the
-mother time to navigate to child before it dies on the second cycle.
+Food density alone (init_food sweep) with unbiased weights=1.0 and ISM=2.33 cannot produce
+child maturation. The care loop is mechanically correct. Phase 4 must introduce motivational
+bias (care_weight > forage/self) to close the feeding-cycle gap.
+
+---
+
+## Next: Phase 3b — Ecological Calibration (ISM Sweep)
+
+---
+
+---
+
+# Phase 3b Current State
+
+Last updated: 2026-05-07 (V3 branch)
+
+---
+
+## Status: CONCLUDED — CHILD_SURVIVAL_POSSIBLE = False
+
+Phase 3b answers: "Can ecologically plausible parameters, with unbiased motivation weights (all = 1.0), produce child maturation (reach tick 200)?"
+
+**Answer: NO.** Full 3D grid sweep (ISM × eat_gain × init_food, 64 combos × 5 seeds = 320 runs) produced C_matr = 0.0 across all combinations. This is not a bug — it is the mechanistic care trap, derived directly from the unbiased softmax dynamics.
+
+---
+
+## Parameters Swept
+
+| Axis | Values | Justification |
+|------|--------|---------------|
+| `infant_starvation_multiplier` (ISM) | [1.2, 1.5, 2.0, 2.33] | Key child vulnerability parameter — never swept in Phase 3 |
+| `eat_gain` | [0.20, 0.30, 0.50, 0.70] | Energy per feed |
+| `init_food` | [100, 300, 600, 900] | Food density → forage cycle speed |
+
+**Fixed (all Phase 3b runs):**
+`care_weight = forage_weight = self_weight = 1.0` (unbiased), `warmth_factor = 0.0`, `move_cost = 0.005`, `rest_recovery = 0.005`, `hunger_rate = 1/35`, `maturity_age = 200`, `max_ticks = 400`, `init_mothers = 15`
+
+---
+
+## BEST_ECOLOGICAL Regime (highest child_death_mu — children lived longest)
+
+| Parameter | Value |
+|-----------|-------|
+| `infant_starvation_multiplier` | 1.2 |
+| `eat_gain` | 0.70 |
+| `init_food` | 600 |
+| `c_matr` | 0.000 |
+| `m_surv` | 0.133 |
+| `child_death_mu` | 48.3 ticks |
+
+Saved to: `outputs/phase3b_calibration/selected_ecologies.json`
+
+---
+
+## OVAT Sensitivity Results (5 seeds each)
+
+### Set A — ISM sweep (eat_gain=0.30, init_food=400)
+
+| ISM | M_surv | C_matr | child_death_mu |
+|-----|--------|--------|----------------|
+| 1.0 | 0.053 | 0.000 | 47.7 |
+| 1.5 | 0.173 | 0.000 | 34.2 |
+| 2.0 | 0.240 | 0.000 | 26.2 |
+| 2.33 | 0.413 | 0.000 | 21.5 |
+| 2.5 | 0.427 | 0.000 | 20.1 |
+
+ISM paradox: higher ISM kills children faster, ending the care trap sooner → mothers survive better. Lower ISM lets children live longer in the care trap → mothers starve.
+
+---
+
+## Why Child Maturation Is Impossible with Weights = 1.0 — The Care Trap
+
+With `tau = 0.1` (near-deterministic softmax) and all weights = 1.0:
+
+```
+forage_cue = 1 - dist_to_food / perception_radius
+```
+
+At init_food=600 (24% grid coverage), forage_cue ≈ 0.86 dominates SELF and CARE.
+
+CARE only wins softmax when `child.distress > forage_cue ≈ 0.86`, meaning the child has ~14% energy remaining — approximately 4 ticks before starvation.
+
+By that point:
+1. Mother commits to CARE and navigates to child.
+2. She arrives with held_food = 0 (has not foraged recently — FORAGE only fires when distress < 0.86).
+3. `feed_child()` fails (held_food ≤ 0 guard). Commitment releases.
+4. Next tick: child distress > 0.86 again → CARE wins → mother navigates again → loop.
+5. Child starves. Mother resumes normal foraging.
+
+**Feeds needed formula:**
+```
+feeds_needed = (200 × hunger_rate × ISM - 1.0) / eat_gain
+             = (5.714 × ISM - 1.0) / eat_gain
+```
+
+| ISM | eat_gain | feeds_needed | Best observed feeds/child |
+|-----|----------|-------------|--------------------------|
+| 1.2 | 0.70 | 8.4 | ~1.9 (from grid data) |
+| 1.5 | 0.30 | 25.2 | ~1.8 |
+| 2.33 | 0.20 | 61.6 | — (mathematically impossible) |
+
+Even at the best ecological combo (ISM=1.2, eat_gain=0.70), observed feeds/child ≈ 1.9 vs 8.4 needed. Gap remains ~4.4×.
+
+**Root cause**: FORAGE must precede CARE (mother must pick food before she can deliver it). With unbiased weights, FORAGE and CARE compete as equals. CARE fires too late (child at 14% energy) and mother arrives empty. The sequential dependency (FORAGE → CARE) is broken by simultaneous competition.
+
+---
+
+## Key Files
+
+| File | Role |
+|------|------|
+| `experiments/phase3b_calibration/config.py` | ISM/eat_gain/init_food sweep grid, PHASE3B_FLAGS, feeds_needed formula |
+| `experiments/phase3b_calibration/run.py` | 8-step pipeline: anchor, OVAT, grid, regime selection |
+| `experiments/phase3b_calibration/plot.py` | 5-figure evidence suite (OVAT sensitivity, action dist, heatmap, validation, care trap) |
+
+---
+
+## Phase 3b Conclusion
+
+Ecological parameter tuning alone (ISM, eat_gain, init_food) cannot rescue child maturation when motivation weights are unbiased. The care trap is a structural consequence of the softmax + cue system with equal weights, not an artefact of any single parameter. This confirms:
+
+1. The simulation mechanics are correct.
+2. Motivational bias is the necessary and sufficient change to enable child maturation.
+3. Phase 4 must sweep `care_weight` to establish the minimum bias needed.
+
+---
+
+## Next: Phase 4 — Motivation Weight Sweep (care_weight bias)

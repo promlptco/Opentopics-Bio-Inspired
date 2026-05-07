@@ -72,8 +72,9 @@ class Config:
     # Warm behavior — spatial thermoregulation (Change H)
     # Within warmth_radius cells, maternal proximity reduces infant hunger_rate.
     # hunger_rate *= (1 - warmth_factor * warmth_proximity)
+    # warmth_factor locked at 0.0 for Phase 3/4 — reserved for Phase 5+ spatial ecology.
     warmth_radius: int = 3
-    warmth_factor: float = 0.3
+    warmth_factor: float = 0.0
 
     # Phase 5 — Ecological Emergence
     # infant_starvation_multiplier=2.33 = 35/15: infant starves in 15 ticks (Change J)

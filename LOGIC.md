@@ -106,15 +106,19 @@ P(a) = exp(score_a / τ) / Σ exp(score_i / τ)
 ### 3.3 Action Execution (`simulation/simulation.py:_execute_action`)
 
 **FORAGE:**
-1. If holding food → eat immediately (energy += eat_gain).
+1. If already holding food → do nothing (motivation block suppresses forage_cue when `held_food >= 1`, so this branch should not fire when provisioned).
 2. Else if on a food cell → pick up food (remove from world, `held_food += 1`).
 3. Else → A* pathfind toward nearest food, move one step (energy -= move_cost, fatigue += fatigue_rate).
 
-**Why pick-carry-eat sequence:** Separating pick from eat gives the mother a food-in-hand state. When she later chooses CARE, she can potentially feed the child from held food (feeding the child costs energy regardless — held food would otherwise only benefit herself). The carry mechanic also creates a realistic two-trip foraging loop.
+**Why pick-carry, not pick-eat:** FORAGE is food procurement only. Eating is deferred to SELF so that energy is consumed when the mother is actually hungry (self_cue = 1−energy is high), not immediately after picking when she may be near full. Immediate eating in FORAGE produced "eat-at-full-energy → gain wasted by cap" behaviour that inflated survival artificially. The carry mechanic also creates a realistic two-trip foraging loop: pick food (FORAGE) → deliver to child (CARE) or eat (SELF).
 
-**SELF:** `rest()` — fatigue decremented by rest_recovery. No energy gain. Fatigue feeds back into self_cue, so resting reduces the urgency of the next SELF choice.
+**SELF:**
+1. If holding food (`held_food > 0`) → eat (energy += eat_gain, held_food -= 1). Self-cue fires when energy is low, so food is consumed efficiently when most needed.
+2. Otherwise → `rest()` (fatigue -= rest_recovery). No direct energy gain.
 
-**Why rest, not sleep/shelter:** The simulation models adult-phase behavior where the primary cost is movement (fatigue). Resting reduces fatigue cost but doesn't directly restore energy — energy comes only from food. This preserves the trade-off: mothers can't rest their way to health, they must forage.
+Fatigue reduction feeds back into the passive fatigue drain next tick (`energy -= fatigue × fatigue_rate`), providing an indirect energy benefit.
+
+**Why rest, not sleep/shelter:** The simulation models adult-phase behavior where the primary cost is movement fatigue. Resting reduces fatigue but doesn't directly restore energy — energy comes only from food. This preserves the trade-off: mothers can't rest their way to health, they must forage. (Note: SELF eats held food first before resting, matching Phase 2 SurvivalSimulation behaviour.)
 
 **CARE (implemented 2026-05-04 — Change C):**
 - Find nearest distressed child in commitment or visible set.
@@ -196,7 +200,7 @@ REST reduces fatigue, which in turn reduces the passive fatigue drain next tick 
 | Per tick (passive fatigue drain) | — | ↓ −fatigue×fatigue_rate | ↑ rises |
 | Per tick (hunger baseline) | — | ↓ −hunger_rate | ↑ rises |
 | SELF (rest) | ↓ −rest_recovery | — (indirect only) | ↓ falls slowly via reduced drain |
-| Eat held food (FORAGE) | — | ↑ +eat_gain | ↓ falls |
+| Eat held food (SELF) | — | ↑ +eat_gain | ↓ falls |
 
 **Why this design:** Energy can only be gained by eating. Every other action either drains or manages the drain rate. `rest_recovery` controls how quickly fatigue resets between movement bursts — it is a **mobility recovery** parameter, not an energy parameter. Its evolutionary relevance is speed of recovery between foraging trips, not survival without food.
 
@@ -207,19 +211,20 @@ REST reduces fatigue, which in turn reduces the passive fatigue drain next tick 
 ```python
 child.energy    ∈ [0, 1]   # metabolic reserve; depleted at hunger_rate per tick
 child.hunger    = 1 - energy  # derived inverse: 0 = full, 1 = dead (energy = 0)
-child.separation ∈ [0, 1]  # normalized distance to mother
-child.distress  = (hunger + separation) / 2
+child.separation ∈ [0, 1]  # normalized distance to mother (tracked but not in distress formula)
+child.distress  = hunger    # hunger-only: distress = 1 - energy  [Fixed 2026-05-07]
 ```
 
 **Death:** `energy <= 0` → starvation. Identical to mother death condition. `hunger` is a derived metric — it is NOT tracked independently.
 
-**Why separation in distress:** Infant distress in mammals is not purely hunger — it is a composite signal including physical separation (cold, vulnerability, isolation). `separation = distance_to_mother / perception_radius` models how a crying infant's signal grows proportionally to how far away the mother is. At `separation = 1.0`, the mother is at or beyond perception radius — the infant is "lost."
+**Distress is hunger-only (fixed 2026-05-07):** The original formula `distress = (hunger + separation) / 2` included separation — the normalized distance from infant to mother. This was removed because immobile infants cannot signal separation agency; separation reflects the mother moving to forage, not the infant's metabolic state. With the old formula, a well-fed but distant infant had artificially elevated distress (up to 0.5 from separation alone), pulling mothers back toward care even when no feeding was needed. The fix: `distress = hunger = 1 − energy`. `child.separation` is still computed and stored (for logging and potential Phase 5+ warmth extensions) but is no longer part of the distress signal.
 
-**Warm behavior is a dual distress reducer:** Maternal proximity (warm) lowers `child.distress` through both components of the formula simultaneously:
-- **Hunger path** — when mother is within `warmth_radius`, `hunger_rate` is reduced (Change H). Energy depletes more slowly → `hunger = 1 − energy` stays lower → distress drops.
-- **Separation path** — being physically close directly reduces `separation = distance / perception_radius` → distress drops.
-
-At same-cell proximity (dist = 0): `separation = 0` and maximum warmth reduction applies to `hunger_rate`. Both components of distress are minimised at once. This is why maternal co-location is the most efficient care action — it simultaneously sates and soothes.
+**Warm behavior (warmth_factor > 0, Phase 5+ only):** When active, maternal proximity reduces neonatal metabolic cost:
+```python
+warmth_proximity = max(0.0, 1.0 - dist_to_mother / warmth_radius)
+hunger_rate *= (1.0 - warmth_factor * warmth_proximity)
+```
+With the hunger-only distress formula, warmth now reduces distress through a single path: lower hunger_rate → slower energy depletion → lower hunger → lower distress. `warmth_factor = 0.0` in all Phase 3/4 experiments (locked off).
 
 **Why the mother reads distress, not hunger directly:** Biologically, a mother cannot observe her infant's internal metabolic state. She can only observe behavioral signals: vocalization intensity, postural cues, activity level. `distress` is this observable signal. Reading `child.hunger` directly would mean the mother has metabolic telepathy — it violates the ecological realism requirement.
 
@@ -372,8 +377,8 @@ Midpoint at energy=0.85. At energy=1.0: P≈0.95. At energy=0.7: P≈0.05. `has_
 ### G. Softmax tau, mutation_rate, mutation_sigma into Config ✅ Implemented
 `Config.softmax_tau = 0.1`, `Config.mutation_rate = 0.1`, `Config.mutation_sigma = 0.05`. Simulation passes these to `choose_motivation(tau=self.config.softmax_tau)` and `genome.mutate(mutation_rate=..., sigma=...)`. **Why:** Evolutionary hyperparameters must be config-file visible and CLI-overridable.
 
-### H. Warm behavior (spatial thermoregulation) ✅ Implemented
-`Config.warmth_radius = 3`, `Config.warmth_factor = 0.3`. Applied in child update loop before `update_hunger()`:
+### H. Warm behavior (spatial thermoregulation) ✅ Implemented (locked off Phase 3/4)
+`Config.warmth_radius = 3`, `Config.warmth_factor = 0.0` (default in root `config.py`; was 0.3 at initial implementation, updated to 0.0 before Phase 3 to prevent confounding ecology — reserved for Phase 5+ spatial ecology experiments). Applied in child update loop before `update_hunger()`:
 ```python
 warmth_proximity = max(0.0, 1.0 - dist_to_mother / warmth_radius)
 hunger_rate *= (1.0 - warmth_factor * warmth_proximity)

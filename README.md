@@ -352,187 +352,102 @@ Use `--workers N` to run them in parallel via `ProcessPoolExecutor`.
 
 ---
 
-## 🐣 Phase 3 — Mother-Child Caregiving Baseline
+## 🐣 Phase 3 — init_food Sweep (Children Added) ✅ CONCLUDED
 
-> **MVE (Minimum Viable Ecology):** the least generous set of environmental parameters (food density, move cost, eat gain) under which mothers can still keep their infant alive to maturity.
+Mother + child simulation. Answers: "Can food density alone, with unbiased motivation weights (all = 1.0) and ISM = 2.33, produce child maturation?"
 
-Mother + child simulation. Finds the MVE where mothers can support a dependent child using motivation weights (FORAGE / CARE / SELF).
+**Result: NO.** C_matr = 0.000 across all 7 init_food values (40–900) × 10 seeds.
+
+```powershell
+python -m experiments.phase3_survival_full.phase3_sweep.run --workers 8
+python -m experiments.phase3_survival_full.phase3_sweep.plot
+```
+
+### Key files
+
+| File | Role |
+|------|------|
+| `experiments/phase3_sweep/config.py` | Sweep grid (INIT_FOOD_VALUES, SWEEP_SEEDS) |
+| `experiments/phase3_sweep/run.py` | Parallel sweep runner |
+| `experiments/phase3_sweep/plot.py` | Three-figure evidence suite |
+
+### Output files
+
+All outputs → `outputs/phase3_sweep/`:
+
+| File | Description |
+|---|---|
+| `sweep_results.csv` | Aggregated metrics per init_food value |
+| `plots/fig1_sweep_summary.png` | init_food vs feeds / M_surv / child death / action split |
+| `plots/fig2_timeseries.png` | Per-tick population, mother energy, child energy |
+| `plots/fig3_phase2_vs_3.png` | Mother survival and energy: Phase 2 vs Phase 3 |
+
+### Phase 3 conclusion
+
+Food density alone cannot produce child maturation. Maximum feeds/child ≈ 2.1 vs 62 needed at ISM=2.33. The bottleneck is the care trap (softmax cycle time), not food availability.
 
 ---
 
-## 🔬 Phase 3a — Motivation Sweep
+## 🔬 Phase 3b — Ecological Calibration ✅ CONCLUDED
 
-Sweeps `care_w × forage_w × self_w` over the locked Phase 2 BALANCED ecology.
-Selects the canonical fixed genome for Phase 3b+.
+3D parameter sweep (ISM × eat_gain × init_food) with unbiased weights. Answers: "Can ecological parameter tuning rescue child maturation at any ISM level?"
 
-Ecology is loaded at runtime from:
-`outputs/phase2_survival_minimal/auto_400_percept15_repeat3_validation_selected_baselines/selected_ecologies.json`
+**Result: NO.** C_matr = 0.000 across all 64 grid combos × 5 seeds = 320 runs. CHILD_SURVIVAL_POSSIBLE = False.
+
+**Care trap mechanism:** With tau=0.1 and all weights=1.0, CARE only wins softmax when child distress > forage_cue ≈ 0.86 (child at ~14% energy, ~4 ticks from death). Mother arrives empty-handed (no prior FORAGE). Feed fails. Commitment releases. Loop. Child starves.
 
 ```powershell
-# Coarse grid — 6×6×6 = 216 combos (default, recommended first pass)
-python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8
-
-# Fine grid — 11×11×11 = 1331 combos (refine after coarse)
-python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8 --grid fine
-
-# Sequential (no parallelism)
-python -m experiments.phase3a_motivation_sweep.run --seeds 15
-
-# Auto-detect worker count
-python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 0
+python -m experiments.phase3_survival_full.phase3b_calibration.run --workers 8
+python -m experiments.phase3_survival_full.phase3b_calibration.plot
 ```
 
-### Phase 3a CLI reference
+### Key files
+
+| File | Role |
+|------|------|
+| `experiments/phase3b_calibration/config.py` | ISM/eat_gain/init_food sweep grid, PHASE3B_FLAGS |
+| `experiments/phase3b_calibration/run.py` | 8-step pipeline (anchor, OVAT, grid, regime selection) |
+| `experiments/phase3b_calibration/plot.py` | 5-figure evidence suite |
+
+### Phase 3b CLI reference
 
 | Flag | Default | Description |
 |---|---|---|
-| `--seeds` | `15` | Independent seeds per genome combination |
-| `--duration` | `400` | Ticks per run (covers maturity_age=200 with buffer) |
 | `--workers` | `1` | Parallel workers (`0` = auto) |
-| `--grid` | `coarse` | `coarse` = 6×6×6 = 216 combos; `fine` = 11×11×11 = 1331 |
-
-### Phase 3a output files
-
-All outputs → `outputs/phase3a_motivation_sweep/<timestamp>/`:
-
-| File | Description |
-|---|---|
-| `sweep_raw.csv` | One row per seed per genome combination |
-| `sweep_results.csv` | Aggregated metrics (mean across seeds) per genome |
-| `canonical_genome.json` | Selected genome + metrics |
-| `heatmap_child_survival.png` | `care_w × forage_w` — child survival rate |
-| `heatmap_child_energy.png` | `care_w × forage_w` — mean child final energy |
-| `heatmap_mother_survival.png` | `care_w × forage_w` — mother survival rate |
-| `heatmap_mean_mother_energy.png` | `care_w × forage_w` — mean mother energy |
-
-### Phase 3a selection criteria (applied in order)
-
-1. `child_survival_rate > 0` — at least one child reached maturity
-2. `mother_survival_rate ≥ 0.5` — ecology not collapsing
-3. `mean_mother_energy > 0.1` — mother energy not collapsed
-4. `care_choice_rate > 0.05` — CARE is non-trivial
-5. Lowest `care_w` among passing
-6. Tie-break: highest `mean_mother_energy`
-
-### Run baseline validation
-
-```powershell
-# Sweep mode — grid search over care/forage/self weights
-python experiments/phase3_survival_full/run.py --mode sweep --duration 1000 --repeats 3
-
-# Single mode — one hand-picked config
-python experiments/phase3_survival_full/run.py --mode single --duration 1000 --repeats 10
-```
-
-### Motivation weight grid (48-combination sweep)
-
-```powershell
-# Default (15 seeds, 1000 ticks)
-python experiments/phase3_survival_full/motivation_sweep.py
-
-# Custom seeds / duration
-python experiments/phase3_survival_full/motivation_sweep.py --seeds 30 --duration 1000
-```
-
-### Escalation sweep — find the MVE food level
-
-```powershell
-# Default sweep food=50→95, step=5, 15 seeds
-python experiments/phase3_survival_full/escalation_sweep.py
-
-# Custom range
-python experiments/phase3_survival_full/escalation_sweep.py --food_start 50 --food_end 70 --food_step 5 --seeds 15
-```
-
-### Action visualization — behavioral characterization
-
-```powershell
-python experiments/phase3_survival_full/action_visualization.py
-```
-
-### Phase 3 CLI reference
-
-| Flag | Default | Description |
-|---|---|---|
-| `--duration` | `1000` | Simulation ticks |
-| `--repeats` | `3` | Repeats per seed |
-| `--seeds` | `15` | Number of seeds (sweep scripts) |
-| `--tau` | `0.1` | Softmax temperature |
-| `--perceptual_noise` | `0.1` | Perceptual noise on food/child distance |
-| `--mode` | `sweep` | `sweep` or `single` |
-| `--food_start` | `50` | Start food level (escalation sweep) |
-| `--food_end` | `95` | End food level (escalation sweep) |
-| `--food_step` | `5` | Step size (escalation sweep) |
 
 ### Output files
 
-All outputs → `outputs/phase3_survival_full/<timestamp>/`:
+All outputs → `outputs/phase3b_calibration/`:
 
 | File | Description |
 |---|---|
-| `auto_phase3_summary.json` | Selected configs + validation metrics |
-| `validation_<name>.png` | Energy + population trajectory |
-| `action_selection_<name>.png` | Action rates over time |
-| `motivation_selection_<name>.png` | Motivation rates over time |
-| `mother_child_diagnostics_<name>.png` | Mother / child energy and feeding |
-| `feed_rate_<name>.png` | Feeding event frequency |
-| `spatial_heatmap_<name>.png` | Population occupancy heatmap |
+| `grid_sweep.csv` | Aggregated metrics — 64 combos × 5 seeds |
+| `ovat_set_A_ism.csv` | ISM sensitivity (aggregated) |
+| `ovat_set_B_eat_gain.csv` | eat_gain sensitivity |
+| `ovat_set_C_init_food.csv` | init_food sensitivity |
+| `selected_ecologies.json` | BEST_ECOLOGICAL regime (ISM=1.2, eat_gain=0.70, init_food=600) |
+| `plots/ovat_sensitivity.png` | OVAT panels: M_surv + child_death_mu vs each axis |
+| `plots/action_rate.png` | Stacked CARE/FORAGE/SELF% across OVAT axes |
+| `plots/feasibility_heatmap.png` | ISM × eat_gain heatmap of child_death_mu |
+| `plots/mother_energy.png` | BEST_ECOLOGICAL validation: mother energy trajectory |
+| `plots/child_energy.png` | BEST_ECOLOGICAL validation: child energy trajectory |
+| `plots/mother_population.png` | BEST_ECOLOGICAL validation: mother population trajectory |
+| `plots/child_population.png` | BEST_ECOLOGICAL validation: child population trajectory |
+| `plots/care_trap_scatter.png` | CARE% vs child_death_mu scatter across all grid combos |
+
+### Phase 3b conclusion
+
+Ecological tuning alone cannot rescue child maturation. Motivational bias (`care_weight > 1.0`) is necessary. Proceeds to Phase 4.
 
 ---
 
-## 🧬 Phase 4 — Neutral Drift Baseline (Evolution)
+## 🧬 Phase 4 — Motivation Weight Sweep 🔲 PLANNED
 
-Establishes the genetic baseline: does care_weight evolve or drift under standard ecology (no existential infant dependency)?
+Find the minimum `care_weight` that enables child maturation at BEST_ECOLOGICAL parameters (ISM=1.2, eat_gain=0.70, init_food=600).
 
-> **Run scripts 05 and 06 (FIXED) for all scientific conclusions.** Scripts 01–04 contain a known orphan-injection bug and are archived for reference only.
+**Scientific rationale:** With care_weight=2.0, CARE wins softmax when distress > 0.43 (child at 57% energy). Mother has held food from prior free-foraging period → delivers → child survives. ~13 feeds in 200 ticks > 8.4 needed.
 
-### Definitive scripts (use these)
-
-```powershell
-# Script 05 — Ceiling-drop baseline (bug-fixed): care_weight init=0.80, standard cost
-python experiments/phase4_neutral_drift_baseline/05_run_ceiling_drop_FIXED.py
-
-# Script 06 — True neutral control (bug-fixed): same as 05 but feed_cost=0 and no infant starvation
-python experiments/phase4_neutral_drift_baseline/06_run_true_neutral_FIXED.py
-```
-
-### Visualization / analysis scripts
-
-```powershell
-# Plot 01 — Artefact mechanism: care crash vs orphan injection rate (stacked)
-python experiments/phase4_neutral_drift_baseline/plot_01_artefact_mechanism.py
-
-# Plot 02 — Lineage fitness scatter: buggy vs fixed
-python experiments/phase4_neutral_drift_baseline/plot_02_lineage_comparison.py
-
-# Plot 03 — Fixed baselines overlay: Script 05 vs Script 06
-python experiments/phase4_neutral_drift_baseline/plot_03_fixed_baselines_overlay.py
-
-# Plot 04 — All-weights stability check (care / forage / self trajectories)
-python experiments/phase4_neutral_drift_baseline/plot_04_all_weights_fixed.py
-
-# Turnover analysis
-python experiments/phase4_neutral_drift_baseline/05_analyze_turnover.py
-```
-
-### Archived scripts (bug-affected — do not use for conclusions)
-
-| Script | Description |
-|---|---|
-| `01_run_floor_bounce_artefact.py` | Original Phase 4 — floor-bounce artefact from U(0,1) init |
-| `02_run_ceiling_drop_erosion.py` | Ceiling-drop recheck — orphan injection bug present |
-| `03_run_bounded_drift_validation.py` | Drift validation — orphan injection bug present |
-| `04_run_true_neutral_control.py` | Neutral control — orphan injection bug present |
-
-### Output files
-
-All outputs → `outputs/phase4_neutral_drift_baseline/`:
-
-| Directory | Description |
-|---|---|
-| `05_ceiling_drop_FIXED/` | Script 05 results (care trajectory, r values, checkpoints) |
-| `06_true_neutral_FIXED/` | Script 06 results |
-| `post_mortem/` | Four visualization plots documenting the bug and fix |
+*Implementation not yet available.*
 
 ---
 
@@ -544,15 +459,25 @@ simulation/       world.py, simulation.py — world dynamics and main loop
 evolution/        genome.py, lineage.py — genetic operators and lineage tracking
 experiments/
   live_viewer.py                    ← phase-agnostic live visualizer
-  phase1_mechanics_tests/           ← mechanics validation (6 tests)
-  phase2_survival_minimal/          ← ecological survival calibration
-  phase3_survival_full/             ← mother-child caregiving baseline
-  phase4_neutral_drift_baseline/    ← neutral genetic drift baseline
-shared/           constants.py — cross-phase constants
-outputs/          auto-generated plots and JSON (organized by phase/timestamp)
+  phase1_mechanics_tests/           ← mechanics validation (6 tests)          [DONE]
+  phase2_survival_minimal/          ← ecological survival calibration          [DONE]
+  phase3_survival_full/             ← all Phase 3 experiments                  [DONE]
+    phase3_sweep/                     ← init_food sweep (children added)
+    phase3b_calibration/              ← ISM × eat_gain × init_food calibration
+  archived/
+    phase3_basic/                   ← early diagnostic single-run (superseded)
+outputs/          auto-generated plots and JSON (mirrors experiments/ structure)
+  phase3_survival_full/
+    phase3_sweep/
+      percept8/                     ← canonical Phase 3 result (perception_radius=8)
+      archived/
+        percept15/                  ← earlier run with wrong perception radius
+    phase3b_calibration/
+      plots/                        ← generated evidence figures
 ```
 
 ## 📄 Documentation
 
-- [EXPERIMENT_DESIGN.md](./EXPERIMENT_DESIGN.md) — research question, methodology, phase protocol
-- [full_experiment_report.md](./full_experiment_report.md) — full results report (Phases 1–4)
+- [ROADMAP.md](./ROADMAP.md) — full phase pipeline: done phases with results, planned phases with status
+- [LOGIC.md](./LOGIC.md) — simulation architecture, code logic, biological reasoning
+- [CURRENT_STATE.md](./CURRENT_STATE.md) — detailed current state per phase (parameters, bugs, results)

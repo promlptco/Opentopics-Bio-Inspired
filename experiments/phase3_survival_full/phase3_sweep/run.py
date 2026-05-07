@@ -1,4 +1,4 @@
-# experiments/phase3_sweep/run.py
+﻿# experiments/phase3_sweep/run.py
 """
 Phase 3 init_food Sensitivity Sweep.
 
@@ -6,9 +6,10 @@ Sweeps init_food across 7 values x 10 seeds = 70 runs.
 Reports mother survival, child maturation, feeds, and action distribution.
 
 Usage:
-    python -m experiments.phase3_sweep.run
-    python -m experiments.phase3_sweep.run --workers 4
-    python -m experiments.phase3_sweep.run --workers 1   # for debugging
+    python -m experiments.phase3_survival_full.phase3_sweep.run
+    python -m experiments.phase3_survival_full.phase3_sweep.run --baseline percept15
+    python -m experiments.phase3_survival_full.phase3_sweep.run --workers 4
+    python -m experiments.phase3_survival_full.phase3_sweep.run --workers 1   # for debugging
 """
 import argparse
 import csv
@@ -19,7 +20,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.phase3_sweep.config import (
+from experiments.phase3_survival_full.phase3_sweep.config import (
     INIT_FOOD_VALUES, SWEEP_SEEDS,
     MOTHER_SURVIVAL_MIN, CHILD_MATURATION_MIN,
     load_sweep_config,
@@ -28,9 +29,9 @@ from experiments.phase3_sweep.config import (
 
 # ── Single run ────────────────────────────────────────────────────────────────
 
-def run_one(init_food: int, seed: int) -> dict:
+def run_one(init_food: int, seed: int, baseline: str) -> dict:
     from simulation.simulation import Simulation
-    cfg = load_sweep_config(init_food, seed)
+    cfg = load_sweep_config(init_food, seed, baseline)
     sim = Simulation(cfg)
     sim.run()
 
@@ -66,7 +67,8 @@ def run_one(init_food: int, seed: int) -> dict:
 
 
 def _task(args):
-    return run_one(*args)
+    init_food, seed, baseline = args
+    return run_one(init_food, seed, baseline)
 
 
 # ── Aggregation helper ────────────────────────────────────────────────────────
@@ -95,11 +97,10 @@ def aggregate(results: list[dict], init_food: int) -> dict:
 
 # ── Output ────────────────────────────────────────────────────────────────────
 
-def print_summary(agg_rows: list[dict]) -> None:
+def print_summary(agg_rows: list[dict], baseline: str) -> None:
     w = 90
     print(f"\n{'='*w}")
-    print(f"Phase 3 Sensitivity Sweep — init_food  "
-          f"(percept8 BALANCED, ISM=2.33, eat_gain=0.2, weights=1.0)")
+    print(f"Phase 3 Sensitivity Sweep — init_food  ({baseline} BALANCED, ISM=2.33, weights=1.0)")
     print(f"{'='*w}")
     print(f"{'food':>5} | {'M_surv':>7} | {'C_matr':>7} | {'C_mat#':>6} | "
           f"{'Feeds':>6} | {'CARE%':>5} | {'FOR%':>5} | {'SELF%':>5} | "
@@ -146,15 +147,18 @@ def save_csv(results: list[dict], path: Path) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Phase 3 init_food sensitivity sweep")
+    parser.add_argument("--baseline", type=str, default="percept8",
+                        choices=["percept8", "percept15"],
+                        help="Phase 2 ecology baseline to use (default: percept8)")
     parser.add_argument("--workers", type=int, default=4,
                         help="Parallel worker processes (default 4)")
     parser.add_argument("--no_save", action="store_true",
                         help="Skip saving CSV output")
     args = parser.parse_args()
 
-    tasks = [(f, s) for f in INIT_FOOD_VALUES for s in SWEEP_SEEDS]
+    tasks = [(f, s, args.baseline) for f in INIT_FOOD_VALUES for s in SWEEP_SEEDS]
     n_total = len(tasks)
-    print(f"Phase 3 init_food sweep: {len(INIT_FOOD_VALUES)} values x "
+    print(f"Phase 3 init_food sweep [{args.baseline}]: {len(INIT_FOOD_VALUES)} values x "
           f"{len(SWEEP_SEEDS)} seeds = {n_total} runs  (workers={args.workers})")
     print(f"init_food values: {INIT_FOOD_VALUES}")
     print(f"Seeds: {SWEEP_SEEDS[0]}–{SWEEP_SEEDS[-1]}")
@@ -172,10 +176,10 @@ def main():
     print(f"  {n_total}/{n_total} done")
 
     agg_rows = [aggregate(results, f) for f in INIT_FOOD_VALUES]
-    print_summary(agg_rows)
+    print_summary(agg_rows, args.baseline)
 
     if not args.no_save:
-        out_dir = PROJECT_ROOT / "outputs" / "phase3_sweep"
+        out_dir = PROJECT_ROOT / "outputs" / "phase3_survival_full" / "phase3_sweep" / args.baseline
         save_csv(results, out_dir / "raw_results.csv")
 
 
