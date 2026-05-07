@@ -128,6 +128,12 @@ class Config:
     birth_cry_duration: int = 0
     birth_cry_floor: float = 0.0
 
+    # Phase 4 fix — Starvation floor (Approach E)
+    # care_energy_floor: mother cannot commit to CARE when energy < this threshold.
+    # If carrying food she eats it (SELF); otherwise breaks commitment and forages.
+    # 0.0 = disabled (all prior phases unaffected).
+    care_energy_floor: float = 0.0
+
     # Phase 8 — Genuine Baldwin Effect controls
     # plasticity_noise_sigma: std-dev of multiplicative Gaussian noise added to the
     #   reward signal in plastic_update(). 0.0 = deterministic (Phase 7 behaviour).

@@ -21,7 +21,7 @@ import json
 from pathlib import Path
 from config import Config
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 _PHASE2_JSON = {
     "percept8":  _PROJECT_ROOT / "outputs/phase2_survival_minimal/auto_400_percept8/selected_ecologies.json",

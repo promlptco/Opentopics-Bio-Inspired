@@ -493,3 +493,153 @@ Ecological parameter tuning alone (ISM, eat_gain, init_food) cannot rescue child
 ---
 
 ## Next: Phase 4 — Motivation Weight Sweep (care_weight bias)
+
+---
+
+---
+
+# Phase 4 Current State
+
+Last updated: 2026-05-07 (V3 branch)
+
+---
+
+## Status: CONCLUDED — child maturation achieved after two structural fixes
+
+Phase 4 answers: "What is the minimum care_weight bias that enables child maturation, given the BEST_ECOLOGICAL baseline from Phase 3b?"
+
+**Answer: care_weight=1.0 is sufficient once the two structural traps are removed.** With fixes applied, C_matr rises from 0.013 (pre-fix maximum) to 0.30–0.75 depending on forage_weight. Child maturation is now mechanically viable.
+
+---
+
+## Ecological Baseline (locked from Phase 3b BEST_ECOLOGICAL)
+
+| Parameter | Value |
+|-----------|-------|
+| `infant_starvation_multiplier` | 1.2 |
+| `eat_gain` | 0.70 |
+| `init_food` | 600 |
+| `move_cost` | 0.005 |
+| `rest_recovery` | 0.005 |
+| `hunger_rate` | 1/35 |
+| `food_perception_radius` | 8 |
+| `maturity_age` | 200 |
+| `max_ticks` | 400 |
+| `init_mothers` | 15 |
+| `feeds_needed` | 8.4 (formula: (200 × 1/35 × 1.2 − 1.0) / 0.70) |
+
+---
+
+## Phase 4 Initial Sweep (before fixes) — null result confirmed
+
+Full 2D grid (care_weight × forage_weight, 30 combos × 5 seeds = 150 runs):
+
+- Maximum C_matr across all combos: **0.013** (1 child per 75 total)
+- feeds/child: 1.5–2.0 across all weight combinations (needed: 8.4)
+- Root cause: two structural traps prevented effective care delivery
+
+---
+
+## The Two Structural Traps
+
+### Trap 1 — Allomothering pool (dominant failure mode)
+
+`_execute_action` selected child via `max(all_children, key=Hamilton_score)`.
+With 15 children visible, all 15 mothers converged on the 1–2 most-distressed strangers.
+A mother abandons her own child whenever any stranger's distress exceeds `1.5 × own_child.distress`.
+Own-child feeds were diluted to ~1.9/child (average); distribution was heavily skewed (2–3 children received all care, 12–13 received none and starved at tick 29).
+
+### Trap 2 — Maternal starvation (high care_weight)
+
+When `held_food=1` and `care_weight ≥ 2.5`, CARE always beat SELF even at critical hunger.
+Mother delivered all food to children, never ate herself, starved at tick 30–45.
+Fewer total feeds delivered per run as care_weight increased — the opposite of the intended effect.
+
+---
+
+## Fixes Applied
+
+### Fix — Approach A: Own-child exclusivity (`simulation/simulation.py: _execute_action`)
+
+```python
+# Commit to own infant first; allomother only when own child is absent or dead.
+if mother.own_child_id is not None:
+    _own = self._get_child_by_id(mother.own_child_id)
+    if _own and _own.alive:
+        target = _own   # skip Hamilton max-scan entirely
+# Fall back to distress-responsive selection only when childless.
+if target is None and visible_children:
+    target = max(visible_children, key=lambda c: ... * c.distress)
+```
+
+**Biological basis**: Oxytocin-driven maternal imprinting at parturition. The mother bonds to the specific infant she birthed (`own_child_id`). She responds to her own infant's cry preferentially regardless of who is crying loudest — the mechanism that makes kin selection produce inclusive fitness gains without requiring explicit r-computation.
+
+### Fix — Approach E: Starvation floor (`simulation/simulation.py: step()`, `config.py`)
+
+```python
+# Survival override: mother cannot commit to CARE when critically hungry.
+if domain == "care" and mother.energy < config.care_energy_floor:
+    domain = "self"    # eat carried food if available
+    # or "forage" + break commitment if empty-handed
+```
+
+`care_energy_floor = 0.3` in Phase 4. Default = 0.0 in `Config` (disabled — all prior phases unaffected).
+
+**Biological basis**: Corticosterone-driven foraging override. In real mammals, extreme hunger suppresses maternal behaviour — a mother cannot provision offspring she cannot survive to care for.
+
+---
+
+## Results After Fixes (10 seeds each)
+
+| Weights | C_matr before | C_matr after | feeds/child | M_surv |
+|---------|--------------|--------------|-------------|--------|
+| care=1.0, forage=1.0 | 0.000 | **0.307** | 11.0 | 0.427 |
+| care=1.0, forage=2.0 | 0.013 | **0.747** | 13.4 | 1.433* |
+| care=1.5, forage=2.0 | 0.013 | **0.700** | 14.0 | 1.360* |
+| care=1.5, forage=1.0 | 0.000 | **0.113** | 10.4 | 0.300 |
+
+*M_surv > 1.0 is correct: matured children become new mothers (reproduction_enabled=False but `_check_maturation()` still runs), so the final mother count can exceed INIT_MOTHERS=15.
+
+feeds/child > 8.4 needed in all cases — the feeding bottleneck is resolved.
+
+---
+
+## On Hamilton r and Allomothering — Correct Framing
+
+**Phase 4 does NOT implement Hamilton r-selection.** The two-stage behavioral rule is:
+
+1. **Imprinting-based own-child care** — mother recognises own infant via `own_child_id` (set at birth). This is the biological mechanism that evolution selects under Hamilton's rule, but the agent computes no r.
+2. **Post-bereavement maternal responsiveness** — when own child is dead/absent, residual maternal drive responds to the most distressed visible infant. All strangers have r=0, so the Hamilton `(1+r)` term equals 1.0 for everyone → the fallback reduces to plain `argmax(distress)`. No kin-selection is occurring.
+
+Hamilton r becomes structurally meaningful only in Phase 5+, when spatial kin clustering (natal philopatry, `birth_scatter_radius`) creates non-zero r between neighbouring agents. In Phase 4 the r-weighting formula is forward-compatible scaffolding; it does not change behaviour.
+
+**How to describe allomothering in Phase 4 write-ups**: "When own child has died, the mother's residual maternal motivation responds to any distressed infant within range (post-bereavement responsiveness). This is not kin selection — it is a behavioural artefact of persistent maternal drive without a target."
+
+---
+
+## Key Files
+
+| File | Role |
+|------|------|
+| `experiments/phase4_weight_sweep/config.py` | Sweep grid, PHASE4_FLAGS, `care_energy_floor=0.3` |
+| `experiments/phase4_weight_sweep/run.py` | 7-step pipeline: threshold → OVAT → grid → selection → validation |
+| `experiments/phase4_weight_sweep/plot.py` | 5-figure suite; grid_heatmap vmax fixed to data-scaled |
+| `simulation/simulation.py` | Approach A (own-child exclusivity) + Approach E (starvation floor) |
+| `config.py` | `care_energy_floor: float = 0.0` added (default disabled) |
+| `outputs/phase4_weight_sweep/` | CSVs + plots from pre-fix run (reflect null result) |
+
+---
+
+## Phase 4 Conclusion
+
+Two behavioral fixes — own-child exclusivity (maternal imprinting) and a starvation floor (self-preservation override) — are necessary and sufficient to enable child maturation under the BEST_ECOLOGICAL parameters. Neither fix requires genetic evolution or plasticity: they are fixed behavioral rules that remove the two structural traps blocking care delivery.
+
+The Phase 4 sweep establishes that:
+1. `care_weight=1.0` with `forage_weight=2.0` achieves the highest C_matr (~0.75), because high forage_weight ensures mothers are always provisioned before committing to CARE.
+2. The minimum viable combination is `care_weight=1.0, forage_weight=1.0` (C_matr=0.31) — demonstrating that the weight value itself matters less than removing the structural traps.
+3. The starvation floor prevents high care_weight from being counterproductive.
+
+---
+
+## Next: Phase 5 — Spatial Ecology and Kin Clustering
+

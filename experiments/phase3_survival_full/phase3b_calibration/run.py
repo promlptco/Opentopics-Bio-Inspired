@@ -26,7 +26,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from experiments.phase3_survival_full.phase3b_calibration.config import (
@@ -46,9 +46,13 @@ def run_one(ism: float, eat_gain: float, init_food: int, seed: int) -> dict:
     from simulation.simulation import Simulation
     cfg = make_config(ism, eat_gain, init_food, seed)
     sim = Simulation(cfg)
-    sim.run()
+    sim.initialize()
+    original_mother_ids = {m.id for m in sim.mothers}
+    while sim.tick < cfg.max_ticks:
+        sim.step()
+        sim.tick += 1
 
-    alive_m  = sum(1 for m in sim.mothers if m.alive)
+    alive_m  = sum(1 for m in sim.mothers if m.alive and m.id in original_mother_ids)
     matured  = sum(1 for r in sim.logger.death_records
                    if r.agent_type == "child" and r.cause == "matured")
     feeds    = len(sim.logger.care_records)

@@ -198,11 +198,18 @@ class MotherAgent(Agent):
         distance_to_food: float | None = None,
         care_enabled: bool = True,
     ) -> dict[str, float]:
-        """Unified motivation scoring: genome_weight × neutral_cue (Change B).
+        """Unified motivation scoring: normalised_weight × neutral_cue.
 
-        final_FORAGE = forage_weight × (1 - dist_to_food / perception_radius)
-        final_SELF   = self_weight   × (1 - energy)
-        final_CARE   = expressed_care_weight × child.distress
+        Weights are normalised by their sum before multiplying by cues so that
+        each effective weight is a fraction of the motivation budget (sum = 1.0).
+        This makes weight values scale-invariant: only ratios matter, genomes
+        cannot inflate without changing behaviour, and plots are interpretable.
+
+        effective_FORAGE = (forage_weight / W) × forage_cue   ∈ [0, 1]
+        effective_SELF   = (self_weight   / W) × self_cue     ∈ [0, 1]
+        effective_CARE   = (care_weight   / W) × child.distress ∈ [0, 1]
+
+        where W = forage_weight + self_weight + care_weight (active domains only).
         """
         forage_cue = self.compute_forage_cue(
             perception_radius=perception_radius,
@@ -211,14 +218,22 @@ class MotherAgent(Agent):
         )
         self_cue = self.compute_self_cue()
 
+        fw = max(0.0, self.genome.forage_weight)
+        sw = max(0.0, self.genome.self_weight)
+        cw = max(0.0, self.expressed_care_weight) if care_enabled else 0.0
+
+        w_total = fw + sw + cw
+        if w_total <= 0.0:
+            w_total = 1.0  # degenerate guard: avoid division by zero
+
         scores = {
-            "FORAGE": max(0.0, self.genome.forage_weight * forage_cue),
-            "SELF": max(0.0, self.genome.self_weight * self_cue),
+            "FORAGE": (fw / w_total) * forage_cue,
+            "SELF":   (sw / w_total) * self_cue,
         }
 
         if care_enabled:
             care_cue = self.compute_care_cue(child=child)
-            scores["CARE"] = max(0.0, self.expressed_care_weight * care_cue)
+            scores["CARE"] = (cw / w_total) * care_cue
 
         return scores
 

@@ -253,6 +253,18 @@ class Simulation:
                             mother.energy - mother.genome.distress_sensitivity * own_child.distress,
                         )
 
+            # Approach E: starvation floor — survival overrides care when critically hungry.
+            # Prevents mothers from delivering food to children while starving to death.
+            if (domain == "care"
+                    and self.config.care_energy_floor > 0.0
+                    and mother.energy < self.config.care_energy_floor):
+                if mother.held_food > 0:
+                    domain = "self"    # eat the carried food first
+                else:
+                    domain = "forage"  # provision before caring; break current commitment
+                    mother.commit_ticks = 0
+                    mother.target_child_id = None
+
             # Log choice if distressed child exists
             if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
                 self._log_choice(mother, visible_children, domain)
@@ -317,14 +329,16 @@ class Simulation:
             if mother.has_commitment():
                 target = self._get_child_by_id(mother.target_child_id)
             if target is None or not target.alive:
-                if visible_children:
-                    # Relatedness-weighted selection (Hamilton r-bias):
-                    # score = expressed_care_weight × (1 + r) × child.distress
-                    # Own child r=0.5 → 1.5× score vs unrelated r=0 → 1.0× score.
-                    # Allomothering still possible when a stranger's distress
-                    # exceeds 1/(1+r_own) of own child's — biologically accurate.
-                    # Option 3 (proximity-decayed allomother threshold) reserved
-                    # for future extension when spatial kin clustering develops.
+                # Approach A: own-child exclusivity gate.
+                # Commit to own infant first; allomother only when own child is absent or dead.
+                # Maps to oxytocin-driven maternal imprinting — mother responds to her own
+                # infant's cry preferentially, regardless of who is crying loudest.
+                if mother.own_child_id is not None:
+                    _own = self._get_child_by_id(mother.own_child_id)
+                    if _own and _own.alive:
+                        target = _own
+                # Fall back to Hamilton r-weighted selection only when childless.
+                if target is None and visible_children:
                     target = max(
                         visible_children,
                         key=lambda c: mother.expressed_care_weight
