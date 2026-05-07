@@ -23,8 +23,14 @@ class ChildAgent(Agent):
     def update_separation(self, steps_to_mother: int, perception_radius: int) -> None:
         self.separation = min(1.0, steps_to_mother / perception_radius)
 
-    def update_distress(self) -> None:
-        self.distress = (self.hunger + self.separation) / 2.0
+    def update_distress(self, birth_cry_duration: int = 0, birth_cry_floor: float = 0.0) -> None:
+        # Infant cry is hunger-driven only. Immobile infants cannot signal separation;
+        # distress = hunger = 1 - energy (pure metabolic state).
+        base = self.hunger
+        if birth_cry_duration > 0 and self.age < birth_cry_duration:
+            self.distress = max(base, birth_cry_floor)
+        else:
+            self.distress = base
 
     def receive_food(self, amount: float) -> float:
         """Restore energy; return energy gained (= hunger reduced)."""

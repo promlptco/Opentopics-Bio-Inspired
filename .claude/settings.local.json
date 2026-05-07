@@ -42,7 +42,8 @@
       "Read(//c/Users/User/.claude/**)",
       "Bash(Get-Content \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-User-Desktop-FIBO-Study-3Y-2-FRA361-OPENTOPICS-Opentopics-Bio-Inspired\\\\05ecbc3d-d5ad-4f3d-8525-db2f2dae3a74\\\\tasks\\\\biegj4wi2.output\" -Wait)",
       "Bash(Select-String -Pattern \"PIPELINE|Step|BALANCED|EASY|HARSH|selected|Error|Traceback|FAILED|score=|surv=|Done\\\\.\")",
-      "Bash(dir C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase2_survival_minimal\\\\20260505_122504_validation_selected_baselines *)"
+      "Bash(dir C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase2_survival_minimal\\\\20260505_122504_validation_selected_baselines *)",
+      "PowerShell(New-Item *)"
     ],
     "additionalDirectories": [
       "\\tmp"

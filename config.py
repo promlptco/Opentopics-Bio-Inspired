@@ -13,6 +13,11 @@ class Config:
 
     # Perception
     perception_radius: int = 8
+    # food_perception_radius: sensory range for food detection only.
+    # Separate from perception_radius so child cry (acoustic, global) and
+    # food odour (chemical, short-range) use independent radii.
+    # Smaller value → lower forage_cue → CARE can win the softmax earlier.
+    food_perception_radius: int = 15
 
     # Energy — derived from starvation constraints (Change J)
     # initial_energy=1.0: full tank at birth
@@ -111,6 +116,16 @@ class Config:
     #   prior experiments unaffected. Phase 6d may set this to a small positive value (e.g.
     #   0.005) to make plasticity metabolically costly, strengthening the assimilation test.
     plasticity_energy_cost: float = 0.0
+
+    # Birth cry — neonatal acoustic distress floor
+    # For the first birth_cry_duration ticks of a child's life, distress is floored
+    # at birth_cry_floor regardless of hunger/separation state.
+    # 0 / 0.0 = disabled — all prior phases unaffected.
+    # Biological basis: mammalian neonates emit high-intensity cries at birth to signal
+    # their existence before hunger has time to accumulate. The mother's response remains
+    # stochastic (softmax-governed) — this is a signal, not a forced outcome.
+    birth_cry_duration: int = 0
+    birth_cry_floor: float = 0.0
 
     # Phase 8 — Genuine Baldwin Effect controls
     # plasticity_noise_sigma: std-dev of multiplicative Gaussian noise added to the

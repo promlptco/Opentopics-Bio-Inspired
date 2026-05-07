@@ -213,148 +213,155 @@ Branch: `V3`
 
 # Phase 3 Current State
 
-Last updated: 2026-05-06 (V3 branch)
+Last updated: 2026-05-07 (V3 branch)
 
 ---
 
-## Phase 3a Status: BLOCKED — awaiting food calibration
+## Status: Mechanistic loop correct — child survival = 0 (ecology/timing)
 
-Phase 3a (Motivation Sweep) cannot run until `init_food` is re-calibrated for Phase 3a's mechanics.
-
----
-
-## Phase 3a Bugs Fixed (2026-05-06)
-
-### Bug 1 — `mother_max_age=400` kills all survivors at tick 399
-- **Cause**: Config default `mother_max_age=400` equals `max_ticks=400`. Phase 3's `Simulation.step()` calls `mother.die()` when `age >= 400`, which fires on every survivor at the very last tick.
-- **Effect**: `mother_survival_rate = 0.0` for all 216 genomes. Phase 2's `SurvivalSimulation` has no age cap — the BALANCED ecology was calibrated without it.
-- **Fix**: `mother_max_age=None` added to Phase 3a config (`experiments/phase3a_motivation_sweep/config.py`).
-
-### Bug 2 — FORAGE domain eats food at full energy (wasted gain)
-- **Cause**: Phase 3's FORAGE domain ate held food immediately after picking (energy ~0.95 → gain = `min(1.0, 0.95+0.5)−0.95 = 0.05`, not 0.5). Phase 2's SELF domain ate only when energy was low (~0.4), getting the full 0.5 gain each time. 70–90% of each food's energy was wasted in Phase 3.
-- **Effect**: Phase 3 survival with BALANCED ecology = ~1/15 vs Phase 2's 6–13/15 with identical parameters.
-- **Fix** (`simulation/simulation.py`): FORAGE domain = pick or navigate only (no eating). SELF domain = eat held food if available, else rest. This matches Phase 2's `SurvivalSimulation` behavior.
-
-### Also fixed in this session
-- `food_replace_on_pick: bool = True` added to `Config` as the universal 1:1 replacement default. `food_replenish_threshold_ratio` defaulted to `0.0` (burst disabled). Phase 3a config cleaned up of the workaround values.
+Phase 3 adds one child per mother to Phase 2. The mechanistic care loop (forage → navigate →
+feed → eat → forage) is confirmed working. Child survival = 0 is an ecological timing issue,
+not a code bug. Root cause and next step documented below.
 
 ---
 
-## Remaining Issue — Ecological pressure from Phase 2 calibration
+## Ecology (percept15 BALANCED — locked from Phase 2)
 
-After both bug fixes, Phase 3a best result is:
-- `mother_survival = 0.41` (below MOTHER_SURVIVAL_MIN = 0.5)
-- `child_survival = 0.00` (no children mature)
+| Parameter | Value |
+|-----------|-------|
+| `perception_radius` | 15.0 |
+| `hunger_rate` | 1/35 ≈ 0.0286 |
+| `move_cost` | 0.01 |
+| `eat_gain` | 0.5 |
+| `init_food` | 40 |
+| `rest_recovery` | 0.005 |
 
-**This is ecological pressure, not a code bug.** The BALANCED ecology (`init_food=40`) was designed for Phase 2 (mothers only). Phase 3a adds:
-- 15 children each needing a feed every ~7 ticks to survive 200 ticks to maturity
-- Feed cost: 0.03 energy per feed from mother
-- Care commitment: 20-tick blocks where mothers cannot forage
+## Phase 3 Additions
 
-The Phase 2 BALANCED ecology has no food surplus for child-rearing. Decision: increase `init_food` for Phase 3a (Option A).
+| Parameter | Value |
+|-----------|-------|
+| `children_enabled` | True |
+| `care_enabled` | True |
+| `infant_starvation_multiplier` | 35/15 ≈ 2.33 — child starves in 15 ticks unfed |
+| `care_weight` | 1.0 (fixed genome) |
+| `forage_weight` | 1.0 (fixed genome) |
+| `self_weight` | 1.0 (fixed genome) |
+| `max_ticks` | 400 |
+| `init_mothers` | 15 |
 
 ---
 
-## NEXT STEP — Phase 3 Food Calibration Sweep
+## Key Files (V3 — Phase 3 Basic)
 
-**Goal**: Find minimum `init_food` where Phase 3a ecology is viable: `mother_survival >= 0.5` AND at least some children mature.
+| File | Role |
+|------|------|
+| `experiments/phase3_basic/config.py` | Loads percept15 BALANCED from Phase 2 JSON; sets Phase 3 flags |
+| `experiments/phase3_basic/run.py` | Diagnostic runner: tick-by-tick trace + multi-seed summary |
+| `simulation/simulation.py` | Core sim — all four Phase 3 fixes applied here |
 
-**Approach**: Extend Phase 2's `new_run.py` with `--mode phase3_food`. No new directory — reuse existing sweep infrastructure for code efficiency and scalability.
+---
 
-### new_config.py additions (bottom of file)
+## Fixes Applied to simulation.py (2026-05-07)
 
+### Fix A — Clear stale commitment when committed child dies
+**Bug**: `has_commitment()` returned True even after committed child died. `domain="care"` was forced
+for up to 20 more ticks. Mother held food (held_food=2) but could not eat → starved.
+
+**Fix** (motivation block, before commitment check):
 ```python
-# Phase 3 Food Calibration — init_food sweep with Phase 3a mechanics
-PHASE3_FOOD_SWEEP_VALUES = [40, 50, 60, 70, 80, 100, 120, 150]
-
-# Fixed conservative genome (low care, strong forage — stress-tests child survival)
-PHASE3_FOOD_CAL_GENOME = {"care_w": 0.2, "forage_w": 1.0, "self_w": 1.0}
-
-# Phase 3a mode flags — same as phase3a_motivation_sweep/config.py
-PHASE3_FOOD_CAL_FLAGS = {
-    "children_enabled": True, "care_enabled": True,
-    "reproduction_enabled": False, "mutation_enabled": False,
-    "plasticity_enabled": False, "mother_max_age": None,
-    "infant_starvation_multiplier": 1.0, "init_mothers": 15,
-}
-
-# Pass thresholds (same as Phase 3a)
-PHASE3_MOTHER_SURVIVAL_MIN = 0.5
-PHASE3_MOTHER_ENERGY_MIN   = 0.1
-PHASE3_CHILD_SURVIVAL_MIN  = 0.0   # any child matured counts
-PHASE3_CARE_CHOICE_MIN     = 0.05
+if mother.has_commitment():
+    _tgt = self._get_child_by_id(mother.target_child_id)
+    if _tgt is None or not _tgt.alive:
+        mother.commit_ticks = 0
+        mother.target_child_id = None
 ```
 
-### new_run.py additions (3 new functions after `_run_task`, mode handler in `run_experiment`)
+### Fix B — Cap held_food at 1; suppress forage_cue when provisioned
+**Bug**: Mother accumulated held_food=2. With forage_cue ≈ 0.667 (perception_radius=15), FORAGE
+always beat SELF — food was gathered but never eaten.
 
+**Fix**: Cap held_food at 1 in FORAGE execution block. When `held_food >= 1`, set
+`nearest_food = None` → forage_cue = 0 → motivation is SELF (eat) vs CARE (feed child).
+
+### Fix C — Kin-directed care motivation (birth imprinting)
+**Bug**: care_child for motivation was the globally most distressed of 15 children (commons trap).
+Collective distress always > SELF drive → mothers starved caring for non-own children.
+
+**Biological basis**: Oxytocin bond at parturition. Mother's care motivation is selectively
+amplified for own infant (birth imprinting / prolactin analog). Required for Hamilton r to
+be meaningful as a predictor at Phase 6+.
+
+**Fix** (motivation block only):
 ```python
-def make_phase3_config(params, duration):
-    cfg = make_config(params, duration)          # reuse Phase 2 config builder
-    for k, v in PHASE3_FOOD_CAL_FLAGS.items():
-        setattr(cfg, k, v)
-    cfg.care_weight   = PHASE3_FOOD_CAL_GENOME["care_w"]
-    cfg.forage_weight = PHASE3_FOOD_CAL_GENOME["forage_w"]
-    cfg.self_weight   = PHASE3_FOOD_CAL_GENOME["self_w"]
-    return cfg
-
-def run_one_phase3(params, seed, duration):
-    from simulation.simulation import Simulation
-    cfg = dataclasses.replace(make_phase3_config(params, duration), seed=seed)
-    sim = Simulation(cfg); sim.run()
-    alive_m = [m for m in sim.mothers if m.alive]
-    matured = sum(1 for r in sim.logger.death_records
-                  if r.agent_type == "child" and r.cause == "matured")
-    tc = len(sim.logger.choice_records)
-    cc = sum(1 for r in sim.logger.choice_records if r.winner_domain == "care")
-    return {
-        "init_food":            params["init_food"],
-        "seed":                 seed,
-        "mother_survival_rate": round(len(alive_m) / cfg.init_mothers, 4),
-        "child_survival_rate":  round(matured / cfg.init_mothers, 4),
-        "mean_mother_energy":   round(sum(m.energy for m in alive_m)/len(alive_m) if alive_m else 0.0, 4),
-        "care_choice_rate":     round(cc / tc if tc else 0.0, 4),
-    }
-
-def _run_task_phase3(task):
-    params, seed, duration = task
-    return run_one_phase3(params, seed, duration)
+if mother.own_child_id is not None:
+    _own = self._get_child_by_id(mother.own_child_id)
+    care_child = _own if (_own and _own.alive) else None
+else:
+    care_child = mother.choose_child(visible_children) if visible_children else None
 ```
 
-Mode handler in `run_experiment` (alongside `"sweep"`, `"pipeline"`, `"single"`):
-- Builds task list: `[({init_food: v}, seed, duration) for v in PHASE3_FOOD_SWEEP_VALUES for seed in seeds]`
-- Runs via ProcessPoolExecutor with `_run_task_phase3`
-- Aggregates raw rows → per-`init_food` mean ± SD
-- Saves `food_sweep_raw.csv`, `food_sweep_agg.csv`, `selected_init_food.json`, `survival_vs_food.png`
-- Picks minimum `init_food` where `mother_survival_rate >= PHASE3_MOTHER_SURVIVAL_MIN`
+### Fix D — Relatedness-weighted action target (Hamilton r-bias)
+**Bug**: `_execute_action` used globally most distressed child as target. Mother navigated to
+a stranger's child while own child drifted to dist=12 unattended.
 
-CLI:
-```
-python -m experiments.phase2_survival_minimal.new_run --mode phase3_food --duration 400 --repeats 15 --workers 8
-```
+**Biological basis**: Kin-selective care — bias own infant without excluding allomothering.
+Biologically: mother can care for others while own child is alive, but prefers own.
+For Hamilton's hypothesis: r is embedded directly in the selection function so care-rate vs r
+is measurable in Phase 6+ without retrofitting.
 
-### Output directory
+**Fix** (`_execute_action` target selection):
 ```
-outputs/phase3_food_calibration/{timestamp}_food_sweep/
-├── food_sweep_raw.csv
-├── food_sweep_agg.csv
-├── selected_init_food.json    # {"recommended_init_food": N}
-└── survival_vs_food.png
+score = expressed_care_weight × (1 + r) × child.distress
+target = max(visible_children, key=score)
 ```
+Own child r=0.5 → 1.5× score. Allomother when stranger's distress > (1/1.5) × own child's.
 
-### After calibration — return to Phase 3a
-Update `experiments/phase3a_motivation_sweep/config.py`:
-- Keep loading ecology params from Phase 2 BALANCED JSON
-- Override `init_food` from `selected_init_food.json`
-- Re-run Phase 3a sweep: `python -m experiments.phase3a_motivation_sweep.run --seeds 15 --workers 8`
+**Future extension**: Option 3 (proximity-decayed allomother threshold) reserved for when
+spatial kin clustering develops in Phase 5+.
 
 ---
 
-## Phase 3a Files (current state)
+## Current Diagnostic Results (seeds 42–46, 400 ticks)
 
-| File | Status |
-|------|--------|
-| `experiments/phase3a_motivation_sweep/config.py` | Bug 1+2 fixed; awaiting food calibration |
-| `experiments/phase3a_motivation_sweep/run.py` | Ready |
-| `experiments/phase3a_motivation_sweep/plot.py` | Ready |
-| `simulation/simulation.py` | Bug 2 fixed (eat moved to SELF domain) |
-| `config.py` | `food_replace_on_pick=True` added |
+| Seed | M_surv | C_surv | Feeds | CARE% | FORAGE% | SELF% |
+|------|--------|--------|-------|-------|---------|-------|
+| 42 | 0.000 | 0.000 | 34 | 55.4 | 36.1 | 8.5 |
+| 43 | 0.000 | 0.000 | 23 | 62.3 | 23.6 | 14.1 |
+| 44 | 0.000 | 0.000 | 23 | 49.4 | 39.1 | 11.5 |
+| 45 | 0.067 | 0.000 | 16 | 62.8 | 23.3 | 13.9 |
+| 46 | 0.067 | 0.000 | 7 | 52.1 | 40.5 | 7.4 |
+| **mean** | **0.027** | **0.000** | **21** | **56.4** | **32.5** | **11.1** |
+
+Child death range: ticks 15–30, mean 19.1
+
+**Confirmed working (trace seed=42)**:
+- Ticks 0–3: FORAGE, picks food (held_food=1)
+- Ticks 4–7: CARE, navigates toward own child (dist 4→0)
+- Tick 8: Feeds child at dist=0 (child energy 0.507 → 0.960)
+- Tick 9: SELF eats held_food (mother energy 0.640 → 1.0)
+- Ticks 10+: FORAGE resumes; second cycle fails (see below)
+
+---
+
+## Remaining Issue — Forage threshold prevents timely second-cycle care
+
+**What happens**: After feeding, child distress drops to ~0. CARE = 0. FORAGE dominates
+for ~10 ticks (forage_cue ≈ 0.667 with perception_radius=15). Child drifts to dist=8–12
+during this foraging window. CARE only beats FORAGE when distress > 0.667 (≈5 ticks before
+child death). By then child is too far to reach in time → child dies on second cycle.
+
+**Root cause**: percept15 BALANCED ecology was calibrated for Phase 2 (mothers only).
+`perception_radius=15` keeps forage_cue persistently high. CARE threshold (> 0.667) is
+only reached when child is nearly dead — navigation from dist=10 takes longer than 5 ticks.
+
+**This is not a code bug.** The care loop is mechanically correct. The ecology needs
+adjustment so that CARE fires earlier in the hunger cycle.
+
+---
+
+## Next Step
+
+Reduce `food_perception_radius` so forage_cue drops and CARE fires at lower child distress.
+`food_perception_radius` is already a separate Config parameter — no architecture change needed.
+At radius=8: forage_cue ≈ 1 − avg_dist/8. This allows CARE to compete earlier and gives the
+mother time to navigate to child before it dies on the second cycle.

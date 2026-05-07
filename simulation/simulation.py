@@ -166,13 +166,9 @@ class Simulation:
                             warmth_prox = max(0.0, 1.0 - dist_to_mother / self.config.warmth_radius)
                             hunger_rate *= (1.0 - self.config.warmth_factor * warmth_prox)
                 child.update_hunger(hunger_rate)
-                mother = self._get_mother_by_id(child.mother_id)
-                if mother and mother.alive:
-                    steps = self.world.get_distance(child.pos, mother.pos)
-                else:
-                    steps = self.config.perception_radius
-                child.update_separation(steps, self.config.perception_radius)
-                child.update_distress()
+                # Infants are immobile; distress is hunger-only (see child.update_distress).
+                # Separation is not computed — it no longer contributes to distress.
+                child.update_distress(self.config.birth_cry_duration, self.config.birth_cry_floor)
                 child.tick_age()
                 child.check_death()
         
@@ -194,30 +190,45 @@ class Simulation:
             # Determine domain using the unified environmental-cue motivation model.
             # choose_motivation() returns uppercase ("FORAGE"/"SELF"/"CARE"); lower()
             # keeps it consistent with _execute_action() and _log_choice().
+
+            # Fix A: clear commitment if committed child has died.
+            if mother.has_commitment():
+                _tgt = self._get_child_by_id(mother.target_child_id)
+                if _tgt is None or not _tgt.alive:
+                    mother.commit_ticks = 0
+                    mother.target_child_id = None
+
             if mother.has_commitment():
                 domain = "care"
             else:
-                nearest_food = self._nearest_food(mother.pos)
+                # Food sensing is range-limited (chemical/visual cue).
+                nearest_food = self._nearest_food_in_radius(
+                    mother.pos, self.config.food_perception_radius
+                )
+                # Fix B: mother holds at most 1 food. When provisioned, forage cue
+                # is suppressed so motivation reduces to SELF (eat) vs CARE (feed child).
+                if mother.held_food >= 1:
+                    nearest_food = None
                 dist_to_food = (
                     float(self.world.get_distance(mother.pos, nearest_food))
                     if nearest_food is not None
                     else None
                 )
                 if self.config.care_enabled:
-                    if visible_children:
-                        care_child = mother.choose_child(visible_children)
-                    elif mother.own_child_id is not None:
-                        # Own child outside perception radius — mother still senses
-                        # distress signal (infant call analog). Gives non-zero CARE
-                        # score so she can be motivated to return.
+                    # Birth-imprinting (oxytocin bond at parturition): mother's care
+                    # motivation is driven by her own child's distress only. She hears
+                    # all cries but responds selectively to the infant she bonded with
+                    # at birth. Allomothering can still occur in _execute_action when
+                    # own child is sated or dead. Required for Hamilton r to be meaningful.
+                    if mother.own_child_id is not None:
                         _own = self._get_child_by_id(mother.own_child_id)
                         care_child = _own if (_own and _own.alive) else None
                     else:
-                        care_child = None
+                        care_child = mother.choose_child(visible_children) if visible_children else None
                 else:
                     care_child = None
                 chosen, _, _ = mother.choose_motivation(
-                    perception_radius=self.config.perception_radius,
+                    perception_radius=self.config.food_perception_radius,
                     tau=self.config.softmax_tau,  # Change G: tau from Config
                     child=care_child,
                     nearest_food=nearest_food,
@@ -295,14 +306,9 @@ class Simulation:
         return self._child_by_id.get(child_id)
     
     def _get_visible_children(self, mother: MotherAgent) -> list[ChildAgent]:
-        visible = []
-        for child in self.children:
-            if not child.alive:
-                continue
-            dist = self.world.get_distance(mother.pos, child.pos)
-            if dist <= self.config.perception_radius:
-                visible.append(child)
-        return visible
+        # Child cry is acoustic — heard across the entire map.
+        # No distance filter; all alive children are always detectable.
+        return [c for c in self.children if c.alive]
     
     def _execute_action(self, mother: MotherAgent, domain: str, visible_children: list[ChildAgent]) -> None:
         if domain == "care":
@@ -311,53 +317,67 @@ class Simulation:
             if mother.has_commitment():
                 target = self._get_child_by_id(mother.target_child_id)
             if target is None or not target.alive:
-                target = mother.choose_child(visible_children)
-                if target is None and mother.own_child_id is not None:
-                    # Fix B: own child outside perception radius — commit to navigate back.
-                    _own = self._get_child_by_id(mother.own_child_id)
-                    if _own and _own.alive:
-                        target = _own
+                if visible_children:
+                    # Relatedness-weighted selection (Hamilton r-bias):
+                    # score = expressed_care_weight × (1 + r) × child.distress
+                    # Own child r=0.5 → 1.5× score vs unrelated r=0 → 1.0× score.
+                    # Allomothering still possible when a stranger's distress
+                    # exceeds 1/(1+r_own) of own child's — biologically accurate.
+                    # Option 3 (proximity-decayed allomother threshold) reserved
+                    # for future extension when spatial kin clustering develops.
+                    target = max(
+                        visible_children,
+                        key=lambda c: mother.expressed_care_weight
+                                      * (1.0 + self.lineage.get_relatedness(mother.id, c.id))
+                                      * c.distress,
+                    )
                 if target:
-                    mother.set_target(target.id, duration=20)  # Change D: 20-tick max commitment
+                    mother.set_target(target.id, duration=20)
             
             if target:
                 dist = self.world.get_distance(mother.pos, target.pos)
                 if dist == 0:
                     # Change C: same-cell feed. Children are non-blocking so the mother
-                    # can occupy their cell. feed_child() guards dist > 1.
-                    total_cost = mother.get_total_cost(self.config.feed_cost)
-                    success, benefit = mother.feed_child(target, self.config.feed_cost, self.world, self.config.eat_gain)
-                    r = self.lineage.get_relatedness(mother.id, target.id)
-                    self.logger.log_care(CareRecord(
-                        tick=self.tick,
-                        mother_id=mother.id,
-                        child_id=target.id,
-                        r=r,
-                        benefit=benefit,
-                        cost=total_cost,
-                        success=success,
-                        mother_lineage_id=mother.lineage_id,
-                        child_lineage_id=target.lineage_id,
-                        is_own_child=(target.mother_id == mother.id),
-                    ))
-                    if success:
-                        is_own = (target.mother_id == mother.id)
-                        if is_own and mother.genome.care_recovery > 0:
-                            mother.energy = min(
-                                1.0,
-                                mother.energy + mother.genome.care_recovery * benefit,
-                            )
-                        if self.config.plasticity_enabled:
-                            if not self.config.plasticity_kin_conditional or is_own:
-                                mother.plastic_update(
-                                    benefit, self.config.plastic_gain,
-                                    energy_cost=self.config.plasticity_energy_cost,
-                                    noise_sigma=self.config.plasticity_noise_sigma,
+                    # can occupy their cell. feed_child() guards dist > 1 and held_food=0.
+                    if mother.held_food <= 0:
+                        # Arrived at child empty-handed — release commitment so the
+                        # motivation block can switch to FORAGE next tick.
+                        mother.commit_ticks = 0
+                        mother.target_child_id = None
+                    else:
+                        total_cost = mother.get_total_cost(self.config.feed_cost)
+                        success, benefit = mother.feed_child(target, self.config.feed_cost, self.world, self.config.eat_gain)
+                        r = self.lineage.get_relatedness(mother.id, target.id)
+                        self.logger.log_care(CareRecord(
+                            tick=self.tick,
+                            mother_id=mother.id,
+                            child_id=target.id,
+                            r=r,
+                            benefit=benefit,
+                            cost=total_cost,
+                            success=success,
+                            mother_lineage_id=mother.lineage_id,
+                            child_lineage_id=target.lineage_id,
+                            is_own_child=(target.mother_id == mother.id),
+                        ))
+                        if success:
+                            is_own = (target.mother_id == mother.id)
+                            if is_own and mother.genome.care_recovery > 0:
+                                mother.energy = min(
+                                    1.0,
+                                    mother.energy + mother.genome.care_recovery * benefit,
                                 )
-                        # Change D: outcome-based commitment — release only when child sated.
-                        if target.hunger < 0.3:
-                            mother.commit_ticks = 0  # child sated; release commitment
-                        # else: keep commitment; tick_commit() decrements naturally
+                            if self.config.plasticity_enabled:
+                                if not self.config.plasticity_kin_conditional or is_own:
+                                    mother.plastic_update(
+                                        benefit, self.config.plastic_gain,
+                                        energy_cost=self.config.plasticity_energy_cost,
+                                        noise_sigma=self.config.plasticity_noise_sigma,
+                                    )
+                            # Change D: outcome-based commitment — release only when child sated.
+                            if target.hunger < 0.3:
+                                mother.commit_ticks = 0  # child sated; release commitment
+                            # else: keep commitment; tick_commit() decrements naturally
                 else:
                     # Move toward child (when dist > 0). Children are non-blocking so
                     # the mother moves onto their cell when dist becomes 1→0.
@@ -373,11 +393,17 @@ class Simulation:
             # (self_cue = 1-energy is high), not immediately after picking when she may
             # be near full. Matching Phase 2 SurvivalSimulation behaviour prevents the
             # "eat-at-full-energy → gain wasted by cap" spiral seen when eating is in FORAGE.
-            if mother.pos in self.world.food_positions:
+            # Fix B: cap at 1 held food — if already provisioned, do nothing (motivation
+            # block suppresses forage_cue so this branch should not fire when held_food>=1).
+            if mother.held_food >= 1:
+                pass
+            elif mother.pos in self.world.food_positions:
                 if mother.pick_food(self.world) and self.config.food_replace_on_pick:
                     self._spawn_food(1)
             else:
-                nearest = self._nearest_food(mother.pos)
+                nearest = self._nearest_food_in_radius(
+                    mother.pos, self.config.food_perception_radius
+                )
                 if nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
@@ -388,6 +414,7 @@ class Simulation:
         elif domain == "self":
             # SELF = self-maintenance. Eat held food first (self_cue fires when energy is
             # low, so the 0.5 gain is used efficiently). Rest only when no food in hand.
+            # LOGIC.md Section 3.3: REST reduces fatigue, not energy — indirect benefit only.
             if mother.held_food > 0:
                 mother.eat(self.config.eat_gain)
             else:
@@ -397,6 +424,13 @@ class Simulation:
         if not self.world.food_positions:
             return None
         return min(self.world.food_positions, key=lambda f: self.world.get_distance(pos, f))
+
+    def _nearest_food_in_radius(self, pos: tuple[int, int], radius: int) -> tuple[int, int] | None:
+        candidates = [f for f in self.world.food_positions
+                      if self.world.get_distance(pos, f) <= radius]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda f: self.world.get_distance(pos, f))
     
     def _log_choice(self, mother: MotherAgent, visible_children: list[ChildAgent], domain: str) -> None:
         if domain == "care":

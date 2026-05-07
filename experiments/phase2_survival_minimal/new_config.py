@@ -19,7 +19,7 @@ INITIAL_ENERGY = 1.0
 VALIDATION_SEEDS = list(range(42, 52))
 
 DEFAULT_SWEEP_SEED_BASE = 42000
-DEFAULT_PERCEPTION_RADIUS = 15.0 # 15 default
+DEFAULT_PERCEPTION_RADIUS = 8.0 # 8 default
 TAIL_WINDOW = 200
 
 
@@ -277,12 +277,12 @@ def candidate_configs(mode="sweep"):
 # Starting from Phase 2 BALANCED baseline (40) upward in coarse steps.
 PHASE3_FOOD_SWEEP_VALUES = [40, 80, 120, 180, 260, 360, 500]
 
-# Calibration genome: care_w must exceed forage_w so CARE can win the tau=0.1 softmax
-# when child distress is high. With (0.2, 0.6): CARE_max=0.2 < FORAGE_min=0.3, care
-# never fires → child_survival=0 at all food levels. (0.6, 0.4) inverts the dominance:
-# CARE_score = 0.6×distress beats FORAGE_score = 0.4×forage_cue when distress > 0.67.
-# self_w=1.0 retained — SELF drive keeps mothers alive when energy falls.
-PHASE3_FOOD_CAL_GENOME = {"care_w": 0.6, "forage_w": 0.4, "self_w": 1.0}
+# Calibration genome: balanced weights so FORAGE and CARE compete fairly.
+# forage_w=0.6 prevents the SELF trap: with self_w=0.6 and forage_w=0.6, FORAGE beats
+# SELF whenever forage_cue > (1-energy) — so a hungry mother forages instead of resting.
+# Old genome (care=0.6, forage=0.4, self=1.0) caused SELF trap: at energy<0.7 SELF=0.3
+# beat FORAGE=0.2, mother rested with no held_food → energy never recovered → starvation.
+PHASE3_FOOD_CAL_GENOME = {"care_w": 0.6, "forage_w": 0.6, "self_w": 0.6}
 
 # Phase 3a mode flags — mirrors phase3a_motivation_sweep/config.py.
 PHASE3_FOOD_CAL_FLAGS = {
@@ -295,6 +295,9 @@ PHASE3_FOOD_CAL_FLAGS = {
     # Restored to LOGIC.md Change J: infant starves in 15 ticks = 3 days
     "infant_starvation_multiplier": 35 / 15,
     "init_mothers":               15,
+    # food_perception_radius must match Phase 2 percept8 baseline (perception_radius=8).
+    # Config default is 15 — override here so food sensing scale is consistent.
+    "food_perception_radius":     8,
 }
 
 # Pass thresholds (same as Phase 3a).

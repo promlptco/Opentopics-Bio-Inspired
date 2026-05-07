@@ -275,10 +275,14 @@ class MotherAgent(Agent):
 
         eat_gain must equal Config.eat_gain — one food unit delivers the same energy
         to a child as it does to an adult. Callers must pass self.config.eat_gain.
+        Requires held_food > 0: one food entity delivers one feed (energy conservation).
         """
         dist = world.get_distance(self.pos, child.pos)
         if dist > 1:
             return False, 0.0
+        if self.held_food <= 0:
+            return False, 0.0
+        self.held_food -= 1
         self.energy -= feed_cost
         hunger_reduced = child.receive_food(eat_gain)
         return True, hunger_reduced
