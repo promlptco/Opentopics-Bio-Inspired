@@ -1,121 +1,38 @@
 # experiments/phase4_weight_sweep/config.py
 """
-Phase 4 — Motivation Weight Sweep
+Phase 4 Motivation Weight Sweep.
 
 Research question:
-    "What is the minimum care_weight fraction that enables child maturation?"
+    "What is the minimum care_weight bias that enables child maturation,
+     given the Phase 3b BEST_ECOLOGICAL baseline?"
 
-Ecological baseline locked from Phase 3b BEST_ECOLOGICAL:
-    ISM=1.2, eat_gain=0.70, init_food=600, move_cost=0.005, rest_recovery=0.005
+Ecology: Phase 3b BEST_ECOLOGICAL (ISM=1.2, eat_gain=0.70, init_food=600,
+         move_cost=0.005).  Loaded from saved JSON; hardcoded fallback included.
 
-Swept axes (simplex fractions; care + forage + self = 1.0):
-    care_weight   — fraction of motivation budget allocated to CARE domain
-    forage_weight — OVAT/grid secondary axis (fraction)
-    self_weight   — derived as 1 − care − forage, or OVAT tertiary
+Sweep: care_weight × forage_weight  (5 × 5 = 25 combos × 5 seeds = 125 runs).
+       self_weight = 1.0 fixed.
 
-Fixed (all Phase 4 runs):
-    perception_radius=8, food_perception_radius=8
-    hunger_rate=1/35, warmth_factor=0.0
-    maturity_age=200, max_ticks=400, init_mothers=15
-
-Scientific rationale:
-    compute_motivation_scores() normalises by weight sum, so stored fractions are
-    the actual effective weights — axes are scale-invariant and bounded in [0, 1].
-    With care_weight=0.50 (50% of budget), CARE wins softmax when distress > 0.50.
-    feeds_needed at ISM=1.2, eat_gain=0.70 ≈ 8.4 → must feed ~9× in 200 ticks.
+Fixes carried forward from Phase 4 original analysis:
+  Approach A — own-child exclusivity (already in simulation._execute_action)
+  Approach E — starvation floor (care_energy_floor=0.3)
 """
-import json
+
 from pathlib import Path
-from itertools import product
+import json
 
-# ── Population / timing ───────────────────────────────────────────────────────
-INIT_MOTHERS = 15
-MAX_TICKS    = 400
-MATURITY_AGE = 200
+# ─────────────────────────────────────────────────────────────────────────────
+# Constants
+# ─────────────────────────────────────────────────────────────────────────────
+INIT_MOTHERS       = 15
+INITIAL_ENERGY     = 1.0
+MATURITY_AGE       = 200
+MAX_TICKS          = 400
+SWEEP_SEEDS        = list(range(42, 47))          # 5 seeds per combo
+VALIDATION_SEEDS   = list(range(42, 52))          # 10 seeds for final validation
 
-# ── Phase 3b BEST_ECOLOGICAL — loaded from Phase 3b output JSON ───────────────
-# Fallback values used only if Phase 3b has not yet produced its output file.
-_PHASE3B_JSON = (
-    Path(__file__).resolve().parent.parent.parent
-    / "outputs" / "phase3_survival_full" / "phase3b_calibration" / "selected_ecologies.json"
-)
-
-_FALLBACK_ECO = {
-    "infant_starvation_multiplier": 1.2,
-    "eat_gain":                     0.70,
-    "init_food":                    600,
-    "move_cost":                    0.005,
-    "rest_recovery":                0.005,
-}
-
-
-def _load_best_eco() -> dict:
-    if _PHASE3B_JSON.exists():
-        with open(_PHASE3B_JSON, encoding="utf-8") as f:
-            data = json.load(f)
-        eco = data.get("regimes", {}).get("BEST_ECOLOGICAL")
-        if eco:
-            return {
-                "infant_starvation_multiplier": float(eco["infant_starvation_multiplier"]),
-                "eat_gain":                     float(eco["eat_gain"]),
-                "init_food":                    int(eco["init_food"]),
-                "move_cost":                    float(eco["move_cost"]),
-                "rest_recovery":                float(eco["rest_recovery"]),
-            }
-    return dict(_FALLBACK_ECO)
-
-
-BEST_ECO = _load_best_eco()
-
-# ── Seeds ─────────────────────────────────────────────────────────────────────
-THRESHOLD_SEEDS  = list(range(42, 47))   # 5 seeds — care_weight threshold scan
-OVAT_SEEDS       = list(range(42, 47))   # 5 seeds per OVAT value
-GRID_SEEDS       = list(range(42, 47))   # 5 seeds per grid combo
-VALIDATION_SEEDS = list(range(42, 52))   # 10 seeds — final validation
-
-# ── Primary care_weight threshold scan ────────────────────────────────────────
-# Independent weights: forage=self=0.5 fixed; care varies across [0,1].
-CARE_WEIGHT_VALUES = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-
-# ── OVAT baseline ─────────────────────────────────────────────────────────────
-# Equal independent weights — each drive at midpoint of [0,1].
-OVAT_BASELINE = {
-    "care_weight":   0.5,
-    "forage_weight": 0.5,
-    "self_weight":   0.5,
-}
-
-# ── OVAT sweep sets ────────────────────────────────────────────────────────────
-OVAT_SWEEPS = {
-    "A": {
-        "label":  "care_weight",
-        "key":    "care_weight",
-        "values": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 1.0],
-    },
-    "B": {
-        "label":  "forage_weight",
-        "key":    "forage_weight",
-        "values": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 1.0],
-    },
-    "C": {
-        "label":  "self_weight",
-        "key":    "self_weight",
-        "values": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 1.0],
-    },
-}
-
-# ── Full 2D grid: care_weight × forage_weight (self_weight=0.5 fixed) ─────────
-# 5 × 5 = 25 combos × 5 seeds = 125 runs.
-SWEEP_GRID = {
-    "care_weight":   [0.2, 0.4, 0.6, 0.8, 1.0],
-    "forage_weight": [0.2, 0.4, 0.6, 0.8, 1.0],
-}
-
-# ── Regime selection thresholds ────────────────────────────────────────────────
-VIABLE_MIN_C_MATR = 0.0    # any C_matr > 0 is viable
-VIABLE_MIN_M_SURV = 0.10   # at least 10% mother survival
-
-# ── Phase 4 locked simulation flags ───────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 4 simulation flags
+# ─────────────────────────────────────────────────────────────────────────────
 PHASE4_FLAGS = {
     "children_enabled":             True,
     "care_enabled":                 True,
@@ -123,63 +40,114 @@ PHASE4_FLAGS = {
     "mutation_enabled":             False,
     "plasticity_enabled":           False,
     "mother_max_age":               None,
-    "perception_radius":            8,
-    "food_perception_radius":       8,
-    "init_mothers":                 INIT_MOTHERS,
     "maturity_age":                 MATURITY_AGE,
-    "max_ticks":                    MAX_TICKS,
-    "warmth_factor":                0.0,
-    # Approach A: own-child exclusivity enabled via simulation._execute_action logic.
-    # Approach E: starvation floor — mother self-preserves below 0.3 energy.
-    "care_energy_floor":            0.3,
-    **BEST_ECO,
+    "food_replace_on_pick":         True,
+    "food_replenish_threshold_ratio": 0.0,
+    "init_mothers":                 INIT_MOTHERS,
+    "care_energy_floor":            0.3,          # Approach E starvation floor
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ecology baseline — load Phase 3b BEST_ECOLOGICAL
+# ─────────────────────────────────────────────────────────────────────────────
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PHASE3B_PATHS = [
+    _PROJECT_ROOT / "outputs/phase3b_calibration/selected_ecologies.json",
+    _PROJECT_ROOT / "outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json",
+]
+
+_FALLBACK_ECOLOGY = {
+    "infant_starvation_multiplier": 1.2,
+    "eat_gain":    0.70,
+    "init_food":   600,
+    "move_cost":   0.005,
+    "rest_recovery": 0.005,
+    "hunger_rate": 1.0 / 35.0,
+    "food_perception_radius": 8,
+    "perception_radius":      8,
 }
 
 
-def make_config(care_weight: float, forage_weight: float, self_weight: float, seed: int):
-    """Build a Config for one Phase 4 simulation run."""
+def _load_phase3b_ecology() -> dict:
+    for path in _PHASE3B_PATHS:
+        if not path.exists():
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            # May be stored under "best_ecological" or as the only key
+            ec = data.get("best_ecological", {}).get("selected_config", {})
+            if not ec:
+                for v in data.values():
+                    if isinstance(v, dict) and "selected_config" in v:
+                        ec = v["selected_config"]
+                        break
+            if ec and "eat_gain" in ec and "init_food" in ec:
+                return {
+                    "infant_starvation_multiplier": float(
+                        ec.get("infant_starvation_multiplier", 1.2)
+                    ),
+                    "eat_gain":    float(ec["eat_gain"]),
+                    "init_food":   int(ec["init_food"]),
+                    "move_cost":   float(ec.get("move_cost", 0.005)),
+                    "rest_recovery": float(ec.get("rest_recovery", 0.005)),
+                    "hunger_rate": float(ec.get("hunger_rate", 1.0 / 35.0)),
+                    "food_perception_radius": int(
+                        ec.get("food_perception_radius",
+                               ec.get("perception_radius", 8))
+                    ),
+                    "perception_radius": int(
+                        ec.get("perception_radius",
+                               ec.get("food_perception_radius", 8))
+                    ),
+                }
+        except Exception:
+            continue
+    return dict(_FALLBACK_ECOLOGY)
+
+
+BEST_ECOLOGICAL = _load_phase3b_ecology()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sweep grid
+# ─────────────────────────────────────────────────────────────────────────────
+CARE_WEIGHT_VALUES   = [0.1, 0.5, 1.0, 1.5, 2.0]
+FORAGE_WEIGHT_VALUES = [0.1, 0.5, 1.0, 1.5, 2.0]
+SELF_WEIGHT_FIXED    = 1.0
+
+# Selection thresholds
+VIABLE_MIN_C_MATR    = 0.10   # minimum C_matr to be considered VIABLE_MIN
+OPTIMAL_LABEL        = "OPTIMAL"
+VIABLE_LABEL         = "VIABLE_MIN"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Config factory
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_config(care_weight: float, forage_weight: float,
+                self_weight: float = SELF_WEIGHT_FIXED,
+                duration: int = MAX_TICKS):
+    """Build a Phase 4 Config for the given weight combination."""
     from config import Config
-    return Config(
-        seed=seed,
-        care_weight=care_weight,
-        forage_weight=forage_weight,
-        self_weight=self_weight,
-        **{k: v for k, v in PHASE4_FLAGS.items()},
-    )
+    cfg = Config()
+    cfg.max_ticks      = duration
+    cfg.initial_energy = INITIAL_ENERGY
 
+    eco = BEST_ECOLOGICAL
+    cfg.infant_starvation_multiplier = float(eco["infant_starvation_multiplier"])
+    cfg.eat_gain                     = float(eco["eat_gain"])
+    cfg.init_food                    = int(eco["init_food"])
+    cfg.move_cost                    = float(eco["move_cost"])
+    cfg.rest_recovery                = float(eco["rest_recovery"])
+    cfg.hunger_rate                  = float(eco["hunger_rate"])
+    cfg.food_perception_radius       = int(eco["food_perception_radius"])
+    cfg.perception_radius            = int(eco["perception_radius"])
 
-def expand_threshold() -> list[dict]:
-    """care_weight threshold scan: forage=self=0.5 fixed (independent weights)."""
-    return [
-        {"care_weight": cw, "forage_weight": 0.5, "self_weight": 0.5}
-        for cw in CARE_WEIGHT_VALUES
-    ]
+    cfg.care_weight   = float(care_weight)
+    cfg.forage_weight = float(forage_weight)
+    cfg.self_weight   = float(self_weight)
 
+    for k, v in PHASE4_FLAGS.items():
+        setattr(cfg, k, v)
 
-def expand_ovat(set_key: str) -> list[dict]:
-    """OVAT: vary one weight, fix others at OVAT_BASELINE (independent weights)."""
-    sw     = OVAT_SWEEPS[set_key]
-    combos = []
-    for v in sw["values"]:
-        params = dict(OVAT_BASELINE)
-        params[sw["key"]] = v
-        combos.append(params)
-    return combos
-
-
-def expand_grid() -> list[dict]:
-    """care × forage grid; self_weight=0.5 fixed (independent weights)."""
-    combos = []
-    for cw in SWEEP_GRID["care_weight"]:
-        for fw in SWEEP_GRID["forage_weight"]:
-            combos.append({
-                "care_weight":   cw,
-                "forage_weight": fw,
-                "self_weight":   0.5,
-            })
-    return combos
-
-
-def feeds_needed(ism: float, eat_gain: float) -> float:
-    """Theoretical minimum feeds for child survival (hunger_rate = 1/35)."""
-    return max(0.0, (MATURITY_AGE * (1 / 35) * ism - 1.0) / eat_gain)
+    return cfg

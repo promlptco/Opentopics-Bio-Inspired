@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import random
 import numpy as np
 from config import Config
@@ -62,6 +63,8 @@ class Simulation:
         
         # Spawn food
         self._spawn_food(self.config.init_food)
+        if self.config.food_entropy_alpha > 0:
+            self.world.init_patch_probs(self.config.food_patch_prior)
     
     def _nearby_pos(self, x: int, y: int) -> tuple[int, int]:
         neighbors = self.world.get_neighbors(x, y)
@@ -93,6 +96,14 @@ class Simulation:
             y = random.randint(0, self.config.height - 1)
             self.world.place_food(x, y)
             
+    def _spawn_food_entropy(self) -> None:
+        alpha = self.config.food_entropy_alpha
+        for pos, p in self.world.food_patch_probs.items():
+            if pos not in self.world.food_positions:
+                rate = -alpha * p * math.log(max(p, 1e-10))
+                if random.random() < rate:
+                    self.world.place_food(*pos)
+
     def _spawn_with_spacing(self, min_dist: int = 3) -> tuple[int, int]:
         """Find position at least min_dist from all agents."""
         for _ in range(50):  # max attempts
@@ -147,7 +158,19 @@ class Simulation:
                     to_add = min(to_add, max(0, self.config.continuous_food_max - current))
                 if to_add > 0:
                     self._spawn_food(to_add)
-        
+
+        # 1c. Shannon entropy food spawn and patch recovery
+        if self.config.food_entropy_alpha > 0:
+            self._spawn_food_entropy()
+            self.world.recover_patches(self.config.food_entropy_gamma, self.config.food_patch_prior)
+
+        # Per-tick thermal drain — computed once, applied to both agents below
+        _thermal_drain = 0.0
+        if self.config.warm_sensitivity > 0:
+            _thermal_drain = self.config.warm_sensitivity * abs(math.sin(
+                2 * math.pi * self.tick / self.config.temperature_period
+            ))
+
         # 2. Update children (only if enabled)
         if self.config.children_enabled:
             for child in self.children:
@@ -165,6 +188,8 @@ class Simulation:
                         if dist_to_mother <= self.config.warmth_radius:
                             warmth_prox = max(0.0, 1.0 - dist_to_mother / self.config.warmth_radius)
                             hunger_rate *= (1.0 - self.config.warmth_factor * warmth_prox)
+                if _thermal_drain > 0:
+                    hunger_rate += _thermal_drain
                 child.update_hunger(hunger_rate)
                 # Infants are immobile; distress is hunger-only (see child.update_distress).
                 # Separation is not computed — it no longer contributes to distress.
@@ -179,6 +204,8 @@ class Simulation:
         # 4. Update mothers
         for mother in alive_mothers:
             mother.update_state(self.config.hunger_rate, self.config.fatigue_rate)
+            if _thermal_drain > 0:
+                mother.energy = max(0.0, mother.energy - _thermal_drain)
             mother.tick_age()
             if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
                 mother.die()
@@ -227,6 +254,12 @@ class Simulation:
                         care_child = mother.choose_child(visible_children) if visible_children else None
                 else:
                     care_child = None
+                _heard_care_distress = None
+                if care_child and self.config.cry_decay_radius > 0:
+                    _d = self.world.get_distance(mother.pos, care_child.pos)
+                    _heard_care_distress = care_child.distress * math.exp(
+                        -_d / self.config.cry_decay_radius
+                    )
                 chosen, _, _ = mother.choose_motivation(
                     perception_radius=self.config.food_perception_radius,
                     tau=self.config.softmax_tau,  # Change G: tau from Config
@@ -234,6 +267,7 @@ class Simulation:
                     nearest_food=nearest_food,
                     distance_to_food=dist_to_food,
                     care_enabled=self.config.care_enabled,
+                    heard_care_distress=_heard_care_distress,
                 )
                 mother.last_motivation = chosen
                 domain = chosen.lower()
@@ -248,9 +282,12 @@ class Simulation:
                 if own_child and own_child.alive and mother.genome.distress_sensitivity > 0:
                     dist_to_own = self.world.get_distance(mother.pos, own_child.pos)
                     if dist_to_own <= self.config.perception_radius:
+                        _heard_ds = own_child.distress
+                        if self.config.cry_decay_radius > 0:
+                            _heard_ds *= math.exp(-dist_to_own / self.config.cry_decay_radius)
                         mother.energy = max(
                             0.0,
-                            mother.energy - mother.genome.distress_sensitivity * own_child.distress,
+                            mother.energy - mother.genome.distress_sensitivity * _heard_ds,
                         )
 
             # Approach E: starvation floor — survival overrides care when critically hungry.
@@ -412,8 +449,11 @@ class Simulation:
             if mother.held_food >= 1:
                 pass
             elif mother.pos in self.world.food_positions:
-                if mother.pick_food(self.world) and self.config.food_replace_on_pick:
-                    self._spawn_food(1)
+                if mother.pick_food(self.world):
+                    if self.config.food_entropy_alpha > 0:
+                        self.world.deplete_patch(*mother.pos, self.config.food_entropy_beta)
+                    elif self.config.food_replace_on_pick:
+                        self._spawn_food(1)
             else:
                 nearest = self._nearest_food_in_radius(
                     mother.pos, self.config.food_perception_radius

@@ -352,6 +352,66 @@ Use `--workers N` to run them in parallel via `ProcessPoolExecutor`.
 
 ---
 
+## 🖧 Shared CLI — `experiments/base/`
+
+Phases 2–4 share a common CLI layer built on `experiments/base/cli.py`.
+Each phase has an `experiment.py` entry point that accepts the same flags.
+
+### Entry points
+
+```powershell
+python -m experiments.phase2_survival_minimal.experiment --mode pipeline --workers 4
+python -m experiments.phase3_survival_full.experiment    --mode pipeline --workers 4
+python -m experiments.phase4_weight_sweep.experiment     --mode sweep    --workers 4
+```
+
+### Full flag reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--mode` | `pipeline` | Phase-specific modes (`pipeline` / `sweep` / `single` / `caretrap`) |
+| `--load RESULT.json` | — | Load a prior phase output JSON and auto-set matching Config params |
+| `--load-key KEY` | auto | Sub-key inside the loaded JSON (e.g. `OPTIMAL`, `BALANCED`, `BEST_ECOLOGICAL`). Auto-detected when the file contains exactly one nested dict. |
+| `--config FILE.json` | — | Hand-written Config override JSON (applied after `--load`) |
+| `--duration N` | 400 | Simulation ticks |
+| `--seeds N` | 10 | Seeds per config |
+| `--workers N` | 4 | Parallel workers (`0` = `os.cpu_count()`) |
+| `--output-dir PATH` | auto | Explicit output directory (timestamped if omitted) |
+| `--param key=value` | — | Override any `Config` field (repeatable; highest priority) |
+
+**Priority (lowest → highest):** `--load` < `--config` < `--param`
+
+### `--load`: phase chaining
+
+`--load` reads a prior phase's output JSON and maps its scalar fields directly onto `Config`.
+Use `--load-key` to select which nested sub-dict to load.
+
+```powershell
+# Phase 4 — load Phase 3b BEST_ECOLOGICAL ecology
+python -m experiments.phase4_weight_sweep.experiment `
+    --load outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json `
+    --load-key BEST_ECOLOGICAL `
+    --mode sweep --workers 4
+
+# Phase 5 — load Phase 4 OPTIMAL weights as starting genome
+python -m experiments.phase5_evolution.experiment `
+    --load outputs/phase4_weight_sweep/sweep_.../selected_weights.json `
+    --load-key OPTIMAL `
+    --mode test --workers 4
+
+# Override one param on top of loaded values
+python -m experiments.phase4_weight_sweep.experiment `
+    --load outputs/.../selected_ecologies.json --load-key BEST_ECOLOGICAL `
+    --param max_ticks=800 --workers 4
+```
+
+When `--load-key` is omitted and the JSON has exactly one nested dict, that key is used automatically.
+For multi-key files (`OPTIMAL` + `VIABLE_MIN`, or `harsh` + `balanced` + `easy`) the key must be specified explicitly.
+
+---
+
+---
+
 ## 🐣 Phase 3 — init_food Sweep (Children Added) ✅ CONCLUDED
 
 Mother + child simulation. Answers: "Can food density alone, with unbiased motivation weights (all = 1.0) and ISM = 2.33, produce child maturation?"
@@ -441,13 +501,119 @@ Ecological tuning alone cannot rescue child maturation. Motivational bias (`care
 
 ---
 
-## 🧬 Phase 4 — Motivation Weight Sweep 🔲 PLANNED
+## 🧬 Phase 4 — Motivation Weight Sweep ✅ CONCLUDED
 
-Find the minimum `care_weight` that enables child maturation at BEST_ECOLOGICAL parameters (ISM=1.2, eat_gain=0.70, init_food=600).
+Find the minimum `care_weight` that enables child maturation at BEST_ECOLOGICAL parameters (ISM=1.2, eat_gain=0.70, init_food=900).
 
-**Scientific rationale:** With care_weight=2.0, CARE wins softmax when distress > 0.43 (child at 57% energy). Mother has held food from prior free-foraging period → delivers → child survives. ~13 feeds in 200 ticks > 8.4 needed.
+**Result: child maturation becomes viable once two structural traps are removed.**
+- Trap 1 — Allomothering pool: all mothers converged on 1–2 most-distressed strangers. Fixed by own-child exclusivity (maternal imprinting via `own_child_id`).
+- Trap 2 — Maternal starvation: high care_weight prevented mother from eating. Fixed by `care_energy_floor=0.3` (starvation floor, Approach E).
 
-*Implementation not yet available.*
+**VIABLE_MIN (first successful):** `care=0.1, forage=0.5, self=0.5` → c_matr=0.120  
+**OPTIMAL regime (selection score = c_matr × m_surv):** `care=0.2, forage=1.0, self=0.1` → c_matr=0.533, m_surv=0.787
+
+```powershell
+python -m experiments.phase4_weight_sweep.run --workers 4
+python -m experiments.phase4_weight_sweep.run --skip_ovat --skip_grid   # threshold only
+python -m experiments.phase4_weight_sweep.run --plot_only               # regenerate plots
+```
+
+### Key files
+
+| File | Role |
+|------|------|
+| `experiments/phase4_weight_sweep/config.py` | Sweep grid, `_load_best_eco()`, `make_config()` |
+| `experiments/phase4_weight_sweep/run.py` | 7-step pipeline: threshold → OVAT → grid → self-refinement → selection → validation |
+| `experiments/phase4_weight_sweep/plot.py` | 5-figure suite incl. 3-panel heatmap (C_matr, M_surv, selection score) |
+
+### Phase 4 CLI reference
+
+| Flag | Description |
+|------|-------------|
+| `--workers N` | Parallel workers |
+| `--skip_threshold` | Skip Step 1 |
+| `--skip_ovat` | Skip Steps 2–4 |
+| `--skip_grid` | Skip Step 5 |
+| `--skip_self` | Skip Step 5b self-weight refinement |
+| `--skip_val` | Skip Step 7 validation |
+| `--plot_only` | Regenerate plots from saved CSVs |
+
+### Output files
+
+All outputs → `outputs/phase4_weight_sweep/`:
+
+| File | Description |
+|------|-------------|
+| `selected_weights.json` | VIABLE_MIN + OPTIMAL regimes → used as Phase 5 starting genome |
+| `threshold.csv` | care_weight scan results (forage=self=0.5 fixed) |
+| `grid_sweep.csv` | care × forage grid aggregated results |
+| `self_refinement.csv` | self_weight sweep at grid OPTIMAL |
+| `validation_optimal.csv` | 10-seed validation of OPTIMAL config |
+| `fig1_ovat.png` | OVAT panels: care / forage / self sensitivity |
+| `fig2_threshold.png` | C_matr + M_surv vs care_weight threshold |
+| `fig3_grid_heatmap.png` | 3-panel heatmap: C_matr, M_surv, selection score |
+| `fig4_validation_timeseries.png` | Energy + population over time for OPTIMAL |
+| `fig2b_self_refinement.png` | self_weight sweep at OPTIMAL (care, forage) |
+
+---
+
+## 🔬 Phase 5 — Asynchronous Genetic Evolution ▶ CURRENT
+
+Asynchronous lineage evolution: mutation ON, plasticity OFF, reproduction ON.
+Each lineage breeds and dies independently — no synchronized generations.
+Answers: "Does ecological pressure drive selection toward higher child survival (maturation)?"
+
+**Starting genome:** Phase 4 OPTIMAL (care=0.2, forage=1.0, self=0.1, auto-loaded)
+**Ecology:** Phase 3b BEST_ECOLOGICAL (ISM=1.2, eat_gain=0.70, init_food=900, auto-loaded)
+**Primary fitness objective:** child survival/maturation (`C_matr`).
+**Secondary diagnostics:** alive mothers and births at each snapshot tick (every 50 ticks).
+
+```powershell
+# Full test run — 10 000 ticks × 10 seeds
+python -m experiments.phase5_evolution.run --mode test --workers 4
+
+# Quick test — 3 seeds
+python -m experiments.phase5_evolution.run --mode test --seeds 3 --workers 4
+
+# Parameter sweep — mutation_rate × sigma × tau (18 combos × 3 seeds × 3 000 ticks)
+python -m experiments.phase5_evolution.run --mode sweep --workers 4
+
+# Regenerate plots only
+python -m experiments.phase5_evolution.run --mode test --plot_only
+```
+
+### Key files
+
+| File | Role |
+|------|------|
+| `experiments/phase5_evolution/config.py` | Loads Phase 4 OPTIMAL + Phase 3b BEST_ECO; sweep grid; `make_config()` |
+| `experiments/phase5_evolution/run.py` | Two-mode runner: `test` and `sweep` |
+| `experiments/phase5_evolution/plot.py` | Fig1 (demographic trajectory), Fig2 (genome evolution), Fig3/4 (sweep heatmaps) |
+
+### Phase 5 CLI reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--mode` | `test` | `test` = full evolution run; `sweep` = parameter sensitivity grid |
+| `--workers` | `4` | Parallel workers |
+| `--seeds` | `10` | Number of seeds for test mode |
+| `--plot_only` | off | Regenerate plots from saved CSVs |
+
+### Output files
+
+All outputs → `outputs/phase5_evolution/`:
+
+| File | Description |
+|------|-------------|
+| `test_trajectory.csv` | Mean ± SD genome + population at each snapshot tick |
+| `test_history_raw.csv` | Per-seed raw snapshots |
+| `test_summary.json` | Final-tick summary (population, generation, care_weight) |
+| `sweep_summary.csv` | Aggregated final-tick stats per (mutation_rate, sigma, tau) combo |
+| `sweep_results_raw.csv` | Per-seed final snapshots for all sweep combos |
+| `fig1_fitness_trajectory.png` | Demographic trajectory: alive mothers + cumulative births over time (mean ± SD) |
+| `fig2_genome_evolution.png` | care / forage / self weight trajectories + mean generation |
+| `fig3_sweep_population.png` | Heatmap: mutation_rate × sigma → final population (panel per tau) |
+| `fig4_sweep_care_weight.png` | Heatmap: mutation_rate × sigma → final mean care_weight (panel per tau) |
 
 ---
 
@@ -458,22 +624,31 @@ agents/           mother.py, child.py — core agent classes
 simulation/       world.py, simulation.py — world dynamics and main loop
 evolution/        genome.py, lineage.py — genetic operators and lineage tracking
 experiments/
+  base/                             ← shared CLI + base class (all phases)
+    experiment.py                     ← BaseExperiment ABC (run_sweep, save_csv, apply_overrides)
+    cli.py                            ← build_parser(), load_overrides() with --load/--load-key
+    io_utils.py                       ← make_output_dir(), write_csv/json helpers
   live_viewer.py                    ← phase-agnostic live visualizer
   phase1_mechanics_tests/           ← mechanics validation (6 tests)          [DONE]
   phase2_survival_minimal/          ← ecological survival calibration          [DONE]
+    experiment.py                     ← CLI entry point (BaseExperiment adapter)
   phase3_survival_full/             ← all Phase 3 experiments                  [DONE]
+    experiment.py                     ← CLI entry point
     phase3_sweep/                     ← init_food sweep (children added)
     phase3b_calibration/              ← ISM × eat_gain × init_food calibration
+  phase4_weight_sweep/              ← motivation weight sweep                  [DONE]
+    experiment.py                     ← CLI entry point
+  phase5_evolution/                 ← asynchronous genetic evolution           [CURRENT]
   archived/
     phase3_basic/                   ← early diagnostic single-run (superseded)
 outputs/          auto-generated plots and JSON (mirrors experiments/ structure)
   phase3_survival_full/
     phase3_sweep/
-      percept8/                     ← canonical Phase 3 result (perception_radius=8)
-      archived/
-        percept15/                  ← earlier run with wrong perception radius
     phase3b_calibration/
-      plots/                        ← generated evidence figures
+      selected_ecologies.json       ← BEST_ECOLOGICAL → Phase 5 starting ecology
+  phase4_weight_sweep/
+    selected_weights.json           ← OPTIMAL weights → Phase 5 starting genome
+  phase5_evolution/                 ← generated by Phase 5 runs
 ```
 
 ## 📄 Documentation

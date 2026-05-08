@@ -76,6 +76,27 @@ class Config:
     warmth_radius: int = 3
     warmth_factor: float = 0.0
 
+    # Shannon entropy food model
+    # food_entropy_alpha > 0 activates entropy model; disables food_replace_on_pick.
+    # spawn_rate(p) = -alpha * p * log(p) — peaks at p = 1/e ≈ 0.37
+    # 0.0 = disabled (food_replace_on_pick behavior preserved for Block 1)
+    food_entropy_alpha: float = 0.0
+    food_entropy_beta: float = 0.1    # probability depletion per food pick
+    food_entropy_gamma: float = 0.01  # mean-reversion recovery rate per tick
+    food_patch_prior: float = 0.5     # p0 equilibrium probability per cell
+
+    # Cry signal distance attenuation
+    # distress_heard = distress * exp(-d / cry_decay_radius)
+    # 0.0 = global cry across entire map (Block 1 behavior preserved)
+    cry_decay_radius: float = 0.0
+
+    # World temperature cycle (sine wave)
+    # thermal_drain(t) = warm_sensitivity * |sin(2π * t / temperature_period)|
+    # Applied to both agents per tick; abs() = both heat and cold cost energy.
+    # 0.0 = disabled (Block 1 behavior preserved)
+    temperature_period: int = 200
+    warm_sensitivity: float = 0.0
+
     # Phase 5 — Ecological Emergence
     # infant_starvation_multiplier=2.33 = 35/15: infant starves in 15 ticks (Change J)
     # B becomes existential (alive/dead) — without care, infant cannot reach maturity.

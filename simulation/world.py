@@ -13,6 +13,7 @@ class GridWorld:
         self.food_positions: set[tuple[int, int]] = set()
         self.entities: dict[int, Entity] = {}
         self.occupied: set[tuple[int, int]] = set()
+        self.food_patch_probs: dict[tuple[int, int], float] = {}  # entropy model
     
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.width and 0 <= y < self.height
@@ -68,3 +69,17 @@ class GridWorld:
     def get_step_toward(self, from_pos: tuple[int, int], to_pos: tuple[int, int]) -> tuple[int, int]:
         """Return next step toward to_pos using A* with octile heuristic."""
         return astar_octile(from_pos, to_pos, self.is_free, self.in_bounds)
+
+    def init_patch_probs(self, prior: float) -> None:
+        for x in range(self.width):
+            for y in range(self.height):
+                self.food_patch_probs[(x, y)] = prior
+
+    def deplete_patch(self, x: int, y: int, beta: float) -> None:
+        p = self.food_patch_probs.get((x, y), 0.5)
+        self.food_patch_probs[(x, y)] = max(0.0, p - beta)
+
+    def recover_patches(self, gamma: float, prior: float) -> None:
+        for pos in self.food_patch_probs:
+            p = self.food_patch_probs[pos]
+            self.food_patch_probs[pos] = p + gamma * (prior - p)

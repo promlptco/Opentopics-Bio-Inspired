@@ -179,7 +179,7 @@ class MotherAgent(Agent):
         """
         return float(max(0.0, 1.0 - self.energy))
 
-    def compute_care_cue(self, child: ChildAgent | None) -> float:
+    def compute_care_cue(self, child: ChildAgent | None, heard_distress: float | None = None) -> float:
         """Neutral CARE cue = child.distress, bounded [0, 1] (Change B).
 
         Mother cannot observe child's internal hunger directly — only the composite
@@ -188,7 +188,7 @@ class MotherAgent(Agent):
         """
         if child is None or not child.alive:
             return 0.0
-        return float(child.distress)
+        return heard_distress if heard_distress is not None else float(child.distress)
 
     def compute_motivation_scores(
         self,
@@ -197,6 +197,7 @@ class MotherAgent(Agent):
         nearest_food: tuple[int, int] | None = None,
         distance_to_food: float | None = None,
         care_enabled: bool = True,
+        heard_care_distress: float | None = None,
     ) -> dict[str, float]:
         """Unified motivation scoring: normalised_weight × neutral_cue.
 
@@ -232,7 +233,7 @@ class MotherAgent(Agent):
         }
 
         if care_enabled:
-            care_cue = self.compute_care_cue(child=child)
+            care_cue = self.compute_care_cue(child=child, heard_distress=heard_care_distress)
             scores["CARE"] = (cw / w_total) * care_cue
 
         return scores
@@ -245,6 +246,7 @@ class MotherAgent(Agent):
         nearest_food: tuple[int, int] | None = None,
         distance_to_food: float | None = None,
         care_enabled: bool = True,
+        heard_care_distress: float | None = None,
     ) -> tuple[str, dict[str, float], dict[str, float]]:
         """Choose motivation via softmax over neutral cue scores. Returns (action, scores, probs)."""
         scores = self.compute_motivation_scores(
@@ -253,6 +255,7 @@ class MotherAgent(Agent):
             nearest_food=nearest_food,
             distance_to_food=distance_to_food,
             care_enabled=care_enabled,
+            heard_care_distress=heard_care_distress,
         )
 
         probs = softmax_probs(scores, tau=tau)

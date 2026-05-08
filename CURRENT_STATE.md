@@ -213,165 +213,120 @@ Branch: `V3`
 
 # Phase 3 Current State
 
-Last updated: 2026-05-07 (V3 branch)
+Last updated: 2026-05-08 (V3 branch)
 
 ---
 
-## Status: CONCLUDED — food density alone cannot support child maturation
+## Status: RESTRUCTURED — awaiting Block 1 confirmation run
 
-Phase 3 answers: "Can ecological pressure from food density alone, with unbiased motivation
-weights=1.0, produce child maturation through maternal care?"
+Phase 3 was restructured to match Phase 2's OVAT 8-step pipeline exactly.
+New files created in `experiments/phase3_survival_full/` (top-level, not sub-folders).
+Phase 3 has NOT been re-run yet with the new pipeline — pending Block 1 confirmation run.
 
-**Answer: NO.** Sensitivity sweep over 7 init_food values × 10 seeds = 70 runs shows zero
-child maturation at all levels. Energy math confirms this is a hard structural limit, not a
-bug. Proceeds to Phase 4 (motivation weight sweep).
-
----
-
-## Ecology (percept8 BALANCED — locked from Phase 2)
-
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| `perception_radius` | 8.0 | Phase 2 percept8 BALANCED |
-| `food_perception_radius` | 8 | explicit (overrides Config default=15) |
-| `hunger_rate` | 1/35 ≈ 0.0286 | Phase 2 |
-| `move_cost` | 0.005 | Phase 2 |
-| `eat_gain` | 0.2 | Phase 2 |
-| `init_food` | swept 40–900 | Phase 3 variable |
-| `rest_recovery` | 0.005 | Phase 2 |
-
-## Phase 3 Additions (locked)
-
-| Parameter | Value | Note |
-|-----------|-------|------|
-| `children_enabled` | True | 1 child per mother at init |
-| `care_enabled` | True | |
-| `infant_starvation_multiplier` | 35/15 ≈ 2.33 | child starves in 15 ticks unfed — biological lock |
-| `care_weight` | 1.0 | unbiased, all equal |
-| `forage_weight` | 1.0 | |
-| `self_weight` | 1.0 | |
-| `warmth_factor` | **0.0** | reserved Phase 5+ — locked off for Phase 3/4 |
-| `max_ticks` | 400 | |
-| `init_mothers` | 15 | |
-| `maturity_age` | 200 | default — child must survive 200 ticks to mature |
+### Research Question
+"What ecological conditions (init_food × eat_gain × move_cost) allow mother-child pairs
+to coexist, given unbiased motivation weights (1/1/1)?"
 
 ---
 
-## Key Files
+## What Changed (vs old phase3_sweep / phase3b_calibration)
+
+| Old | New |
+|-----|-----|
+| Only swept `init_food` (1D) | Sweeps `init_food × eat_gain × move_cost` (3D, same axes as Phase 2) |
+| Swept `ISM` — a biological constant | ISM **locked at 35/15 ≈ 2.33** (not swept) |
+| No HARSH/BALANCED/EASY selection | Same regime selection criteria as Phase 2 + Option C child gate |
+| Different plot style | Same academic plot style as Phase 2 + 4-row OVAT map |
+| Different pipeline structure | Identical 8-step pipeline to Phase 2 |
+
+Old sub-folders (`phase3_sweep/`, `phase3b_calibration/`) kept as archives, not entry points.
+
+---
+
+## Key Files (new — entry points)
 
 | File | Role |
 |------|------|
-| `experiments/phase3_basic/config.py` | Loads percept8 BALANCED from Phase 2 JSON |
-| `experiments/phase3_basic/run.py` | Diagnostic runner: tick-by-tick trace |
-| `experiments/phase3_sweep/config.py` | Sweep config: INIT_FOOD_VALUES, SWEEP_SEEDS |
-| `experiments/phase3_sweep/run.py` | Parallel sweep runner (ProcessPoolExecutor) |
-| `experiments/phase3_sweep/plot.py` | Three-figure plot suite from CSV + live sims |
-| `simulation/simulation.py` | Core sim — all 5 fixes applied |
-| `agents/mother.py` | feed_child() — Fix E applied |
-| `agents/child.py` | update_distress() — hunger-only distress |
+| `experiments/phase3_survival_full/config.py` | ISM=2.33 locked, unbiased weights 1/1/1, OVAT axes, Option C child targets, Phase 2 anchor loader |
+| `experiments/phase3_survival_full/run.py` | `Phase3Simulation` wrapper + full 8-step pipeline; 3 modes: pipeline/sweep/single |
+| `experiments/phase3_survival_full/plot.py` | 4-panel condition overview, motivation split bar, 4-row × 3-col OVAT sensitivity map |
 
 ---
 
-## All Fixes (chronological)
+## Fixed Parameters
 
-### Fix A — Clear stale commitment when committed child dies
-**Bug**: `has_commitment()` forced CARE domain for up to 20 ticks after child death.
-Mother held food but could never eat → starvation.
-**Fix**: Before commitment check, query `_get_child_by_id`; if dead or None, clear commit.
+| Parameter | Value | Note |
+|-----------|-------|------|
+| `ISM` (infant_starvation_multiplier) | 35/15 ≈ 2.33 | biological constant — locked, NOT swept |
+| `maturity_age` | 200 | ticks to reach maturity (5 ticks/day × 40 days) |
+| `max_ticks` | 400 | 5 ticks/day × 80 days |
+| `init_mothers` | 15 | same as Phase 2 |
+| `care_weight` | 1.0 | unbiased — all motivations equal |
+| `forage_weight` | 1.0 | |
+| `self_weight` | 1.0 | |
+| `children_enabled` | True | 15 mother-child pairs at t=0 |
+| `care_enabled` | True | |
+| `reproduction_enabled` | False | ecology calibration only |
+| `perception_radius` | 8 | matches Phase 2 anchor |
 
-### Fix B — Cap held_food=1; suppress forage_cue when provisioned
-**Bug**: Mother accumulated held_food=2. forage_cue always high → food never eaten.
-**Fix**: Cap at 1 in FORAGE block. When `held_food >= 1`, set `nearest_food=None` → forage_cue=0.
+---
 
-### Fix C — Kin-directed care motivation (birth imprinting / oxytocin bond)
-**Bug**: care_child was globally most distressed child (commons trap) → collective distress
-always beat SELF drive → mothers starved caring for strangers' children.
-**Biological basis**: Oxytocin bond at parturition; prolactin amplifies own-infant response.
-Required for Hamilton r to be meaningful in Phase 6+.
-**Fix**: care_child = mother's `own_child_id` target only; allomother only when own child absent.
+## OVAT Sweep Axes (same as Phase 2, extended init_food range)
 
-### Fix D — Relatedness-weighted action target (Hamilton r-bias)
-**Bug**: `_execute_action` picked globally most distressed child; mother navigated to
-stranger while own child was distant.
-**Fix**: `score = expressed_care_weight × (1+r) × child.distress`. Own child r=0.5 → 1.5× boost.
-Allomothering possible when stranger's distress > (1/1.5) × own child's.
-**Future**: Option 3 (proximity-decayed allomother threshold) reserved for Phase 5+.
+| Set | Key | Values |
+|-----|-----|--------|
+| A | `init_food` | 40, 100, 200, 400, 700, 1000, 1500 |
+| B | `eat_gain` | 0.10, 0.20, 0.30, 0.50, 0.70 |
+| C | `move_cost` | 0.005, 0.01, 0.02, 0.05, 0.10 |
 
-### Fix E — feed_child requires held_food; energy conservation (2026-05-07)
-**Bug**: `feed_child()` had no `held_food` check. Mother fed child out of thin air
-(held_food=0 → success). One food pickup enabled 3+ child feeds (held_food never
-decremented). Created phantom energy, inflated feed counts, masked real ecology.
-**Fix** (`agents/mother.py`):
-```python
-if self.held_food <= 0:
-    return False, 0.0
-self.held_food -= 1
+Note: `init_food` range extended vs Phase 2 because 15 children add indirect resource pressure on mothers.
+
+---
+
+## Selection Criteria
+
+### Mother criteria (identical to Phase 2)
+
+| Condition | Survival range |
+|-----------|---------------|
+| HARSH | 10% – 45% |
+| BALANCED | 50% – 75% |
+| EASY | > 80% |
+
+### Child criteria — Option C (dual metric, user-approved 2026-05-08)
+
+| Condition | C_matr | child_death_mu |
+|-----------|--------|----------------|
+| HARSH | no constraint | no constraint |
+| BALANCED | > 0.0 (any maturation counts) | ≥ 50 ticks |
+| EASY | ≥ 0.10 | ≥ 120 ticks |
+
+---
+
+## Phase 2 Anchor (auto-loaded)
+
+Loads BALANCED ecology from `outputs/phase2_survival_minimal/auto_400_percept8/selected_ecologies.json`.
+Falls back to `{move_cost:0.01, eat_gain:0.20, init_food:40, rest_recovery:0.005}` if absent.
+
+---
+
+## Run Command
+
+```bash
+python -m experiments.phase3_survival_full.run --mode pipeline --workers 4
 ```
-**Companion fix** (`simulation/simulation.py`, `_execute_action`): when mother arrives
-at child (dist=0) with held_food=0, release commitment so she can immediately forage.
-
-### Fix (distress formula) — Hunger-only infant distress
-**Bug**: `distress = (hunger + separation) / 2`. Separation contribution was artificial
-(children are immobile infants; separation reflects mother moving to forage, not infant agency).
-**Fix** (`agents/child.py`): `distress = hunger = 1 − energy`.
 
 ---
 
-## Phase 3 Sensitivity Sweep Results (percept8 BALANCED, warmth=0, all weights=1.0)
+## Validation
 
-70 runs (7 init_food × 10 seeds), max_ticks=400
-
-| init_food | M_surv | C_matr | Feeds | CARE% | FOR% | SELF% | C_death_mu | C_rng |
-|-----------|--------|--------|-------|-------|------|-------|------------|-------|
-| 40  | 0.000 | 0.000 | 12 | 76.7 | 16.4 | 6.9 | 17.4 | 15–21 |
-| 80  | 0.000 | 0.000 | 18 | 73.1 | 21.3 | 5.7 | 18.7 | 15–24 |
-| 150 | 0.013 | 0.000 | 21 | 70.0 | 24.6 | 5.4 | 19.2 | 15–24 |
-| 250 | 0.153 | 0.000 | 24 | 69.9 | 24.7 | 5.4 | 19.9 | 15–24 |
-| 400 | 0.293 | 0.000 | 29 | 69.8 | 25.1 | 5.0 | 20.8 | 18–27 |
-| 600 | 0.447 | 0.000 | 30 | 70.8 | 24.7 | 4.5 | 21.0 | 18–30 |
-| 900 | 0.567 | 0.000 | 32 | 71.1 | 23.5 | 5.4 | 21.3 | 18–33 |
-
-**Phase 2 BALANCED (no children) reference: M_surv = 62.8%**
-
-Key observations:
-- Feeds increase monotonically with food (correct after Fix E) — confirms energy is now conserved
-- Even at food=900 (6×), C_death_mu = 21.3 ticks vs maturity_age = 200 — factor of ~9.5× gap
-- Mother survival severely degraded vs Phase 2 (57% vs 63%) even with 6× food
-- Adding children costs ~6–63% mother survival depending on food density
-
-### Why child maturation is impossible with weights=1.0
-
-Energy budget per child:
-```
-Energy needed to reach maturity_age=200:  200 × 0.0667 − 1.0 = 12.3 units
-Feeds needed:  12.3 / 0.2 = 62 feeds per child
-Best observed: 32 total / 15 children = 2.1 feeds per child (food=900)
-Gap: 30× shortfall
-```
-Foraging cycle (forage→navigate→feed→forage): ~8 ticks minimum.
-Maximum possible feeds in 200 ticks: 200/8 = 25 per child — still short of 62.
-Food density alone cannot close this gap because the bottleneck is cycle time, not food availability.
+- Syntax: 3/3 files pass `py_compile.compile()` ✓
+- Import: all modules import cleanly ✓
+- Functional (100-tick smoke test): Phase3Simulation ran; final_pop=1, C_matr=0.0, child_death_mu=18.8, care_pct=60%, child_population_history populated ✓
 
 ---
 
-## Plots Generated
-
-Output: `outputs/phase3_sweep/plots/`
-- `fig1_sweep_summary.png` — init_food vs feeds / mother survival / child death / action split
-- `fig2_timeseries.png` — per-tick population, mother energy, child energy (seed=42, food=900)
-- `fig3_phase2_vs_3.png` — mother survival and energy trajectory: Phase 2 vs Phase 3
-
----
-
-## Phase 3 Conclusion
-
-Food density alone (init_food sweep) with unbiased weights=1.0 and ISM=2.33 cannot produce
-child maturation. The care loop is mechanically correct. Phase 4 must introduce motivational
-bias (care_weight > forage/self) to close the feeding-cycle gap.
-
----
-
-## Next: Phase 3b — Ecological Calibration (ISM Sweep)
+## Next: Run Phase 1–3 for Block 1 confirmation
 
 ---
 
@@ -508,7 +463,11 @@ Last updated: 2026-05-07 (V3 branch)
 
 Phase 4 answers: "What is the minimum care_weight bias that enables child maturation, given the BEST_ECOLOGICAL baseline from Phase 3b?"
 
-**Answer: care_weight=1.0 is sufficient once the two structural traps are removed.** With fixes applied, C_matr rises from 0.013 (pre-fix maximum) to 0.30–0.75 depending on forage_weight. Child maturation is now mechanically viable.
+**Answer: child maturation is mechanically viable once the two structural traps are removed.**  
+In the recorded Phase 4 output (`outputs/phase4_weight_sweep/selected_weights.json`):  
+- **VIABLE_MIN** = `care=0.1, forage=0.5, self=0.5` (`C_matr=0.120`)  
+- **OPTIMAL** = `care=0.2, forage=1.0, self=0.1` (`C_matr=0.533`, `M_surv=0.787`)  
+This confirms viability without requiring `care_weight=1.0`.
 
 ---
 
@@ -641,5 +600,323 @@ The Phase 4 sweep establishes that:
 
 ---
 
-## Next: Phase 5 — Spatial Ecology and Kin Clustering
+## Next: Phase 5 — Asynchronous Genetic Evolution
 
+---
+
+---
+
+# World Mechanism Updates (Block 2 preparation)
+
+Last updated: 2026-05-08 (V3 branch)
+
+---
+
+## Status: IMPLEMENTED — all mechanisms backward-compatible; Block 1 runs unaffected
+
+All new features default to 0.0 / disabled. Block 1 experiments reproduce identically unless the new Config params are explicitly set.
+
+---
+
+## 1. Shannon Entropy Food Model
+
+**Mechanism**: `spawn_rate(p) = −α × p × log(p)` per cell per tick.
+
+| New Config param | Default | Description |
+|---|---|---|
+| `food_entropy_alpha` | 0.0 | Scale factor α — 0 = disabled (old food_replace_on_pick) |
+| `food_entropy_beta` | 0.1 | Probability depletion on pick |
+| `food_entropy_gamma` | 0.01 | Mean-reversion recovery rate per tick |
+| `food_patch_prior` | 0.5 | Equilibrium probability p₀ per cell |
+
+**Behavior when `food_entropy_alpha > 0`**:
+- `world.init_patch_probs(p0)` called at initialize — all cells start at `p0`
+- Per tick: each empty cell spawns food with probability `−α × p × log(p)` (peaks at p = 1/e ≈ 0.37)
+- On pick: `p -= beta` at the picked cell (local depletion)
+- Per tick: `p += gamma × (p0 − p)` mean reversion (global recovery)
+- `food_replace_on_pick` is bypassed when entropy is active
+
+**Files changed**: `config.py`, `simulation/world.py` (new `init_patch_probs`, `deplete_patch`, `recover_patches`), `simulation/simulation.py` (new `_spawn_food_entropy`, section 1c in `step()`)
+
+---
+
+## 2. Cry Signal Distance Attenuation
+
+**Mechanism**: `distress_heard = distress × exp(−d / cry_decay_radius)`
+
+| New Config param | Default | Description |
+|---|---|---|
+| `cry_decay_radius` | 0.0 | Decay length in cells — 0 = global cry (Block 1 behavior) |
+
+**Behavior when `cry_decay_radius > 0`**:
+- CARE motivation cue uses distance-attenuated distress, not raw `child.distress`
+- `distress_sensitivity` cortisol penalty also uses attenuated signal
+- At d=0: full distress; at d=cry_decay_radius: ~37% distress; at d=3×radius: ~5%
+
+**Files changed**: `agents/mother.py` (`compute_care_cue`, `compute_motivation_scores`, `choose_motivation` — added `heard_distress`/`heard_care_distress` params), `simulation/simulation.py` (compute `_heard_care_distress` and `_heard_ds` before motivation call)
+
+---
+
+## 3. World Temperature Cycle
+
+**Mechanism**: `thermal_drain(t) = warm_sensitivity × |sin(2π × t / temperature_period)|`
+
+| New Config param | Default | Description |
+|---|---|---|
+| `temperature_period` | 200 | Ticks per full hot/cold cycle |
+| `warm_sensitivity` | 0.0 | Amplitude of thermal drain — 0 = disabled |
+
+**Behavior when `warm_sensitivity > 0`**:
+- `abs(sin(...))` model: both summer peak and winter peak drain energy (thermoneutral zone at sin=0)
+- Applied to both mothers (energy drain) and children (additive hunger rate)
+- Computed once per tick as `_thermal_drain`, applied to all agents
+- Block 1–2: set to very low value (e.g., 0.005); Block 3: sweep to observe evolved response
+
+Note: separate from `warmth_factor`/`warmth_radius` (maternal proximity warmth — unchanged).
+
+**Files changed**: `config.py`, `simulation/simulation.py` (`_thermal_drain` in `step()`)
+
+---
+
+## 4. Genome Defaults — distress_sensitivity and care_recovery
+
+Not changed in `evolution/genome.py` (default stays 0.0 for Block 1 backward compatibility).
+
+Block 2 config (`experiments/phase5_evolution/config.py`) will explicitly set:
+- `distress_sensitivity = 0.5` (cortisol analog — moderate baseline)
+- `care_recovery = 0.5` (prolactin analog — moderate baseline)
+
+These genes will also be tested in Block 3 eco-pressure analysis (sensitivity parameter).
+
+---
+
+## Maturation Removal — No Bug Confirmed
+
+`_check_maturation()` removal chain is clean:
+1. `birth_mother.own_child_id = None` cleared immediately → mother can reproduce again
+2. Child popped from `_child_by_id` and removed from `world.entities`
+3. Child remains in `self.children` as `alive=False` until step-7 filter — excluded by all `c.alive` checks
+4. New mother placed at `child.pos` with correct genome and lineage chain
+
+Edge case noted: if a mother is standing on the child's cell at maturation tick, two mothers temporarily share the same world position (very rare, not a crash).
+
+---
+
+---
+
+# Approved Next Steps (session 2026-05-08)
+
+Last updated: 2026-05-08 (V3 branch)
+
+---
+
+## Status: COMPLETED (session 2026-05-08)
+
+All three workstreams implemented and smoke-tested.
+
+---
+
+## Workstream 1 — Care Trap Diagnostic Plots (Route A)
+
+Use **existing Phase 3 run data** (`outputs/phase3_survival_full/auto_400_20260508_183813/`).
+No new simulation run needed. Add new plot functions to `experiments/phase3_survival_full/plot.py`.
+
+### Scientific narrative
+
+Phase 3 (ISM=2.33, all weights=1/1/1) already shows C_matr≈0. These plots explain *why* mechanistically.
+Each figure is a **separate standalone PNG** — not multi-panel in the same figure.
+Teacher audience: keep each plot simple and self-contained. No zooming into specific care trap moments.
+
+### 5 individual plots
+
+| Figure | Name | What it shows |
+|--------|------|---------------|
+| `caretrap_motivation_scores.png` | Motivation scores over time | 3 smooth lines (FORAGE, CARE, SELF scores) over ticks for 1 representative run (seed=42). FORAGE flatly dominates. X=tick, Y=score 0–1. |
+| `caretrap_action_strip.png` | Action sequence strip | Categorical color strip: one colored cell per tick, color = action chosen (FORAGE/PICK/CARE_MOVE/FEED/EAT/REST). X=tick, Y=one row per mother (15 rows). Shows FORAGE-dominated pattern. |
+| `caretrap_held_food.png` | held_food state | Step function (0 or 1) for 1 representative mother over ticks. Red ✗ markers at ticks where CARE motivation was chosen but held_food=0 (failed delivery). |
+| `caretrap_child_energy.png` | Child energy decline | Per-child energy lines (15 children) declining to 0. Vertical dashed lines at ticks where CARE fired. Red dot at each child's death tick. |
+| `caretrap_failed_care_bar.png` | % failed CARE attempts | Bar chart across all 15 mothers: % of CARE-selection ticks where held_food=0 at that moment. Population-level evidence. One sentence takeaway: "X% of CARE attempts fail because mother has no food to deliver." |
+
+### Implementation note
+
+To produce these plots, `Phase3Simulation.run()` must log per-tick:
+- motivation chosen per mother
+- action taken per mother
+- `held_food` value per mother
+- child energy per child
+- whether CARE was chosen AND held_food=0 (failed delivery flag)
+
+Check whether this data is already in the trajectory CSV from the existing run before adding new logging.
+
+---
+
+## Workstream 2 — Phase 4 Weight Sweep (Route B)
+
+**New experiment**: `experiments/phase4_weight_sweep/` (re-implement from scratch — old files were deleted).
+
+### Scientific narrative
+
+Shows that increasing care_weight relative to forage_weight rescues child maturation.
+Unbiased (1/1/1) is the leftmost column of the heatmap — C_matr≈0, connecting to Workstream 1.
+
+### Sweep design
+
+| Axis | Values | Note |
+|------|--------|------|
+| `care_weight` | 0.1, 0.5, 1.0, 1.5, 2.0 | primary axis |
+| `forage_weight` | 0.1, 0.5, 1.0, 1.5, 2.0 | secondary axis |
+| `self_weight` | 1.0 (fixed) | not swept — SELF drives EAT/REST, not the CARE→FEED chain |
+
+Seeds per combo: 5. Total runs: 25 combos × 5 seeds = 125 runs.
+Ecology: Phase 3b BEST_ECOLOGICAL (ISM=1.2, eat_gain=0.70, init_food=600, move_cost=0.005).
+Carry forward Phase 4 fixes: own-child exclusivity (Approach A) + starvation floor `care_energy_floor=0.3` (Approach E).
+
+### 3 figures
+
+| Figure | Name | Type | Content |
+|--------|------|------|---------|
+| `sweep_3d_surface.png` | 3D motivation sweep | 3D surface (matplotlib `plot_surface`) | X=care_weight, Y=forage_weight, Z=mean C_matr. Viridis colormap. 2D heatmap projected below as shadow. `self_weight=1.0` noted in title. |
+| `sweep_heatmap.png` | 2D weight heatmap | Annotated heatmap | care × forage grid, cell colour = mean C_matr, cell text = value. Contour line at C_matr=0.10 (VIABLE_MIN). ★ at OPTIMAL point. |
+| `sweep_mother_survival.png` | Mother survival heatmap | Annotated heatmap | Same grid, cell colour = mean M_surv. Overlay: same VIABLE_MIN contour from C_matr figure. |
+
+### Key outputs
+
+- `selected_weights.json` — VIABLE_MIN (lowest care_weight with C_matr≥0.10) and OPTIMAL (highest C_matr combo)
+- `sweep_results_raw.csv` — one row per (care, forage, seed)
+- `sweep_summary.csv` — one row per (care, forage), mean ± SD across seeds
+
+---
+
+## Workstream 3 — OOP Restructure + CLI Config (Phase 1–3)
+
+**Goal**: make all phases runnable cleanly on a Linux terminal/server for long Phase 5+ evolution runs.
+Implement after Workstreams 1 and 2 are confirmed working.
+
+### Problems with current code
+
+- Each phase has its own flat `config.py / run.py / plot.py` with hardcoded defaults
+- No CLI to override individual params without editing source files
+- No `--config path/to/file.json` support for batch server jobs
+- No shared base class — common logic (seed loops, CSV writing, progress logging) duplicated across phases
+
+### Target structure
+
+```
+experiments/
+  base/
+    __init__.py
+    experiment.py     ← BaseExperiment class
+    cli.py            ← shared argparse builder
+    io_utils.py       ← shared CSV / JSON write helpers
+  phase2_survival_minimal/
+    experiment.py     ← Phase2Experiment(BaseExperiment)
+    config.py         ← parameter dataclass + defaults (no hardcoding)
+    plot.py           ← unchanged style
+  phase3_survival_full/
+    experiment.py     ← Phase3Experiment(BaseExperiment)
+    config.py
+    plot.py
+  phase4_weight_sweep/
+    experiment.py     ← Phase4Experiment(BaseExperiment)
+    config.py
+    plot.py
+```
+
+### BaseExperiment contract
+
+```python
+class BaseExperiment:
+    def __init__(self, cfg: Config, out_dir: Path): ...
+    def run_one(self, seed: int) -> dict: ...          # override per phase
+    def run_sweep(self, grid: list[dict]) -> pd.DataFrame: ...
+    def save_results(self, df: pd.DataFrame) -> None: ...
+    def make_plots(self, df: pd.DataFrame) -> None: ...  # override per phase
+```
+
+### CLI requirements (every phase entry point)
+
+```bash
+python -m experiments.phase3_survival_full.experiment \
+    --mode pipeline \
+    --config configs/phase3_balanced.json \
+    --duration 1000 \
+    --seeds 10 \
+    --workers 8 \
+    --output-dir outputs/phase3_run1
+```
+
+All `Config` fields overridable via `--param value` flags (generated from dataclass fields).
+`--config` loads a JSON file first; CLI flags override on top.
+Progress logged to stdout with timestamps (for nohup/screen sessions on Linux).
+
+### Backward compatibility
+
+- Old `new_run.py` / `run.py` entry points kept as thin shims that call the new classes
+- Existing output directories and JSON formats unchanged
+- All prior phase outputs remain valid inputs for downstream phases
+
+---
+
+## Completion Summary
+
+| Workstream | Status | Key files |
+|-----------|--------|-----------|
+| WS1 — Care Trap Diagnostics | Done | `experiments/phase3_survival_full/plot.py` (+5 caretrap functions), `run.py` (`run_diagnostic`, `caretrap` CLI mode) |
+| WS2 — Phase 4 Weight Sweep | Done | `experiments/phase4_weight_sweep/{config,run,plot,experiment}.py` |
+| WS3 — OOP Restructure + CLI | Done | `experiments/base/{experiment,cli,io_utils}.py`, phase adapters for 2/3/4 |
+
+---
+
+## Shared CLI — `experiments/base/cli.py`
+
+Every phase entry point is `experiments/<phase>/experiment.py`.
+All phases share the same flags via `build_parser()`.
+
+### Full flag reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--mode` | `pipeline` | Phase-specific modes (pipeline / sweep / single / caretrap) |
+| `--load RESULT.json` | — | Load a prior phase output JSON; auto-sets matching Config params |
+| `--load-key KEY` | auto | Sub-key inside the loaded JSON (e.g. `OPTIMAL`, `BALANCED`, `BEST_ECOLOGICAL`). Auto-detected when the JSON has exactly one nested-dict entry. |
+| `--config FILE.json` | — | Hand-written Config override JSON (applied after `--load`) |
+| `--duration N` | 400 | Simulation ticks |
+| `--seeds N` | 10 | Seeds per config |
+| `--workers N` | 4 | Parallel workers (`0` = auto `os.cpu_count()`) |
+| `--output-dir PATH` | auto | Explicit output dir (timestamped auto-path if omitted) |
+| `--param key=value` | — | Override any Config field (repeatable; highest priority) |
+
+### Priority order (lowest → highest)
+
+```
+--load  <  --config  <  --param
+```
+
+### Phase-chaining examples
+
+```bash
+# Phase 4: load Phase 3b BEST_ECOLOGICAL ecology
+python -m experiments.phase4_weight_sweep.experiment \
+    --load outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json \
+    --load-key BEST_ECOLOGICAL \
+    --mode sweep --workers 4
+
+# Phase 5: load Phase 4 OPTIMAL weights as starting genome
+python -m experiments.phase5_evolution.experiment \
+    --load outputs/phase4_weight_sweep/sweep_20260508_194211/selected_weights.json \
+    --load-key OPTIMAL \
+    --mode test --workers 4
+
+# Override one param on top of loaded values
+python -m experiments.phase4_weight_sweep.experiment \
+    --load outputs/.../selected_ecologies.json --load-key BEST_ECOLOGICAL \
+    --param max_ticks=800 --workers 4
+```
+
+### Entry points
+
+| Phase | Entry point |
+|-------|-------------|
+| Phase 2 | `python -m experiments.phase2_survival_minimal.experiment` |
+| Phase 3 | `python -m experiments.phase3_survival_full.experiment` |
+| Phase 4 | `python -m experiments.phase4_weight_sweep.experiment` |
