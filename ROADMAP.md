@@ -21,29 +21,30 @@ No explicit fitness function. Ecological pressure is the only selector.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  BLOCK 1 — World Setup          (DONE)              │
+│  BLOCK 1 — World Setup    (NEEDS RE-RUN)            │
 │  Validate mechanics. Sweep eco space.               │
 │  Select and lock BEST_ECOLOGICAL values.            │
-│  Phases 1 / 2 / 3 / 3b                              │
+│  Phases 1 / 2 / 3 / 3b / 4                         │
+│  ⚠ Must re-run with mechanism baseline values ON   │
 └────────────────────┬────────────────────────────────┘
-                     │  BEST_ECOLOGICAL locked
+                     │  BEST_ECOLOGICAL + mechanism baseline locked
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │  BLOCK 2 — Baldwin Emergence    (TO BUILD)          │
-│  Init genome: all weights = 0.5 (neutral).          │
+│  Init genome: care=forage=self=1/3 (sum=1).         │
+│  Renormalize genome after every mutation.           │
+│  Same mechanism baseline as Block 1.                │
 │  Run ~100 generations, multi-seed.                  │
-│  Sweep: mutation_rate, sigma, tau, lr, lc.          │
-│  Claim: care_weight rises from 0.5 under            │
-│  ecological pressure alone.                         │
 │  Baldwin test: plasticity ON vs OFF.                │
 └────────────────────┬────────────────────────────────┘
-                     │  best-emerged genome weights
+                     │  evolved genome weights
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │  BLOCK 3 — Eco Pressure Analysis  (TO BUILD)        │
-│  Take evolved genome. Redeploy under different eco  │
-│  settings via --eco-preset CLI flag. Quick runs.    │
-│  Interpret behavior, motivation, energy, pop.       │
+│  Take evolved genome. Vary mechanism values         │
+│  (food_entropy_alpha / cry_decay_radius /           │
+│   warm_sensitivity) one at a time — OVAT.           │
+│  Measure care behavior response.                    │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -74,21 +75,22 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 
 ---
 
-## Block 1 — World Setup (DONE)
+## Block 1 — World Setup (⚠ NEEDS RE-RUN)
 
-| Phase | Goal | Result |
-|---|---|---|
-| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass |
-| Phase 2 | Mother-only eco baselines — HARSH / BALANCED / EASY | Locked |
-| Phase 3 | Children + food sweep | Null: food density alone → C_matr = 0 |
-| Phase 3b | Eco calibration: ISM / eat_gain / init_food | Null: equal weights → C_matr = 0 (care trap). BEST_ECOLOGICAL locked. |
+| Phase | Goal | Previous result | Re-run status |
+|---|---|---|---|
+| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass | 🔁 Re-run with mechanisms ON |
+| Phase 2 | Mother-only eco baselines — HARSH / BALANCED / EASY | Locked | 🔁 Re-run with mechanisms ON |
+| Phase 3 | Children + food sweep | Null: C_matr = 0 | 🔁 Re-run with mechanisms ON |
+| Phase 3b | Eco calibration: ISM / eat_gain / init_food | BEST_ECOLOGICAL locked | 🔁 Re-run with mechanisms ON |
+| Phase 4 | Motivation weight sweep | Viable weight regimes found | 🔁 Re-run with mechanisms ON |
 
-**Engine capabilities unlocked during Block 1 (now permanent defaults for Block 2/3):**
-- Own-child exclusivity — mother bonds to own child ID (`is_own` flag in `simulation.py`)
-- Starvation floor — `care_energy_floor = 0.3` in `Config` (mother preserves self below 0.3 energy)
-- `plasticity_kin_conditional = True` — plasticity fires on own-child feed events only
+**⚠ Why re-run:** Three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) must be active at fixed baseline values in ALL blocks. Previous runs used 0.0 for all three. Baseline values must be calibrated first (see PROGRESS.md Step 1).
 
-These are **Config flags**, not phases. Block 2 sets them once in its `config.py` and forgets about them.
+**Engine capabilities (permanent, carry into Block 2/3):**
+- Own-child exclusivity — `own_child_id` in `simulation.py`
+- Starvation floor — `care_energy_floor = 0.3`
+- Genome normalization — after every mutation: `w /= w.sum()` so genome always sums to 1.0
 
 **Locked output for Block 2:**
 `outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json` → `BEST_ECOLOGICAL`
@@ -101,8 +103,10 @@ These are **Config flags**, not phases. Block 2 sets them once in its `config.py
 
 | Parameter | Value |
 |---|---|
-| Starting genome | `care = forage = self = 0.5` — neutral, no pre-baked bias |
+| Starting genome | `care = forage = self = 1/3` — normalized sum = 1, neutral, no pre-baked bias |
+| Genome mutation | After every mutation: renormalize by sum → weights always sum to 1.0 |
 | Ecology | BEST_ECOLOGICAL (loaded from Phase 3b JSON; frozen) |
+| Mechanisms | Same baseline values as Block 1 (food_entropy_alpha, cry_decay_radius, warm_sensitivity) |
 | Evolution | mutation ON, reproduction ON |
 | Plasticity (primary) | OFF |
 | Plasticity (control) | ON — for Baldwin comparison |
@@ -110,8 +114,7 @@ These are **Config flags**, not phases. Block 2 sets them once in its `config.py
 | Control seeds | 30 |
 | Sweep seeds | 3 |
 
-**Why 0.5/0.5/0.5?** Any rise in `mean_genome_care_weight` above 0.5 is pure ecological
-selection — no starting advantage. Strongest possible emergence claim.
+**Why 1/3 each?** Genome is normalized to sum=1, so 1/3 each = equal budget shares = perfectly neutral start. Any rise in `mean_genome_care_weight` above 1/3 is pure ecological selection. `genome.care_weight` IS the effective care share directly — no conversion needed.
 
 ### Control Matrix (4 conditions)
 
@@ -133,8 +136,8 @@ selection — no starting advantage. Strongest possible emergence claim.
 
 ### Success Criteria
 
-1. `mut_on_plast_off`: `mean_genome_care_weight` rises above 0.5 over ~100 generations.
-2. `mut_off_plast_off`: care_weight stays flat (no drift, no selection).
+1. `mut_on_plast_off`: `mean_genome_care_weight` rises above 1/3 over ~100 generations.
+2. `mut_off_plast_off`: care_weight stays flat at 1/3 (no drift, no selection).
 3. `C_matr` improves over generations in mutation-ON only.
 4. Baldwin signal: `mut_on_plast_on` shows faster early C_matr rise, converges to same endpoint as `mut_on_plast_off`.
 
@@ -171,6 +174,14 @@ selection — no starting advantage. Strongest possible emergence claim.
 | Run length | 1 000–5 000 ticks (quick, interactive) |
 | Seeds | 1–3 (qualitative interpretation) |
 
+**Eco pressure axes (OVAT — vary one at a time from baseline):**
+
+| Mechanism | Config param | Baseline | Low | High |
+|-----------|-------------|---------|-----|------|
+| Shannon entropy food | `food_entropy_alpha` | TBD | 0.0 (uniform) | TBD |
+| Cry attenuation | `cry_decay_radius` | TBD | 0.0 (perfect) | TBD |
+| Temperature cycle | `warm_sensitivity` | TBD | 0.0 (none) | TBD |
+
 ### Eco Presets (via `--eco-preset` or manual CLI flags)
 
 | Preset | Description |
@@ -179,13 +190,14 @@ selection — no starting advantage. Strongest possible emergence claim.
 | `HARSH` | High starvation pressure (Phase 2 HARSH) |
 | `BALANCED` | Moderate pressure (Phase 2 BALANCED) |
 | `EASY` | Low pressure (Phase 2 EASY) |
-| `CUSTOM` | `--ism`, `--eat-gain`, `--init-food` flags |
+| `CUSTOM` | `--food-alpha`, `--cry-radius`, `--warm-sens` flags |
 
 ### Interpretation Questions
 
-- Under HARSH: does evolved care sustain C_matr, or does starvation collapse it?
-- Under EASY: do mothers reduce care (less pressure) or maintain it (stable instinct)?
-- What ISM breaks the evolved care behavior?
+- Higher `food_entropy_alpha`: does patchy food force more foraging, suppressing care?
+- Higher `cry_decay_radius`: does weaker cry signal reduce care responsiveness?
+- Higher `warm_sensitivity`: does thermal pressure compete with care for energy budget?
+- What combination of pressures breaks the evolved care behavior?
 
 ### Figures
 
@@ -253,14 +265,18 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control
 
 ## Progress Tracker
 
-**Block 1 — World Setup**
-- [x] Phase 1 mechanics validated
-- [x] Phase 2 ecological baselines
-- [x] Phase 3 null result (food density)
-- [x] Phase 3b null result (care trap) + BEST_ECOLOGICAL locked
+**Block 1 — World Setup (⚠ NEEDS RE-RUN)**
+- [x] Phase 1 mechanics validated (without mechanisms)
+- [x] Phase 2 ecological baselines (without mechanisms)
+- [x] Phase 3 null result — C_matr = 0 (without mechanisms)
+- [x] Phase 3b null result — care trap + BEST_ECOLOGICAL locked (without mechanisms)
+- [x] Phase 4 weight sweep — viable weight regimes found (without mechanisms)
+- [ ] **Mechanism baseline values calibrated** ← START HERE
+- [ ] Phase 1–4 re-run with mechanism baseline values ON
 
 **Block 2 — Baldwin Emergence**
 - [ ] `experiments/phase5_evolution/` code written (config + run + plot)
+- [ ] Genome normalization (sum=1 after mutation) implemented
 - [ ] Smoke test: generation x-axis, energy panels, genome drift visible
 - [ ] Control matrix 30-seed run complete
 - [ ] Baldwin signal confirmed or refuted
@@ -268,8 +284,10 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control
 - [ ] Stats: Mann-Whitney endpoint test + rank-biserial effect size
 
 **Block 3 — Eco Pressure**
-- [ ] `--mode pressure --eco-preset` wired in run.py
-- [ ] HARSH / BALANCED / EASY runs complete
+- [ ] `--mode pressure` with mechanism OVAT wired in run.py
+- [ ] food_entropy_alpha sweep complete
+- [ ] cry_decay_radius sweep complete
+- [ ] warm_sensitivity sweep complete
 - [ ] Pressure interpretation written
 
 **Paper**

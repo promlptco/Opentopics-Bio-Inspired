@@ -653,6 +653,9 @@ outputs/          auto-generated plots and JSON (mirrors experiments/ structure)
 
 ## 📄 Documentation
 
-- [ROADMAP.md](./ROADMAP.md) — full phase pipeline: done phases with results, planned phases with status
-- [LOGIC.md](./LOGIC.md) — simulation architecture, code logic, biological reasoning
-- [CURRENT_STATE.md](./CURRENT_STATE.md) — detailed current state per phase (parameters, bugs, results)
+| File | Purpose |
+|------|---------|
+| [PROGRESS.md](./PROGRESS.md) | **Timeline of research findings** — what each phase discovered, why it matters, and how phases connect. Start here to understand the arc of the project. |
+| [CURRENT_STATE.md](./CURRENT_STATE.md) | **Technical detail per phase** — exact parameters, locked baselines, bugs fixed, and per-phase status. Referenced by PROGRESS.md for deeper dives. |
+| [ROADMAP.md](./ROADMAP.md) | **Research plan** — three-block framework, Block 2 control matrix design, success criteria, progress tracker. |
+| [LOGIC.md](./LOGIC.md) | **Simulation architecture** — code logic, agent mechanics, biological reasoning behind design decisions. |

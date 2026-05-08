@@ -1,4 +1,23 @@
-# Phase 2 Current State
+# Current State
+
+Last updated: 2026-05-08 (V3 branch)
+
+---
+
+## ⚠ STATUS — All Phase 1–4 results are PENDING RE-RUN
+
+**Reason:** Three ecological mechanisms must be active at fixed baseline values across all blocks (design decision locked 2026-05-08). Previous runs used 0.0 for all three — results are not comparable to Block 2/3.
+
+**Before re-running anything:**
+1. Calibrate `food_entropy_alpha`, `cry_decay_radius`, `warm_sensitivity` baseline values
+2. Lock values in config
+3. Re-run Phase 1 → 2 → 3 → 3b → 4 in order
+
+See PROGRESS.md `▶ NEXT SESSION TASK LIST` for step-by-step instructions.
+
+---
+
+## Phase 2 Current State (PENDING RE-RUN)
 
 Last updated: 2026-05-05 (V3 branch)
 

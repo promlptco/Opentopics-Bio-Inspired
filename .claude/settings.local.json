@@ -49,7 +49,8 @@
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\experiments\" -Recurse -Directory\\).FullName)",
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Recurse -Directory\\).FullName)",
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\experiments\" -Recurse -File | Where-Object {$_.Extension -match '\\\\.\\(json|csv|png\\)$'}\\).FullName)",
-      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Recurse -File | Where-Object {$_.Extension -match '\\\\.\\(json|csv|png\\)$'}\\).FullName)"
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Recurse -File | Where-Object {$_.Extension -match '\\\\.\\(json|csv|png\\)$'}\\).FullName)",
+      "PowerShell(Get-Content \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase4_weight_sweep\\\\sweep_20260508_215018\\\\sweep_summary.csv\" -First 5)"
     ],
     "additionalDirectories": [
       "\\tmp"
