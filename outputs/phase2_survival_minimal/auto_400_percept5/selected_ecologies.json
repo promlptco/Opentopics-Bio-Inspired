@@ -1,0 +1,89 @@
+{
+  "harsh": {
+    "selected_config": {
+      "perception_radius": 5.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.1,
+      "eat_gain": 0.8,
+      "init_food": 150,
+      "rest_recovery": 0.005,
+      "food_entropy_alpha": 0.0,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "harsh"
+    },
+    "selection_status": "unknown",
+    "validation_summary": {
+      "final_pop": 3.8666666666666667,
+      "final_pop_sd": 2.334285520001546,
+      "mean_energy": 0.35261504784783554,
+      "final_energy": 0.1787162885757134,
+      "tail_mean_energy": 0.23064437064456567,
+      "tail_energy_sd": 0.11482821208487733,
+      "tail_energy_slope": -0.0005329226358986825,
+      "tail_pop_slope": -0.011483987099677509,
+      "rest_action_rate": 0.2515429034687977,
+      "failed_forage_rate": 0.06614130153666399,
+      "total_actions_mean": 2851.866666666667
+    }
+  },
+  "balanced": {
+    "selected_config": {
+      "perception_radius": 5.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.05,
+      "eat_gain": 0.8,
+      "init_food": 150,
+      "rest_recovery": 0.005,
+      "food_entropy_alpha": 0.0,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "balanced"
+    },
+    "selection_status": "unknown",
+    "validation_summary": {
+      "final_pop": 9.633333333333333,
+      "final_pop_sd": 2.971905486757986,
+      "mean_energy": 0.5525596462507087,
+      "final_energy": 0.4373862646087403,
+      "tail_mean_energy": 0.47639223835846134,
+      "tail_energy_sd": 0.12360956314116446,
+      "tail_energy_slope": -0.00024113856625586683,
+      "tail_pop_slope": -0.004919522988074733,
+      "rest_action_rate": 0.23044273107042432,
+      "failed_forage_rate": 0.059640849889713306,
+      "total_actions_mean": 4309.033333333334
+    }
+  },
+  "easy": {
+    "selected_config": {
+      "perception_radius": 5.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.8,
+      "init_food": 150,
+      "rest_recovery": 0.005,
+      "food_entropy_alpha": 0.0,
+      "care_weight": 0.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "easy"
+    },
+    "selection_status": "unknown",
+    "validation_summary": {
+      "final_pop": 12.966666666666667,
+      "final_pop_sd": 1.7220788470785986,
+      "mean_energy": 0.6926512894660691,
+      "final_energy": 0.6322246573676246,
+      "tail_mean_energy": 0.640676365642866,
+      "tail_energy_sd": 0.08048952902326588,
+      "tail_energy_slope": -0.00010842336773133222,
+      "tail_pop_slope": -0.0014695617390435031,
+      "rest_action_rate": 0.2178161143719056,
+      "failed_forage_rate": 0.055869218308191346,
+      "total_actions_mean": 5127.166666666667
+    }
+  }
+}

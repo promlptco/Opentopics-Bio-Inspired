@@ -1,0 +1,107 @@
+{
+  "harsh": {
+    "selected_config": {
+      "perception_radius": 8.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.7,
+      "init_food": 200,
+      "rest_recovery": 0.005,
+      "care_weight": 1.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "harsh"
+    },
+    "selection_status": "validated_pass",
+    "validation_summary": {
+      "final_pop": 4.0,
+      "final_pop_sd": 3.0659419433511785,
+      "mean_energy": 0.3268051846428571,
+      "final_energy": 0.2313012380952381,
+      "tail_mean_energy": 0.25901694285714283,
+      "tail_energy_sd": 0.20154812472300043,
+      "tail_energy_slope": -0.0003461021770544273,
+      "tail_pop_slope": -0.006587339683492098,
+      "rest_action_rate": 0.11075573394903074,
+      "child_mean_energy_mean": 0.5069981977018921,
+      "child_mean_energy_sd": 0.02275092459294787,
+      "child_maturation_rate_mean": 0.0,
+      "child_maturation_rate_sd": 0.0,
+      "child_death_tick_mean_mean": 28.113333333333333,
+      "child_death_tick_mean_sd": 3.4952729983984563,
+      "care_pct_mean": 0.5599564524223767,
+      "forage_pct_mean": 0.32928781362859255,
+      "self_pct_mean": 0.11075573394903074
+    }
+  },
+  "balanced": {
+    "selected_config": {
+      "perception_radius": 8.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.5,
+      "init_food": 1500,
+      "rest_recovery": 0.005,
+      "care_weight": 1.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "balanced"
+    },
+    "selection_status": "fallback_penalty_score",
+    "validation_summary": {
+      "final_pop": 5.9,
+      "final_pop_sd": 3.3000000000000003,
+      "mean_energy": 0.4454128363095237,
+      "final_energy": 0.36033895238095237,
+      "tail_mean_energy": 0.36815545595238097,
+      "tail_energy_sd": 0.20787951407348162,
+      "tail_energy_slope": -7.865377559439118e-05,
+      "tail_pop_slope": -0.0010499512487812392,
+      "rest_action_rate": 0.11709354783121392,
+      "child_mean_energy_mean": 0.5153729089870238,
+      "child_mean_energy_sd": 0.02240446386219358,
+      "child_maturation_rate_mean": 0.0,
+      "child_maturation_rate_sd": 0.0,
+      "child_death_tick_mean_mean": 38.41809523809523,
+      "child_death_tick_mean_sd": 3.3146563832131246,
+      "care_pct_mean": 0.5418217382224096,
+      "forage_pct_mean": 0.3410847139463765,
+      "self_pct_mean": 0.11709354783121392
+    }
+  },
+  "easy": {
+    "selected_config": {
+      "perception_radius": 8.0,
+      "hunger_rate": 0.02857142857142857,
+      "move_cost": 0.005,
+      "eat_gain": 0.7,
+      "init_food": 1500,
+      "rest_recovery": 0.005,
+      "care_weight": 1.0,
+      "forage_weight": 1.0,
+      "self_weight": 1.0,
+      "name": "easy"
+    },
+    "selection_status": "fallback_penalty_score",
+    "validation_summary": {
+      "final_pop": 3.2,
+      "final_pop_sd": 2.993325909419153,
+      "mean_energy": 0.3348995105136593,
+      "final_energy": 0.18539447619047617,
+      "tail_mean_energy": 0.20296824547619047,
+      "tail_energy_sd": 0.18057887363528677,
+      "tail_energy_slope": -0.00015815864528756135,
+      "tail_pop_slope": -0.0026560414010350377,
+      "rest_action_rate": 0.1091769353245055,
+      "child_mean_energy_mean": 0.5796511756312626,
+      "child_mean_energy_sd": 0.014140831684620941,
+      "child_maturation_rate_mean": 0.0,
+      "child_maturation_rate_sd": 0.0,
+      "child_death_tick_mean_mean": 48.693333333333335,
+      "child_death_tick_mean_sd": 5.0880426273546275,
+      "care_pct_mean": 0.5450522056056626,
+      "forage_pct_mean": 0.345770859069832,
+      "self_pct_mean": 0.1091769353245055
+    }
+  }
+}

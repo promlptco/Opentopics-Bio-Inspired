@@ -125,6 +125,11 @@ SENSITIVITY_SWEEPS = {
         "key": "move_cost",
         "values": [0.005, 0.01, 0.02, 0.05, 0.10],
     },
+    "D": {
+        "label": "food_entropy_alpha",
+        "key":   "food_entropy_alpha",
+        "values": [0.0],
+    },
 }
 
 SENSITIVITY_SUBPLOT_CONFIG = [

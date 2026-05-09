@@ -37,7 +37,7 @@ VALIDATION_SEEDS        = list(range(42, 52))   # 10 seeds — same standard as 
 DEFAULT_SWEEP_SEED_BASE = 43000                 # offset from Phase 2 (42000) to avoid seed collision
 TAIL_WINDOW             = 200
 PLOT_SMOOTH_WINDOW      = 25
-DEFAULT_PERCEPTION_RADIUS = 8.0
+DEFAULT_PERCEPTION_RADIUS = 25.0
 
 # Phase 3 biological constants (LOGIC.md locked — do not tune)
 ISM          = 2.33       # infant_starvation_multiplier = 1.0; infants drain at same rate as mothers (35 ticks to starvation)
