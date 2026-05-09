@@ -37,6 +37,7 @@ import sys
 import os
 import argparse
 import random
+import math
 from datetime import datetime
 
 import numpy as np
@@ -161,6 +162,9 @@ class SurvivalSimulation:
 
         self._spawn_food(food_count)
 
+        if getattr(self.config, "food_entropy_alpha", 0.0) > 0:
+            self.world.init_patch_probs(self.config.food_patch_prior)
+
     def _random_free_pos(self):
         for _ in range(200):
             x = random.randint(0, self.config.width - 1)
@@ -184,6 +188,14 @@ class SurvivalSimulation:
             if (x, y) not in self.world.food_positions:
                 self.world.place_food(x, y)
                 spawned += 1
+
+    def _spawn_food_entropy(self):
+        alpha = self.config.food_entropy_alpha
+        for pos, p in self.world.food_patch_probs.items():
+            if pos not in self.world.food_positions:
+                rate = -alpha * p * math.log(max(p, 1e-10))
+                if random.random() < rate:
+                    self.world.place_food(*pos)
 
     def _nearest_food(self, pos):
         if not self.world.food_positions:
@@ -226,6 +238,15 @@ class SurvivalSimulation:
     # ============================================================
 
     def step(self):
+        # Shannon entropy food spawn and patch recovery (when active).
+        # Mirrors simulation/simulation.py section 1c — same ordering.
+        if getattr(self.config, "food_entropy_alpha", 0.0) > 0:
+            self._spawn_food_entropy()
+            self.world.recover_patches(
+                getattr(self.config, "food_entropy_gamma", 0.01),
+                self.config.food_patch_prior,
+            )
+
         alive_mothers = [m for m in self.mothers if m.alive]
         random.shuffle(alive_mothers)
         processed_alive_count = len(alive_mothers)
@@ -288,7 +309,13 @@ class SurvivalSimulation:
             if motivation == "FORAGE":
                 if mother.pos in self.world.food_positions:
                     self.world.remove_food(*mother.pos)
-                    self._spawn_food(1)  # 1:1 replacement — food count stays at init_food
+                    if getattr(self.config, "food_entropy_alpha", 0.0) > 0:
+                        self.world.deplete_patch(
+                            *mother.pos,
+                            getattr(self.config, "food_entropy_beta", 0.1),
+                        )
+                    else:
+                        self._spawn_food(1)  # 1:1 replacement — food count stays at init_food
                     mother.held_food += 1
 
                     self.action_counts["PICK"] += 1
@@ -458,6 +485,13 @@ def make_config(params, duration):
     cfg.rest_recovery = params["rest_recovery"]
 
     cfg.fatigue_rate = params.get("fatigue_rate", getattr(cfg, "fatigue_rate", 0.01))
+
+    # Shannon entropy food model (Set D).
+    # food_patch_prior is set to init_food / grid_area so the entropy equilibrium
+    # matches the target food density (init_food items on a 50×50 grid).
+    cfg.food_entropy_alpha = params.get("food_entropy_alpha", 0.0)
+    if cfg.food_entropy_alpha > 0:
+        cfg.food_patch_prior = cfg.init_food / (cfg.width * cfg.height)
 
     cfg.forage_weight = params.get("forage_weight", 1.0)
     cfg.self_weight = params.get("self_weight", 1.0)
@@ -1056,8 +1090,8 @@ def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
     """
     Build the multi-dimensional Step 6 validation grid.
 
-    ROADMAPS.md Step 6: init_food × eat_gain × move_cost
-    Uses all values from SENSITIVITY_SWEEPS sets A/B/C directly.
+    ROADMAPS.md Step 6: init_food × food_entropy_alpha × eat_gain × move_cost
+    Uses all values from SENSITIVITY_SWEEPS sets A/B/C/D directly.
     Non-swept parameters (hunger_rate, rest_recovery, etc.) are held at
     synthetic_baseline values.
 
@@ -1068,24 +1102,26 @@ def _pipeline_multidim_configs(detected_params, clarity, synthetic_baseline):
     """
     from itertools import product as iproduct
 
-    food_values = SENSITIVITY_SWEEPS["A"]["values"]
-    eat_values  = SENSITIVITY_SWEEPS["B"]["values"]
-    cost_values = SENSITIVITY_SWEEPS["C"]["values"]
+    food_values  = SENSITIVITY_SWEEPS["A"]["values"]
+    eat_values   = SENSITIVITY_SWEEPS["B"]["values"]
+    cost_values  = SENSITIVITY_SWEEPS["C"]["values"]
+    alpha_values = SENSITIVITY_SWEEPS["D"]["values"]
 
     base_params = dict(synthetic_baseline)
     configs = []
 
-    for food, eat, cost in iproduct(food_values, eat_values, cost_values):
+    for food, eat, cost, alpha in iproduct(food_values, eat_values, cost_values, alpha_values):
         params = dict(base_params)
-        params["init_food"] = int(food)
-        params["eat_gain"]  = float(eat)
-        params["move_cost"] = float(cost)
-        params["name"]      = "candidate"
+        params["init_food"]          = int(food)
+        params["eat_gain"]           = float(eat)
+        params["move_cost"]          = float(cost)
+        params["food_entropy_alpha"] = float(alpha)
+        params["name"]               = "candidate"
         configs.append(params)
 
     desc = (
-        f"{len(food_values)} init_food × {len(eat_values)} eat_gain × "
-        f"{len(cost_values)} move_cost = {len(configs)} configs"
+        f"{len(food_values)} init_food x {len(alpha_values)} food_entropy_alpha x "
+        f"{len(eat_values)} eat_gain x {len(cost_values)} move_cost = {len(configs)} configs"
     )
     return configs, desc
 
@@ -1153,10 +1189,14 @@ def select_by_penalty_score(name, sweep_records):
     return best_rec, best_score, scored
 
 
-def _pipeline_validate(params, n_seeds, duration, tau, noise, workers):
-    """Run N independent seeds for diagnostic validation. Returns (results, labels, summary)."""
+def _pipeline_validate(params, n_seeds, n_repeats, duration, tau, noise, workers):
+    """Run N seeds x R repeats for diagnostic validation. Returns (results, labels, summary)."""
     seeds = list(range(42, 42 + n_seeds))
-    tasks = [(dict(params), seed, duration, tau, noise) for seed in seeds]
+    tasks = [
+        (dict(params), seed * 1000 + rep, duration, tau, noise)
+        for seed in seeds
+        for rep in range(n_repeats)
+    ]
 
     if workers <= 1:
         raw = [_run_task(t) for t in tasks]
@@ -1165,13 +1205,15 @@ def _pipeline_validate(params, n_seeds, duration, tau, noise, workers):
             raw = list(pool.map(_run_task, tasks))
 
     results = []
-    for seed, r in zip(seeds, raw):
-        r["base_seed"] = seed
-        r["repeat"]    = 1
-        r["run_seed"]  = seed
+    for idx, r in enumerate(raw):
+        seed_idx = idx // n_repeats
+        rep_idx  = idx % n_repeats
+        r["base_seed"] = seeds[seed_idx]
+        r["repeat"]    = rep_idx + 1
+        r["run_seed"]  = seeds[seed_idx] * 1000 + rep_idx
         results.append(r)
 
-    labels  = [str(s) for s in seeds]
+    labels  = [f"{seeds[i // n_repeats]}-r{(i % n_repeats) + 1}" for i in range(len(raw))]
     summary = summarize_repeats(results, duration)
     return results, labels, summary
 
@@ -1184,7 +1226,9 @@ def _run_pipeline(args, out_dir, n_workers):
         save_csv as save_sens_csv,
     )
 
-    N_SEEDS       = 50
+    N_SEEDS        = 10
+    N_REPEATS      = 3
+    N_RUNS_PER_CONFIG = N_SEEDS * N_REPEATS
     pipeline_seeds = list(range(42, 42 + N_SEEDS))
 
     # ── Step 1: Mechanics lock confirmation ───────────────────────────────────
@@ -1206,9 +1250,9 @@ def _run_pipeline(args, out_dir, n_workers):
     print("\n" + "=" * 70)
     print("PIPELINE Step 2 — Provisional Baseline (BALANCED_BASELINE)")
     print("=" * 70)
-    eco_keys = ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery")
+    eco_keys = ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery", "food_entropy_alpha")
     for k in eco_keys:
-        print(f"  {k:<20} = {synthetic[k]}")
+        print(f"  {k:<22} = {synthetic[k]}")
 
     # ── Step 3: First-pass init_food gradient scan (find food anchor) ─────────
     print("\n" + "=" * 70)
@@ -1218,7 +1262,7 @@ def _run_pipeline(args, out_dir, n_workers):
 
     anchor_food, anchor_summary = find_food_anchor(
         seeds=pipeline_seeds,
-        repeats=1,
+        repeats=N_REPEATS,
         duration=args.duration,
         tau=args.tau,
         noise=args.perceptual_noise,
@@ -1234,7 +1278,7 @@ def _run_pipeline(args, out_dir, n_workers):
     os.makedirs(ovat_dir, exist_ok=True)
 
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 4 — OVAT Sensitivity Sweep  (N={N_SEEDS} seeds per point)")
+    print(f"PIPELINE Step 4 — OVAT Sensitivity Sweep  ({N_SEEDS} seeds x {N_REPEATS} repeats = {N_RUNS_PER_CONFIG} runs per point)")
     print("=" * 70)
     print(f"  Baseline = anchored (init_food={anchor_food})  Duration={args.duration}  Workers={n_workers}")
 
@@ -1243,13 +1287,13 @@ def _run_pipeline(args, out_dir, n_workers):
         sweep_def = SENSITIVITY_SWEEPS[set_id]
         key       = sweep_def["key"]
         n_vals    = len(sweep_def["values"])
-        print(f"\n-- Set {set_id}: '{key}'  ({n_vals} values x {N_SEEDS} seeds = {n_vals * N_SEEDS} runs) --")
+        print(f"\n-- Set {set_id}: '{key}'  ({n_vals} values x {N_SEEDS} seeds x {N_REPEATS} repeats = {n_vals * N_RUNS_PER_CONFIG} runs) --")
         results = run_set(
             set_id=set_id,
             sweep=sweep_def,
             baseline=anchored_baseline,
             seeds=pipeline_seeds,
-            repeats=1,
+            repeats=N_REPEATS,
             duration=args.duration,
             tau=args.tau,
             noise=args.perceptual_noise,
@@ -1286,20 +1330,21 @@ def _run_pipeline(args, out_dir, n_workers):
 
     # ── Step 6: Multi-parameter validation grid (N=50 per config) ────────────
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 6 — Multi-Parameter Validation Grid  (N={N_SEEDS} per config)")
+    print(f"PIPELINE Step 6 — Multi-Parameter Validation Grid  ({N_SEEDS} seeds x {N_REPEATS} repeats = {N_RUNS_PER_CONFIG} runs per config)")
     print("=" * 70)
 
     sweep_configs, grid_desc = _pipeline_multidim_configs(detected, clarity, anchored_baseline)
-    total_runs = len(sweep_configs) * N_SEEDS
+    total_runs = len(sweep_configs) * N_RUNS_PER_CONFIG
     print(f"  Grid    : {grid_desc}")
-    print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds)")
-    print(f"  Full ROADMAPS.md grid: init_food × eat_gain × move_cost")
+    print(f"  Runs    : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds x {N_REPEATS} repeats)")
+    print(f"  Full grid: init_food x food_entropy_alpha x eat_gain x move_cost")
     print(f"  Non-swept params (hunger_rate, rest_recovery) held at anchored baseline")
 
     sweep_tasks = [
-        (dict(p), seed, args.duration, args.tau, args.perceptual_noise)
+        (dict(p), seed * 1000 + rep, args.duration, args.tau, args.perceptual_noise)
         for p in sweep_configs
         for seed in pipeline_seeds
+        for rep in range(N_REPEATS)
     ]
 
     if n_workers <= 1:
@@ -1309,13 +1354,14 @@ def _run_pipeline(args, out_dir, n_workers):
             flat_results = list(pool.map(_run_task, sweep_tasks))
 
     step4_records = []
-    print(f"\n  {'#':>4}  {'food':>5}  {'eat':>6}  {'cost':>7}  {'surv':>6}  {'tailE':>7}  {'E+/-':>6}  {'slope':>9}")
+    print(f"\n  {'#':>4}  {'food':>5}  {'alpha':>7}  {'eat':>6}  {'cost':>7}  {'surv':>6}  {'tailE':>7}  {'E+/-':>6}  {'slope':>9}")
     for idx, params in enumerate(sweep_configs):
-        reps = flat_results[idx * N_SEEDS : (idx + 1) * N_SEEDS]
+        reps = flat_results[idx * N_RUNS_PER_CONFIG : (idx + 1) * N_RUNS_PER_CONFIG]
         sr   = summarize_repeats(reps, args.duration)
         step4_records.append({"params": dict(params), "result": sr})
         print(
             f"  {idx + 1:>4}  {params['init_food']:>5}  "
+            f"{params.get('food_entropy_alpha', 0.0):>7.4f}  "
             f"{params['eat_gain']:>6.3f}  "
             f"{params['move_cost']:>7.4f}  "
             f"{sr['final_pop'] / INIT_MOTHERS:>6.2f}  "
@@ -1341,7 +1387,7 @@ def _run_pipeline(args, out_dir, n_workers):
         p = best_rec["params"]
         cfg_str = "  ".join(
             f"{k}={p[k]:g}"
-            for k in ("hunger_rate", "move_cost", "eat_gain", "init_food", "rest_recovery")
+            for k in ("hunger_rate", "move_cost", "eat_gain", "init_food", "food_entropy_alpha", "rest_recovery")
         )
         print(
             f"  {cond_name.upper():<12}  {best_score:>9.2f}  "
@@ -1359,7 +1405,7 @@ def _run_pipeline(args, out_dir, n_workers):
 
     # ── Step 8: Final plots + diagnostic report (N=50 validation seeds) ────────
     print("\n" + "=" * 70)
-    print(f"PIPELINE Step 8 — Final Plots & Diagnostic Report  (N={N_SEEDS} validation seeds)")
+    print(f"PIPELINE Step 8 — Final Plots & Diagnostic Report  ({N_SEEDS} seeds x {N_REPEATS} repeats = {N_RUNS_PER_CONFIG} runs per condition)")
     print("=" * 70)
 
     summary = {}
@@ -1369,7 +1415,7 @@ def _run_pipeline(args, out_dir, n_workers):
         print(f"\n  Validating + plotting {cond_name.upper()} ...")
 
         val_results, val_labels, val_summary = _pipeline_validate(
-            params, N_SEEDS, args.duration, args.tau, args.perceptual_noise, n_workers
+            params, N_SEEDS, N_REPEATS, args.duration, args.tau, args.perceptual_noise, n_workers
         )
 
         print_validation_runs(cond_name, val_results)
@@ -1402,6 +1448,7 @@ def _run_pipeline(args, out_dir, n_workers):
 
     summary["_pipeline_meta"] = {
         "n_seeds":            N_SEEDS,
+        "n_repeats":          N_REPEATS,
         "synthetic_baseline": {k: v for k, v in synthetic.items() if k != "name"},
         "anchor_food":        anchor_food,
         "anchored_baseline":  {k: v for k, v in anchored_baseline.items() if k != "name"},
@@ -1429,10 +1476,11 @@ def _run_phase3_food(args, out_dir, n_workers):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    seeds    = list(range(42, 42 + args.repeats))
+    _FOOD_SEEDS   = list(range(42, 52))  # 10 seeds
+    _FOOD_REPEATS = 3
     duration = args.duration
 
-    # Build task list: one task per (init_food value, seed)
+    # Build task list: one task per (init_food value, seed, repeat)
     base_params = {
         "perception_radius": DEFAULT_PERCEPTION_RADIUS,
         "hunger_rate":       1.0 / 35.0,
@@ -1446,8 +1494,9 @@ def _run_phase3_food(args, out_dir, n_workers):
     for food_val in PHASE3_FOOD_SWEEP_VALUES:
         p = dict(base_params)
         p["init_food"] = food_val
-        for seed in seeds:
-            tasks.append((p, seed, duration))
+        for seed in _FOOD_SEEDS:
+            for rep in range(_FOOD_REPEATS):
+                tasks.append((p, seed * 1000 + rep, duration))
 
     print(
         f"\nPhase 3 Food Calibration Sweep"

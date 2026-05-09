@@ -1,5 +1,9 @@
 # Research Progress Timeline
 
+> ⚠ **COLLABORATOR NOTE: IF YOU DON'T KNOW, JUST ASK — NO GUESSING.**
+> Do not fill in unknown values, infer undocumented behavior, or assume parameter names.
+> Read the actual source files before writing anything.
+
 Branch: V3 | Deadline: 2026-05-17
 
 Chronological record of every phase — what was done, what was found, and what it implies.
@@ -10,25 +14,38 @@ For the full research plan see [ROADMAP.md](./ROADMAP.md).
 
 ## ▶ NEXT SESSION TASK LIST (read this first)
 
-**Step 1 — Calibrate mechanism baseline values**
-Three mechanisms are implemented but baseline values are not yet chosen.
-Run short single-seed diagnostic runs varying each parameter to find values that:
-- `food_entropy_alpha`: produce visible food clustering without starving all agents
-- `cry_decay_radius`: mother hears own child clearly at typical distance (~5–10 cells), not strangers far away
-- `warm_sensitivity`: adds mild energy drain (~5–10% extra per tick cycle) without collapsing survival
+Calibration is now **integrated into Phase 2 and Phase 3 sweeps** — no separate diagnostic runs needed.
 
-Once chosen, lock them in a shared `MECHANISM_BASELINE` dict in `config.py` or a dedicated `experiments/shared_baseline.py`.
+### Step 1 — Extend Phase 2 sweep code to 4 parameters
 
-**Step 2 — Re-run Block 1 with baseline values**
-Run in order with mechanisms ON at baseline values:
+Add `food_entropy_alpha` as Set D to `experiments/phase2_survival_minimal/new_config.py` sweep grid.
+Phase 2 now sweeps: `init_food × food_entropy_alpha × move_cost × eat_gain`.
+
 ```powershell
 $env:MPLBACKEND='Agg'; python -m experiments.phase2_survival_minimal.new_run --mode pipeline --workers 4
+```
+
+Best result from Phase 2 = provisional ecology baseline (including `food_entropy_alpha` value).
+
+### Step 2 — Extend Phase 3 sweep code to 6 parameters
+
+Add `food_entropy_alpha`, `temperature_sensitivity`, `cry_decay_radius` as Sets D/E/F to `experiments/phase3_survival_full/config.py`.
+Phase 3 now sweeps: `init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius`.
+
+```powershell
 $env:MPLBACKEND='Agg'; python -m experiments.phase3_survival_full.run --mode pipeline --workers 4
+```
+
+Best result from Phase 3 = BEST_ECOLOGICAL (locked for Block 2).
+
+### Step 3 — Re-run Phase 4 with locked BEST_ECOLOGICAL
+
+```powershell
 $env:MPLBACKEND='Agg'; python -m experiments.phase4_weight_sweep.run --mode sweep --workers 4
 ```
-Phase 1 (mechanics tests) must also be re-run to confirm engine still passes with mechanisms active.
 
-**Step 3 — Build Block 2**
+### Step 4 — Build Block 2
+
 Write `experiments/phase5_evolution/config.py`, `run.py`, `plot.py` per ROADMAP.md spec.
 Starting genome: care = forage = self = 1/3 (normalized sum = 1).
 Genome renormalization after every mutation is mandatory (see design decision below).
@@ -44,10 +61,10 @@ Genome renormalization after every mutation is mandatory (see design decision be
 **Baseline values — TO BE CALIBRATED before re-run:**
 
 | Mechanism | Config param | Baseline value | Notes |
-|-----------|-------------|---------------|-------|
-| Shannon entropy food | `food_entropy_alpha` | TBD | Mild spatial heterogeneity |
-| Cry attenuation | `cry_decay_radius` | TBD | Moderate distance decay |
-| Temperature cycle | `warm_sensitivity` | TBD | Low thermal drain |
+| --- | --- | --- | --- |
+| Shannon entropy food | `food_entropy_alpha` | TBD — locked by Phase 2 sweep | Mild spatial heterogeneity |
+| Cry attenuation | `cry_decay_radius` | TBD — locked by Phase 3 sweep | Moderate distance decay |
+| Temperature cycle | `temperature_sensitivity` | TBD — locked by Phase 3 sweep | Children only; cold/warm asymmetric |
 
 **Block 3 eco-pressure analysis** = vary these three values (one at a time or jointly) on top of the evolved Block 2 genome to measure care behavior response.
 
@@ -200,10 +217,10 @@ The care trap (Phase 3b) and its resolution (Phase 4) together define the resear
 **What:** Vary the three mechanism parameter values (one at a time, OVAT-style) on top of the evolved genome and measure whether evolved care behavior is maintained, amplified, or suppressed.
 
 | Axis | Low | Baseline | High |
-|------|-----|---------|------|
-| `food_entropy_alpha` | 0.0 (uniform) | TBD | TBD (high spatial heterogeneity) |
-| `cry_decay_radius` | 0.0 (perfect signal) | TBD | TBD (strong attenuation) |
-| `warm_sensitivity` | 0.0 (no drain) | TBD | TBD (strong thermal pressure) |
+| --- | --- | --- | --- |
+| `food_entropy_alpha` | 0.0 (uniform) | TBD — locked by Phase 2 sweep | TBD (high spatial heterogeneity) |
+| `cry_decay_radius` | 0.0 (perfect signal) | TBD — locked by Phase 3 sweep | TBD (strong attenuation) |
+| `temperature_sensitivity` | 0.0 (no drain) | TBD — locked by Phase 3 sweep | TBD (strong thermal pressure; children only) |
 
 **Code location:** `--mode pressure` flag on Block 2 runner (not yet written)
 
@@ -216,10 +233,10 @@ The care trap (Phase 3b) and its resolution (Phase 4) together define the resear
 Three mechanisms implemented in `simulation/simulation.py` and `config.py`. Active in **every** block at the same baseline values — only Block 3 varies them for eco-pressure analysis.
 
 | Mechanism | Config param | Description |
-|-----------|-------------|-------------|
+| --- | --- | --- |
 | Shannon entropy food | `food_entropy_alpha` | Spatially heterogeneous food patches with depletion and recovery |
 | Cry signal attenuation | `cry_decay_radius` | Distance-decayed child distress signal heard by mother |
-| Temperature cycle | `warm_sensitivity` | Sinusoidal thermal drain on energy for mothers and children |
+| Temperature cycle | `temperature_sensitivity` | Asymmetric cold/warm sinusoidal effect — **children only** (renamed from `warm_sensitivity` 2026-05-09) |
 
 **Baseline values:** TBD — must be calibrated before Phase 1 re-run.
 

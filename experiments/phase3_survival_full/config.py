@@ -40,7 +40,7 @@ PLOT_SMOOTH_WINDOW      = 25
 DEFAULT_PERCEPTION_RADIUS = 8.0
 
 # Phase 3 biological constants (LOGIC.md locked — do not tune)
-ISM          = 35 / 15   # infant_starvation_multiplier ≈ 2.33; infant starves in 15 ticks = 3 days
+ISM          = 2.33       # infant_starvation_multiplier = 1.0; infants drain at same rate as mothers (35 ticks to starvation)
 MATURITY_AGE = 200       # ticks to reach maturity (5 ticks/day × 40 days)
 MAX_TICKS    = 400       # simulation length (5 ticks/day × 80 days)
 
@@ -202,20 +202,34 @@ SELECTION_TARGETS = {
     },
 }
 
-# Child criteria: Option C (dual metric — C_matr + child longevity)
-# Applied as secondary gate after the mother gate passes.
-# HARSH: no child constraint (children rarely survive under harsh pressure; expected).
-# BALANCED: at least some child survival + meaningful longevity.
-# EASY: meaningful maturation rate + children close to reaching maturity.
+# Child criteria — PRIMARY selection gate (checked before mother metrics).
+# Priority order: child energy (1st) → child longevity/population (2nd)
+#                 → mother energy (3rd) → mother population (4th).
+#
+# child_mean_energy: mean energy of alive children averaged over all simulation ticks.
+# child_death_tick:  tick at which children die on average (higher = longer lived).
+# min_c_matr kept for logging/reporting; NOT used as a hard gate (always 0 in 400-tick runs).
 CHILD_SELECTION_TARGETS = {
-    "harsh":    None,
+    "harsh": {
+        "min_child_energy":      0.05,   # child mean energy ≥ 5% (PRIMARY: very lenient for harsh)
+        "target_child_energy":   0.20,
+        "min_child_death_mu":    15.0,   # children live ≥ 15 ticks (SECONDARY)
+        "target_child_death_mu": 28.0,
+        "min_c_matr":            0.0,    # logging only
+    },
     "balanced": {
-        "min_c_matr":         0.0,    # strictly > 0 (any maturation counts)
-        "min_child_death_mu": 50.0,   # children live ≥ 50 ticks (= 10 days) on average
+        "min_child_energy":      0.15,   # child mean energy ≥ 15% (PRIMARY)
+        "target_child_energy":   0.35,
+        "min_child_death_mu":    22.0,   # children live ≥ 22 ticks (SECONDARY)
+        "target_child_death_mu": 40.0,
+        "min_c_matr":            0.0,
     },
     "easy": {
-        "min_c_matr":         0.10,   # ≥ 10% maturation rate
-        "min_child_death_mu": 120.0,  # children live ≥ 120 ticks (= 24 days; 60% of maturity_age)
+        "min_child_energy":      0.25,   # child mean energy ≥ 25% (PRIMARY)
+        "target_child_energy":   0.50,
+        "min_child_death_mu":    28.0,   # children live ≥ 28 ticks (SECONDARY)
+        "target_child_death_mu": 55.0,
+        "min_c_matr":            0.0,
     },
 }
 

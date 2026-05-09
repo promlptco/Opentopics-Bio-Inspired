@@ -78,7 +78,12 @@ def _smooth(series: list, window: int) -> np.ndarray:
     if window <= 1 or len(arr) < window:
         return arr
     kernel = np.ones(window) / window
-    return np.convolve(arr, kernel, mode="same")
+    # TRIAL: edge-replication padding — preserves tick-0 true value, no zero-pad spike.
+    # To revert: comment the 3 lines below and uncomment the original line.
+    pad = window // 2
+    padded = np.pad(arr, pad, mode="edge")
+    return np.convolve(padded, kernel, mode="valid")[:len(arr)]
+    # return np.convolve(arr, kernel, mode="same")  # original (zero-pad, causes spike)
 
 
 def _style_ax(ax, xlabel: str = "", ylabel: str = "", title: str = "") -> None:
@@ -514,6 +519,776 @@ def plot_caretrap_failed_care_bar(diag: dict, out_dir: str) -> None:
                     f"  (mean={overall:.0f}%, seed=42)")
     fig.tight_layout()
     _save(fig, os.path.join(out_dir, "caretrap_failed_care_bar.png"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 2-style validation suite — academic style with minor grid
+# ─────────────────────────────────────────────────────────────────────────────
+
+_ANNOT_BOX = dict(boxstyle="square,pad=0.5", facecolor="white",
+                  edgecolor="#aaaaaa", alpha=0.95, linewidth=0.8)
+_LEGEND_KW = dict(fontsize=9, framealpha=0.95, edgecolor="#aaaaaa", fancybox=False)
+
+_MOTIV_COLORS = {
+    "FORAGE": "#d45b13",
+    "SELF":   "#7b4ea0",
+    "CARE":   "#B48EAD",
+}
+
+
+def style_axes(ax):
+    """Full academic style with minor grid — identical to Phase 2."""
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(0.8)
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.4, color="#888888")
+    ax.grid(True, which="minor", linestyle=":", linewidth=0.3, alpha=0.2, color="#aaaaaa")
+    ax.minorticks_on()
+    ax.tick_params(which="major", labelsize=9, length=5, width=0.8, direction="in")
+    ax.tick_params(which="minor", labelsize=0, length=2.5, width=0.5, direction="in")
+    ax.set_facecolor("white")
+    ax.xaxis.label.set_size(11)
+    ax.yaxis.label.set_size(11)
+    ax.title.set_size(12)
+
+
+def save_figure(fig, out_dir: str, filename: str, dpi: int = 200) -> None:
+    fig.patch.set_facecolor("white")
+    path = os.path.join(out_dir, filename)
+    os.makedirs(out_dir, exist_ok=True)
+    fig.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    print(f"  Saved: {filename}")
+
+
+def _motiv_share_matrix(results: list, key: str, duration: int, window: int) -> np.ndarray:
+    """
+    Per-tick SHARE of logged choices that chose `key` (FORAGE/SELF/CARE).
+    Denominator = FORAGE+SELF+CARE (all logged choices that tick) so shares sum to 1.
+    """
+    matrix = []
+    for r in results:
+        hist = r.get("motivation_history", [])
+        share = np.full(duration, np.nan)
+        for t, row in enumerate(hist[:duration]):
+            total = row.get("FORAGE", 0) + row.get("SELF", 0) + row.get("CARE", 0)
+            if total > 0:
+                share[t] = row.get(key, 0) / total
+        valid = np.nan_to_num(share, nan=0.0)
+        matrix.append(_smooth(valid, window))
+    return np.asarray(matrix, dtype=float)
+
+
+def _food_avail_matrix(results: list, duration: int, window: int) -> np.ndarray:
+    """Food available per tick. Returns (n_runs, duration)."""
+    matrix = []
+    for r in results:
+        hist = r.get("food_history", [])
+        vals = np.zeros(duration, dtype=float)
+        for t, row in enumerate(hist[:duration]):
+            vals[t] = row.get("food_available", 0.0)
+        matrix.append(_smooth(vals, window))
+    return np.asarray(matrix, dtype=float)
+
+
+# ─── 1. Validation overview (Phase 2 style: 2-panel mother energy + pop) ────
+
+def plot_validation_p3(name: str, results: list, params: dict,
+                       duration: int, out_dir: str) -> None:
+    """Phase 2-style 2-panel mother validation. → validation_{name}.png"""
+    from experiments.phase3_survival_full.config import SELECTION_TARGETS
+    ticks = np.arange(duration)
+
+    e_mat = np.asarray(
+        [np.nan_to_num(pad(r["energy_history"], duration), nan=0.0) for r in results]
+    )
+    p_mat = np.asarray(
+        [np.nan_to_num(pad(r["population_history"], duration), nan=0.0) for r in results]
+    )
+    mean_e, std_e = np.mean(e_mat, axis=0), np.std(e_mat, axis=0)
+    mean_p, std_p = np.mean(p_mat, axis=0), np.std(p_mat, axis=0)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
+    fig.suptitle(
+        f"Phase 3 Multi-Seed Validation — {name.upper()}  |  MotherAgent  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold", y=0.98,
+    )
+    fig.text(
+        0.5, 0.955,
+        (f"food={params.get('init_food','?')}  eat={params.get('eat_gain','?'):.2f}  "
+         f"cost={params.get('move_cost','?'):.4f}  "
+         f"care_w={params.get('care_weight',1.0):.1f}  "
+         f"forage_w={params.get('forage_weight',1.0):.1f}  "
+         f"self_w={params.get('self_weight',1.0):.1f}"),
+        ha="center", va="top", fontsize=9, color="#444444",
+    )
+
+    for i in range(len(results)):
+        lbl = "Individual runs" if i == 0 else "_nolegend_"
+        ax1.plot(ticks, e_mat[i], alpha=0.2, lw=0.7, color="#aaaaaa", label=lbl)
+        ax2.step(ticks, p_mat[i], where="post", alpha=0.2, lw=0.7, color="#aaaaaa", label=lbl)
+
+    ax1.fill_between(ticks, mean_e - std_e, mean_e + std_e,
+                     color="#2ca02c", alpha=0.18, label="Mean ± 1 SD")
+    ax1.plot(ticks, mean_e, color="#2ca02c", lw=2.2, label="Group mean")
+    ax2.fill_between(ticks, mean_p - std_p, mean_p + std_p,
+                     color="#1f77b4", alpha=0.18, label="Mean ± 1 SD")
+    ax2.plot(ticks, mean_p, color="#1f77b4", lw=2.2, label="Group mean")
+
+    _t = SELECTION_TARGETS.get(name, {})
+    target_e  = _t.get("target_energy", 0.35)
+    ceiling_e = _t.get("energy_high", _t.get("min_energy", 0.80))
+    ax1.axhline(target_e,  color="#555555", ls=":",  lw=1.2, label=f"Target energy = {target_e:.2f}")
+    ax1.axhline(ceiling_e, color="#555555", ls="--", lw=1.0, alpha=0.6,
+                label=f"Energy ceiling = {ceiling_e:.2f}")
+    ax1.axhline(0.0, color="#d62728", ls="--", lw=1.0, alpha=0.6, label="Death threshold (E = 0)")
+    ax2.axhline(0.0, color="#d62728", ls="--", lw=1.0, alpha=0.6, label="Extinction (n = 0)")
+    ax2.axhline(INIT_MOTHERS, color="#555555", ls=":", lw=1.2,
+                label=f"Initial cohort (n = {INIT_MOTHERS})")
+
+    ax1.set_title("Population-weighted energy trajectory  (green = group mean ± 1 SD)")
+    ax1.set_ylabel("Population-weighted mean energy")
+    ax1.set_ylim(-0.05, 1.05)
+    ax2.set_title("Alive population over time  (blue = group mean ± 1 SD)")
+    ax2.set_ylabel("Number of alive mothers")
+    ax2.set_xlabel("Simulation tick")
+    ax2.set_ylim(-0.5, INIT_MOTHERS + 1.5)
+
+    summary = (
+        f"final alive mean = {np.mean(p_mat[:, -1]):.2f}/{INIT_MOTHERS}\n"
+        f"final energy mean = {mean_e[-1]:.3f}\n"
+        f"final energy SD = {std_e[-1]:.3f}"
+    )
+    ax1.text(0.01, 0.04, summary, transform=ax1.transAxes, fontsize=9, bbox=_ANNOT_BOX)
+    for ax in (ax1, ax2):
+        style_axes(ax)
+        ax.legend(loc="lower left", **_LEGEND_KW)
+
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"validation_{name}.png")
+
+
+# ─── 2 & 3. Motivation / action selection over time ──────────────────────────
+
+def _plot_motivation_over_time(name: str, results: list, duration: int,
+                                out_dir: str, filename_prefix: str,
+                                title_prefix: str, window: int = 25) -> None:
+    """
+    FORAGE/SELF/CARE selection share over time (per-tick fraction of logged choices).
+    """
+    ticks = np.arange(duration)
+    matrices = {k: _motiv_share_matrix(results, k, duration, window)
+                for k in ["FORAGE", "SELF", "CARE"]}
+
+    fig, ax = plt.subplots(figsize=(13, 6))
+    first = True
+    for key, matrix in matrices.items():
+        for i in range(matrix.shape[0]):
+            ax.plot(ticks, matrix[i], alpha=0.2, lw=0.5, color="#aaaaaa",
+                    label="Individual runs" if first else "_nolegend_")
+            first = False
+
+    for key, matrix in matrices.items():
+        mu  = np.mean(matrix, axis=0)
+        sd  = np.std(matrix,  axis=0)
+        col = _MOTIV_COLORS[key]
+        ax.fill_between(ticks, mu - sd, mu + sd, alpha=0.15, color=col,
+                        label=f"{key} mean ± 1 SD")
+        ax.plot(ticks, mu, lw=2.2, color=col, label=f"{key} group mean")
+
+    ax.axvline(200, color="#888888", lw=1, ls="--", alpha=0.6, label="maturity (200)")
+    ax.set_ylim(-0.05, 1.05)
+    fig.suptitle(
+        f"{title_prefix} Over Time — {name.upper()}  |  Phase 3  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title(
+        f"Share of logged care-conditional choices  |  smoothing window = {window} ticks"
+    )
+    ax.set_xlabel("Simulation tick")
+    ax.set_ylabel("Share of logged choices (FORAGE+SELF+CARE = 1)")
+    style_axes(ax)
+    ax.legend(loc="upper right", **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"{filename_prefix}_{name}.png")
+
+
+def plot_motivation_selection_over_time_p3(name: str, results: list, duration: int,
+                                            out_dir: str, window: int = 25) -> None:
+    """→ motivation_selection_{name}.png"""
+    _plot_motivation_over_time(name, results, duration, out_dir,
+                               "motivation_selection", "Motivation Selection", window)
+
+
+def plot_action_selection_over_time_p3(name: str, results: list, duration: int,
+                                        out_dir: str, window: int = 25) -> None:
+    """→ action_selection_{name}.png  (Phase 3: action = motivation choice)"""
+    _plot_motivation_over_time(name, results, duration, out_dir,
+                               "action_selection", "Action Selection (Motivation Proxy)", window)
+
+
+# ─── 4. Stacked motivation area ───────────────────────────────────────────────
+
+def plot_stacked_motivation_p3(name: str, results: list, duration: int,
+                                out_dir: str, window: int = 25) -> None:
+    """Stacked area: mean FORAGE/SELF/CARE share per tick. → stacked_motivation_{name}.png"""
+    ticks = np.arange(duration)
+    keys  = ["FORAGE", "SELF", "CARE"]
+    means = {k: np.mean(_motiv_share_matrix(results, k, duration, window), axis=0) for k in keys}
+
+    fig, ax = plt.subplots(figsize=(13, 6))
+    ax.stackplot(
+        ticks,
+        [means[k] for k in keys],
+        labels=keys,
+        colors=[_MOTIV_COLORS[k] for k in keys],
+        alpha=0.82,
+    )
+    ax.axvline(200, color="#333333", lw=1, ls="--", alpha=0.7, label="maturity (200)")
+    ax.set_ylim(0.0, 1.15)
+    fig.suptitle(
+        f"Stacked Motivation Selection — {name.upper()}  |  Phase 3  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title(f"Mean share stacked  |  smoothing window = {window} ticks")
+    ax.set_xlabel("Simulation tick")
+    ax.set_ylabel("Share of logged choices")
+    style_axes(ax)
+    ax.legend(loc="upper right", ncol=2, **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"stacked_action_failed_{name}.png")
+
+
+# ─── 5. Care rate vs child energy correlation ─────────────────────────────────
+
+def plot_care_child_energy_correlation_p3(name: str, results: list, duration: int,
+                                           out_dir: str, window: int = 25) -> None:
+    """
+    Scatter: per-tick CARE share vs mean child energy.
+    Phase 3 analogue of Phase 2's FAILED_FORAGE vs energy-drop correlation.
+    → correlation_failed_forage_energy_{name}.png
+    """
+    xs, ys = [], []
+    for r in results:
+        hist_m = r.get("motivation_history", [])
+        hist_c = r.get("child_energy_history", [])
+        for t in range(min(duration, len(hist_m), len(hist_c))):
+            row  = hist_m[t]
+            total = row.get("FORAGE", 0) + row.get("SELF", 0) + row.get("CARE", 0)
+            ce    = hist_c[t] if t < len(hist_c) else float("nan")
+            if total > 0 and not (isinstance(ce, float) and np.isnan(ce)):
+                xs.append(row.get("CARE", 0) / total)
+                ys.append(float(ce))
+
+    xs = np.asarray(xs, dtype=float)
+    ys = np.asarray(ys, dtype=float)
+    valid = np.isfinite(xs) & np.isfinite(ys)
+    xs, ys = xs[valid], ys[valid]
+
+    can_fit = (len(xs) >= 3 and np.std(xs) > 1e-12 and np.std(ys) > 1e-12)
+    corr = float(np.corrcoef(xs, ys)[0, 1]) if can_fit else 0.0
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    if len(xs) > 0:
+        ax.scatter(xs, ys, alpha=0.06, s=10, color="steelblue", label="Tick samples")
+    if can_fit:
+        try:
+            coef = np.polyfit(xs, ys, 1)
+            xfit = np.linspace(float(xs.min()), float(xs.max()), 100)
+            ax.plot(xfit, coef[0] * xfit + coef[1], color="tab:red", lw=2.0, label="Linear fit")
+        except np.linalg.LinAlgError:
+            pass
+    else:
+        ax.text(0.02, 0.95, "Linear fit skipped: insufficient variance",
+                transform=ax.transAxes, fontsize=9, va="top", bbox=_ANNOT_BOX)
+
+    fig.suptitle(
+        f"CARE Share vs Child Energy — {name.upper()}  |  Pearson r = {corr:.3f}  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title("Correlation diagnostic  |  grey dots = tick samples, red = linear fit")
+    ax.set_xlabel("CARE share (fraction of logged choices)")
+    ax.set_ylabel("Mean child energy (0–1)")
+    style_axes(ax)
+    ax.legend(loc="upper right", **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"correlation_failed_forage_energy_{name}.png")
+
+
+# ─── 6. Forage rate vs mother energy correlation ──────────────────────────────
+
+def plot_forage_energy_correlation_p3(name: str, results: list, duration: int,
+                                       out_dir: str, window: int = 25) -> None:
+    """
+    Scatter: per-tick FORAGE share vs mother energy drop.
+    → correlation_failed_self_energy_{name}.png
+    """
+    xs, ys = [], []
+    for r in results:
+        hist_m  = r.get("motivation_history", [])
+        e_arr   = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
+        e_delta = np.diff(e_arr, prepend=e_arr[0])
+        e_drop  = _smooth(np.maximum(0.0, -e_delta), window)
+
+        for t in range(min(duration, len(hist_m))):
+            row   = hist_m[t]
+            total = row.get("FORAGE", 0) + row.get("SELF", 0) + row.get("CARE", 0)
+            if total > 0 and t < len(e_drop):
+                xs.append(row.get("FORAGE", 0) / total)
+                ys.append(float(e_drop[t]))
+
+    xs = np.asarray(xs, dtype=float)
+    ys = np.asarray(ys, dtype=float)
+    valid = np.isfinite(xs) & np.isfinite(ys)
+    xs, ys = xs[valid], ys[valid]
+
+    can_fit = (len(xs) >= 3 and np.std(xs) > 1e-12 and np.std(ys) > 1e-12)
+    corr = float(np.corrcoef(xs, ys)[0, 1]) if can_fit else 0.0
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    if len(xs) > 0:
+        ax.scatter(xs, ys, alpha=0.06, s=10, color="steelblue", label="Tick samples")
+    if can_fit:
+        try:
+            coef = np.polyfit(xs, ys, 1)
+            xfit = np.linspace(float(xs.min()), float(xs.max()), 100)
+            ax.plot(xfit, coef[0] * xfit + coef[1], color="tab:red", lw=2.0, label="Linear fit")
+        except np.linalg.LinAlgError:
+            pass
+    else:
+        ax.text(0.02, 0.95, "Linear fit skipped: insufficient variance",
+                transform=ax.transAxes, fontsize=9, va="top", bbox=_ANNOT_BOX)
+
+    fig.suptitle(
+        f"FORAGE Share vs Mother Energy Decay — {name.upper()}  |  Pearson r = {corr:.3f}  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title("Correlation diagnostic  |  grey dots = tick samples, red = linear fit")
+    ax.set_xlabel("FORAGE share (fraction of logged choices)")
+    ax.set_ylabel("Mother energy drop per tick (smoothed)")
+    style_axes(ax)
+    ax.legend(loc="upper right", **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"correlation_failed_self_energy_{name}.png")
+
+
+# ─── 7. Rate sum check ────────────────────────────────────────────────────────
+
+def plot_rate_sum_check_p3(name: str, results: list, duration: int,
+                            out_dir: str) -> None:
+    """
+    Verify FORAGE+SELF+CARE shares sum to 1 per tick.
+    → rate_sum_check_{name}.png
+    """
+    ticks = np.arange(duration)
+    sum_runs = []
+    for r in results:
+        hist = r.get("motivation_history", [])
+        total_share = np.full(duration, np.nan)
+        for t, row in enumerate(hist[:duration]):
+            total = row.get("FORAGE", 0) + row.get("SELF", 0) + row.get("CARE", 0)
+            if total > 0:
+                total_share[t] = 1.0
+        sum_runs.append(total_share)
+
+    forage_runs = [_motiv_share_matrix([r], "FORAGE", duration, 1)[0] for r in results]
+    self_runs   = [_motiv_share_matrix([r], "SELF",   duration, 1)[0] for r in results]
+    care_runs   = [_motiv_share_matrix([r], "CARE",   duration, 1)[0] for r in results]
+
+    f_mat = np.asarray(forage_runs)
+    s_mat = np.asarray(self_runs)
+    c_mat = np.asarray(care_runs)
+    sum_mat = f_mat + s_mat + c_mat
+
+    fig, ax = plt.subplots(figsize=(13, 6))
+    curves = [
+        ("FORAGE share", f_mat,   "tab:orange", "-"),
+        ("SELF share",   s_mat,   "tab:purple",  "--"),
+        ("CARE share",   c_mat,   "#B48EAD",     "-."),
+        ("Total (F+S+C)", sum_mat, "tab:green",  "-"),
+    ]
+    for label, matrix, color, ls in curves:
+        mu  = np.nanmean(matrix, axis=0)
+        sd  = np.nanstd(matrix,  axis=0)
+        ax.fill_between(ticks, mu - sd, mu + sd, color=color, alpha=0.10,
+                        label=f"{label} Mean ± SD")
+        ax.plot(ticks, mu, color=color, ls=ls, lw=2.2, label=f"{label} Group Mean")
+
+    ax.axhline(1.0, color="black", ls="--", lw=1.2, alpha=0.75,
+               label="Expected normalized total = 1.0")
+    ax.set_ylim(-0.05, 1.25)
+    fig.suptitle(
+        f"Rate Sum Check — {name.upper()}  |  Phase 3  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title("Share completeness check  |  denominator = F+S+C logged choices  |  no smoothing")
+    ax.set_xlabel("Simulation tick")
+    ax.set_ylabel("Share sum per processed mother")
+    style_axes(ax)
+    ax.legend(loc="upper right", ncol=2, **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"rate_sum_check_{name}.png")
+
+
+# ─── 8. State-space: energy vs motivation ────────────────────────────────────
+
+def plot_state_space_energy_motivation_p3(name: str, results: list, duration: int,
+                                           out_dir: str, window: int = 25) -> None:
+    """
+    4-panel scatter: mother energy vs FORAGE/SELF/CARE shares + child energy.
+    → state_space_energy_action_{name}.png
+    """
+    e_all = np.concatenate(
+        [np.nan_to_num(pad(r["energy_history"], duration), nan=0.0) for r in results]
+    )
+    plot_items = [
+        ("FORAGE share",  _motiv_share_matrix(results, "FORAGE", duration, window), "tab:orange"),
+        ("SELF share",    _motiv_share_matrix(results, "SELF",   duration, window), "tab:purple"),
+        ("CARE share",    _motiv_share_matrix(results, "CARE",   duration, window), "#B48EAD"),
+        ("Child energy",
+         np.asarray([
+             _smooth(np.nan_to_num(pad(r.get("child_energy_history", []), duration), nan=0.0), window)
+             for r in results
+         ]), C_CHILD),
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 9), sharex=True)
+    axes_flat = axes.flatten()
+
+    for ax, (label, matrix, color) in zip(axes_flat, plot_items):
+        rate_all = matrix.reshape(-1)
+        ax.scatter(e_all, rate_all, alpha=0.06, s=8, color=color)
+
+        bins = np.linspace(0.0, 1.0, 21)
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        bin_means = []
+        for lo, hi in zip(bins[:-1], bins[1:]):
+            mask = (e_all >= lo) & (e_all < hi)
+            bin_means.append(float(np.mean(rate_all[mask])) if np.any(mask) else np.nan)
+
+        ax.plot(bin_centers, bin_means, color="black", lw=2.0, label="Binned mean")
+        ax.set_title(f"Energy vs {label}  (black = binned mean)")
+        ax.set_xlabel("Population-weighted mean energy")
+        ax.set_ylabel("Value (0–1)")
+        ax.set_xlim(-0.02, 1.02)
+        ax.set_ylim(-0.05, 1.05)
+        style_axes(ax)
+        ax.legend(loc="upper right", **_LEGEND_KW)
+
+    fig.suptitle(
+        f"State Space: Energy vs Motivation — {name.upper()}  |  Phase 3  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"state_space_energy_action_{name}.png")
+
+
+# ─── 9. Food consumption over time ───────────────────────────────────────────
+
+def plot_food_consumption_p3(name: str, results: list, duration: int,
+                              out_dir: str, window: int = 25) -> None:
+    """
+    Food available over time (right axis) + CARE/FORAGE share (left axis).
+    → food_consumption_rate_{name}.png
+    """
+    ticks = np.arange(duration)
+    food_mat   = _food_avail_matrix(results, duration, window)
+    forage_mat = _motiv_share_matrix(results, "FORAGE", duration, window)
+    care_mat   = _motiv_share_matrix(results, "CARE",   duration, window)
+
+    food_mu,   food_sd   = np.mean(food_mat,   axis=0), np.std(food_mat,   axis=0)
+    forage_mu, forage_sd = np.mean(forage_mat, axis=0), np.std(forage_mat, axis=0)
+    care_mu,   care_sd   = np.mean(care_mat,   axis=0), np.std(care_mat,   axis=0)
+
+    fig, ax1 = plt.subplots(figsize=(13, 6))
+    ax2 = ax1.twinx()
+
+    for i in range(forage_mat.shape[0]):
+        ax1.plot(ticks, forage_mat[i], alpha=0.2, lw=0.6, color="#aaaaaa",
+                 label="Individual runs" if i == 0 else "_nolegend_")
+
+    ax1.fill_between(ticks, forage_mu - forage_sd, forage_mu + forage_sd,
+                     color=_MOTIV_COLORS["FORAGE"], alpha=0.12, label="FORAGE Mean ± SD")
+    ax1.plot(ticks, forage_mu, color=_MOTIV_COLORS["FORAGE"], lw=2.2, label="FORAGE Group Mean")
+    ax1.fill_between(ticks, care_mu - care_sd, care_mu + care_sd,
+                     color=_MOTIV_COLORS["CARE"], alpha=0.12, label="CARE Mean ± SD")
+    ax1.plot(ticks, care_mu, color=_MOTIV_COLORS["CARE"], lw=2.2, label="CARE Group Mean")
+
+    ax2.fill_between(ticks, food_mu - food_sd, food_mu + food_sd,
+                     color="tab:blue", alpha=0.08, label="Food Count Mean ± SD")
+    ax2.plot(ticks, food_mu, color="tab:blue", ls="--", lw=2.0, label="Food Available")
+
+    fig.suptitle(
+        f"Food Available & Motivation Over Time — {name.upper()}  |  n = {len(results)} runs  |  window = {window} ticks",
+        fontsize=14, fontweight="bold",
+    )
+    ax1.set_title("FORAGE/CARE share (left axis) and food count (right axis, dashed)")
+    ax1.set_xlabel("Simulation tick")
+    ax1.set_ylabel("Motivation share (0–1)")
+    ax2.set_ylabel("Food items available on grid")
+    ax1.set_ylim(-0.05, 1.05)
+
+    style_axes(ax1)
+    style_axes(ax2)
+    lines1, lbl1 = ax1.get_legend_handles_labels()
+    lines2, lbl2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, lbl1 + lbl2, loc="upper right", **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"food_consumption_rate_{name}.png")
+
+
+# ─── 10. Spatial heatmap ──────────────────────────────────────────────────────
+
+def plot_spatial_heatmap_p3(name: str, results: list, out_dir: str) -> None:
+    """Mother spatial heatmap — identical template to Phase 2. → spatial_heatmap_population_{name}.png"""
+    heatmaps = [np.asarray(r["spatial_heatmap"], dtype=float)
+                for r in results if r.get("spatial_heatmap") is not None]
+    if not heatmaps:
+        return
+    mean_hm = np.mean(np.asarray(heatmaps, dtype=float), axis=0)
+    if np.max(mean_hm) > 0:
+        mean_hm = mean_hm / np.max(mean_hm)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.imshow(mean_hm, origin="lower", interpolation="nearest", aspect="equal")
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Normalized visit density", fontsize=9)
+    fig.suptitle(
+        f"Spatial Heatmap of Mother Population — {name.upper()}  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title("Mean normalised visit density across all runs")
+    ax.set_xlabel("Grid x-coordinate")
+    ax.set_ylabel("Grid y-coordinate")
+    style_axes(ax)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"spatial_heatmap_population_{name}.png")
+
+
+# ─── 11. Energy expenditure breakdown ────────────────────────────────────────
+
+def plot_energy_expenditure_breakdown_p3(name: str, results: list, out_dir: str) -> None:
+    """
+    Bar chart: mean motivation shares + mean energy metrics.
+    Phase 3 equivalent of Phase 2's energy expenditure breakdown.
+    → energy_expenditure_breakdown_{name}.png
+    """
+    forage_pcts = np.array([r.get("forage_pct", 0.0) * 100 for r in results])
+    self_pcts   = np.array([r.get("self_pct",   0.0) * 100 for r in results])
+    care_pcts   = np.array([r.get("care_pct",   0.0) * 100 for r in results])
+    mean_es     = np.array([r.get("mean_energy", 0.0) for r in results])
+    final_es    = np.array([r.get("final_energy", 0.0) for r in results])
+
+    # Child mean energy per run
+    child_es = []
+    for r in results:
+        hist = r.get("child_energy_history", [])
+        if hist:
+            arr = np.asarray(hist, dtype=float)
+            child_es.append(float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else 0.0)
+        else:
+            child_es.append(0.0)
+    child_es = np.array(child_es)
+
+    labels = ["FORAGE %", "SELF %", "CARE %",
+              "Mother\nmean E", "Mother\nfinal E", "Child\nmean E"]
+    means  = [forage_pcts.mean(), self_pcts.mean(), care_pcts.mean(),
+               mean_es.mean() * 100, final_es.mean() * 100, child_es.mean() * 100]
+    sds    = [forage_pcts.std(), self_pcts.std(), care_pcts.std(),
+               mean_es.std()   * 100, final_es.std()   * 100, child_es.std()   * 100]
+    colors = [_MOTIV_COLORS["FORAGE"], _MOTIV_COLORS["SELF"], _MOTIV_COLORS["CARE"],
+              "#1f77b4", "#5E81AC", C_CHILD]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(labels))
+    ax.bar(x, means, yerr=sds, capsize=5, color=colors, alpha=0.82)
+    ax.axhline(0.0, color="black", lw=1.0, alpha=0.7)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=15, ha="right")
+    ax.set_ylabel("Value (% for motivation shares; energy × 100 for energy metrics)")
+
+    summary = (
+        f"FORAGE = {forage_pcts.mean():.1f}%\n"
+        f"SELF   = {self_pcts.mean():.1f}%\n"
+        f"CARE   = {care_pcts.mean():.1f}%\n"
+        f"mom_E  = {mean_es.mean():.3f}\n"
+        f"child_E= {child_es.mean():.3f}"
+    )
+    ax.text(0.02, 0.96, summary, transform=ax.transAxes, fontsize=9, va="top", bbox=_ANNOT_BOX)
+
+    fig.suptitle(
+        f"Energy & Motivation Breakdown — {name.upper()}  |  Mean ± SD  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_title("Motivation shares (%) and energy metrics (×100) across all validation runs")
+    style_axes(ax)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"energy_expenditure_breakdown_{name}.png")
+
+
+# ─── 12. Homeostatic balance ──────────────────────────────────────────────────
+
+def plot_homeostatic_balance_p3(name: str, results: list, duration: int,
+                                 out_dir: str, window: int = 25) -> None:
+    """
+    Mother energy (blue, left) vs fatigue (red, right) dual-axis.
+    → homeostatic_balance_{name}.png
+    """
+    ticks = np.arange(duration)
+
+    e_mat = np.asarray([
+        _smooth(np.nan_to_num(pad(r["energy_history"], duration), nan=0.0), window)
+        for r in results
+    ], dtype=float)
+    f_mat = np.asarray([
+        _smooth(np.nan_to_num(pad(r.get("fatigue_history", []), duration), nan=0.0), window)
+        for r in results
+    ], dtype=float)
+
+    mu_e, sd_e = np.mean(e_mat, axis=0), np.std(e_mat, axis=0)
+    mu_f, sd_f = np.mean(f_mat, axis=0), np.std(f_mat, axis=0)
+
+    fig, ax_e = plt.subplots(figsize=(13, 6))
+    ax_f = ax_e.twinx()
+
+    for i in range(len(results)):
+        lbl = "Individual runs" if i == 0 else "_nolegend_"
+        ax_e.plot(ticks, e_mat[i], color="#aaaaaa", alpha=0.2, lw=0.7, label=lbl)
+        ax_f.plot(ticks, f_mat[i], color="#aaaaaa", alpha=0.2, lw=0.7)
+
+    ax_e.fill_between(ticks, mu_e - sd_e, mu_e + sd_e, color="#1f77b4", alpha=0.15,
+                      label="Energy mean ± 1 SD")
+    ax_e.plot(ticks, mu_e, color="#1f77b4", lw=2.3, label="Mean energy")
+    ax_f.fill_between(ticks, mu_f - sd_f, mu_f + sd_f, color="#d62728", alpha=0.12,
+                      label="Fatigue mean ± 1 SD")
+    ax_f.plot(ticks, mu_f, color="#d62728", ls="--", lw=2.3, label="Mean fatigue")
+
+    ax_e.axhline(0.35, color="#1f77b4", ls=":", alpha=0.55, lw=1.2, label="Energy target = 0.35")
+    ax_f.axhline(0.0,  color="#d62728", ls=":", alpha=0.35, lw=1.0, label="Fatigue baseline = 0")
+
+    fig.suptitle(
+        f"Homeostatic Balance: Energy vs Fatigue — {name.upper()}  |  Phase 3  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    ax_e.set_title(f"Energy (blue, left) vs fatigue (red, right)  |  smoothing window = {window} ticks")
+    ax_e.set_xlabel("Simulation tick")
+    ax_e.set_ylabel("Population-weighted mean energy", color="#1f77b4")
+    ax_f.set_ylabel("Population-weighted mean fatigue", color="#d62728")
+    ax_e.tick_params(axis="y", labelcolor="#1f77b4")
+    ax_f.tick_params(axis="y", labelcolor="#d62728")
+    ax_e.set_ylim(-0.05, 1.05)
+    ax_f.set_ylim(-0.05, 1.05)
+    style_axes(ax_e)
+    style_axes(ax_f)
+
+    lines_e, lbl_e = ax_e.get_legend_handles_labels()
+    lines_f, lbl_f = ax_f.get_legend_handles_labels()
+    ax_e.legend(lines_e + lines_f, lbl_e + lbl_f, loc="upper right", **_LEGEND_KW)
+    plt.tight_layout()
+    save_figure(fig, out_dir, f"homeostatic_balance_{name}.png")
+
+
+# ─── 13. Child metrics panel (Phase 3 specific) ───────────────────────────────
+
+def plot_child_metrics_p3(name: str, results: list, duration: int, out_dir: str,
+                           window: int = 25) -> None:
+    """
+    4-panel child diagnostic:
+      [0] Child energy over time (mean ± SD)
+      [1] Child population over time
+      [2] Child death tick distribution (histogram)
+      [3] CARE rate over time (for context)
+    → child_metrics_{name}.png
+    """
+    ticks = np.arange(duration)
+
+    ce_mat = np.asarray([
+        np.nan_to_num(pad(r.get("child_energy_history",     []), duration), nan=0.0)
+        for r in results
+    ], dtype=float)
+    cp_mat = np.asarray([
+        np.nan_to_num(pad(r.get("child_population_history", []), duration), nan=0.0)
+        for r in results
+    ], dtype=float)
+    care_mat = _motiv_share_matrix(results, "CARE", duration, window)
+
+    death_ticks = [r.get("child_death_tick_mean", float(duration)) for r in results]
+
+    mu_ce, sd_ce = np.nanmean(ce_mat, axis=0), np.nanstd(ce_mat, axis=0)
+    mu_cp, sd_cp = np.mean(cp_mat, axis=0), np.std(cp_mat, axis=0)
+    mu_cr, sd_cr = np.mean(care_mat, axis=0), np.std(care_mat, axis=0)
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+    ax_ce, ax_cp, ax_dt, ax_cr = axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]
+
+    # Child energy
+    for row in ce_mat:
+        ax_ce.plot(ticks, _smooth(row, window), color="#cccccc", lw=0.4, alpha=0.4)
+    ax_ce.fill_between(ticks, np.clip(mu_ce - sd_ce, 0, None), mu_ce + sd_ce,
+                       alpha=0.18, color=C_CHILD, label="Mean ± 1 SD")
+    ax_ce.plot(ticks, _smooth(mu_ce, window), color=C_CHILD, lw=2.2, label="Group mean")
+    ax_ce.axvline(200, color="#888888", lw=1, ls="--", label="maturity (200)")
+    ax_ce.axhline(0.0, color="#d62728", ls="--", lw=1.0, alpha=0.6)
+    ax_ce.set_ylim(-0.05, 1.05)
+    ax_ce.set_title("Child energy over time")
+    ax_ce.set_ylabel("Mean alive child energy")
+    ax_ce.set_xlabel("Simulation tick")
+    style_axes(ax_ce)
+    ax_ce.legend(loc="upper right", **_LEGEND_KW)
+
+    # Child population
+    for row in cp_mat:
+        ax_cp.step(ticks, row, where="post", color="#cccccc", lw=0.4, alpha=0.4)
+    ax_cp.fill_between(ticks, np.clip(mu_cp - sd_cp, 0, None), mu_cp + sd_cp,
+                       alpha=0.18, color=C_CHILD, label="Mean ± 1 SD")
+    ax_cp.step(ticks, mu_cp, where="post", color=C_CHILD, lw=2.2, label="Group mean")
+    ax_cp.axhline(INIT_MOTHERS, color="#555555", ls=":", lw=1.2,
+                  label=f"Initial (n = {INIT_MOTHERS})")
+    ax_cp.axvline(200, color="#888888", lw=1, ls="--", label="maturity (200)")
+    ax_cp.set_ylim(-0.5, INIT_MOTHERS + 1.5)
+    ax_cp.set_title("Child population over time")
+    ax_cp.set_ylabel("Number of alive children")
+    ax_cp.set_xlabel("Simulation tick")
+    style_axes(ax_cp)
+    ax_cp.legend(loc="upper right", **_LEGEND_KW)
+
+    # Death tick histogram
+    finite_deaths = [d for d in death_ticks if d < duration]
+    if finite_deaths:
+        ax_dt.hist(finite_deaths, bins=15, color=C_CHILD, alpha=0.75, edgecolor="white")
+        ax_dt.axvline(float(np.mean(finite_deaths)), color="#d62728", lw=2.0, ls="--",
+                      label=f"mean = {np.mean(finite_deaths):.1f}")
+        ax_dt.axvline(200, color="#888888", lw=1.5, ls=":", label="maturity (200)")
+    else:
+        ax_dt.text(0.5, 0.5, "No child deaths\n(all survived / no data)",
+                   transform=ax_dt.transAxes, ha="center", va="center", fontsize=11)
+    ax_dt.set_title("Child death tick distribution")
+    ax_dt.set_xlabel("Death tick (per seed mean)")
+    ax_dt.set_ylabel("Count")
+    style_axes(ax_dt)
+    ax_dt.legend(loc="upper right", **_LEGEND_KW)
+
+    # CARE rate over time
+    for row in care_mat:
+        ax_cr.plot(ticks, row, color="#cccccc", lw=0.4, alpha=0.4)
+    ax_cr.fill_between(ticks, np.clip(mu_cr - sd_cr, 0, None), mu_cr + sd_cr,
+                       alpha=0.18, color=_MOTIV_COLORS["CARE"], label="Mean ± 1 SD")
+    ax_cr.plot(ticks, mu_cr, color=_MOTIV_COLORS["CARE"], lw=2.2, label="CARE share")
+    ax_cr.axvline(200, color="#888888", lw=1, ls="--", label="maturity (200)")
+    ax_cr.set_ylim(-0.05, 1.05)
+    ax_cr.set_title("CARE motivation share over time")
+    ax_cr.set_ylabel("Share of logged choices")
+    ax_cr.set_xlabel("Simulation tick")
+    style_axes(ax_cr)
+    ax_cr.legend(loc="upper right", **_LEGEND_KW)
+
+    fig.suptitle(
+        f"Phase 3 Child Metrics — {name.upper()}  |  n = {len(results)} runs",
+        fontsize=14, fontweight="bold",
+    )
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    save_figure(fig, out_dir, f"child_metrics_{name}.png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -374,11 +374,23 @@ def summarize_repeats(repeat_results: list, duration: int,
     tail_means = np.array(tail_means, dtype=float)
 
     # Phase 3 child metrics
-    c_matr_vals     = np.array([r.get("child_maturation_rate", 0.0) for r in repeat_results], dtype=float)
+    c_matr_vals      = np.array([r.get("child_maturation_rate", 0.0) for r in repeat_results], dtype=float)
     child_death_vals = np.array([r.get("child_death_tick_mean", float(duration)) for r in repeat_results], dtype=float)
-    care_pct_vals   = np.array([r.get("care_pct", 0.0)  for r in repeat_results], dtype=float)
-    forage_pct_vals = np.array([r.get("forage_pct", 0.0) for r in repeat_results], dtype=float)
-    self_pct_vals   = np.array([r.get("self_pct", 0.0)   for r in repeat_results], dtype=float)
+    care_pct_vals    = np.array([r.get("care_pct", 0.0)  for r in repeat_results], dtype=float)
+    forage_pct_vals  = np.array([r.get("forage_pct", 0.0) for r in repeat_results], dtype=float)
+    self_pct_vals    = np.array([r.get("self_pct", 0.0)   for r in repeat_results], dtype=float)
+
+    # Child mean energy (PRIMARY selection metric): mean over alive-child ticks per run
+    child_mean_e_vals = []
+    for r in repeat_results:
+        hist = r.get("child_energy_history", [])
+        if hist:
+            arr = np.asarray(hist, dtype=float)
+            mu = float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else 0.0
+        else:
+            mu = 0.0
+        child_mean_e_vals.append(mu)
+    child_mean_e_vals = np.array(child_mean_e_vals, dtype=float)
 
     # SELF-rate analogous to Phase 2's rest_action_rate (for selection sanity check)
     self_rates = []
@@ -397,7 +409,9 @@ def summarize_repeats(repeat_results: list, duration: int,
         "tail_energy_slope":         float(np.mean(e_slopes)),
         "tail_pop_slope":            float(np.mean(pop_slopes)),
         "rest_action_rate":          float(np.mean(self_rates)),   # SELF rate (Phase 2 compat name)
-        # Phase 3 child metrics
+        # Phase 3 child metrics (priority: energy > longevity > maturation)
+        "child_mean_energy_mean":      float(np.mean(child_mean_e_vals)),
+        "child_mean_energy_sd":        float(np.std(child_mean_e_vals)),
         "child_maturation_rate_mean":  float(np.mean(c_matr_vals)),
         "child_maturation_rate_sd":    float(np.std(c_matr_vals)),
         "child_death_tick_mean_mean":  float(np.mean(child_death_vals)),
@@ -417,75 +431,101 @@ def _survival_rate(result: dict) -> float:
 
 
 def is_valid_condition(name: str, result: dict) -> bool:
-    """Return True if result satisfies Phase 3 selection criteria for `name`."""
-    surv = _survival_rate(result)
-    t    = SELECTION_TARGETS[name]
+    """
+    Return True if result satisfies Phase 3 selection criteria for `name`.
 
-    if name in ("balanced", "harsh"):
-        mother_ok = (
-            t["min_survival_rate"] <= surv <= t["max_survival_rate"]
-            and t["energy_low"] <= safe(result["tail_mean_energy"]) <= t["energy_high"]
-        )
-        if name == "balanced":
-            mother_ok = mother_ok and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
-    elif name == "easy":
-        mother_ok = (
-            surv >= t["min_survival_rate"]
-            and safe(result["tail_mean_energy"]) >= t["min_energy"]
-            and safe(result["tail_energy_sd"], nan=1.0) <= t["max_tail_sd"]
-        )
-    else:
-        mother_ok = False
+    Priority order (checked top-to-bottom — a violation at any level fails):
+      1. Child energy        (PRIMARY)
+      2. Child longevity     (SECONDARY)
+      3. Mother energy       (TERTIARY)
+      4. Mother population   (QUATERNARY)
+    """
+    child_t = CHILD_SELECTION_TARGETS[name]
+    t       = SELECTION_TARGETS[name]
 
-    if not mother_ok:
+    # ── Priority 1: child energy ──────────────────────────────────────────────
+    child_mean_e = safe(result.get("child_mean_energy_mean", 0.0))
+    if child_mean_e < child_t["min_child_energy"]:
         return False
 
-    # Child gate (Option C)
-    child_t = CHILD_SELECTION_TARGETS[name]
-    if child_t is None:
-        return True
-
-    c_matr   = safe(result.get("child_maturation_rate_mean", 0.0))
+    # ── Priority 2: child longevity (population proxy) ───────────────────────
     death_mu = safe(result.get("child_death_tick_mean_mean", 0.0))
-    return (c_matr > child_t["min_c_matr"] and
-            death_mu >= child_t["min_child_death_mu"])
+    if death_mu < child_t["min_child_death_mu"]:
+        return False
+
+    # ── Priority 3: mother energy ─────────────────────────────────────────────
+    energy = safe(result["tail_mean_energy"])
+    if name in ("balanced", "harsh"):
+        if not (t["energy_low"] <= energy <= t["energy_high"]):
+            return False
+    elif name == "easy":
+        if energy < t["min_energy"]:
+            return False
+
+    # ── Priority 4: mother population ────────────────────────────────────────
+    surv = _survival_rate(result)
+    if name in ("balanced", "harsh"):
+        if not (t["min_survival_rate"] <= surv <= t["max_survival_rate"]):
+            return False
+    elif name == "easy":
+        if surv < t["min_survival_rate"]:
+            return False
+
+    return True
 
 
 def _penalty_score(name: str, result: dict) -> float:
-    """Lower = better. Mother gate + child proximity score."""
-    surv   = _survival_rate(result)
+    """
+    Lower = better.  Penalty weights follow the priority order:
+      1. Child energy   — highest weight (PRIMARY)
+      2. Child longevity — high weight  (SECONDARY)
+      3. Mother energy   — medium weight (TERTIARY)
+      4. Mother survival — lowest weight (QUATERNARY)
+    """
+    child_t = CHILD_SELECTION_TARGETS[name]
+    t       = SELECTION_TARGETS[name]
+    score   = 0.0
+
+    # ── Priority 1: child energy (PRIMARY) ───────────────────────────────────
+    child_mean_e = safe(result.get("child_mean_energy_mean", 0.0))
+    if child_mean_e < child_t["min_child_energy"]:
+        score += 3000.0 * (child_t["min_child_energy"] - child_mean_e)
+    score += abs(child_mean_e - child_t["target_child_energy"]) * 200.0
+
+    # ── Priority 2: child longevity (SECONDARY) ───────────────────────────────
+    death_mu = safe(result.get("child_death_tick_mean_mean", 0.0))
+    if death_mu < child_t["min_child_death_mu"]:
+        score += 30.0 * (child_t["min_child_death_mu"] - death_mu)
+    score += abs(death_mu - child_t["target_child_death_mu"]) * 10.0
+
+    # ── Priority 3: mother energy (TERTIARY) ──────────────────────────────────
     energy = safe(result["tail_mean_energy"])
     e_sd   = safe(result["tail_energy_sd"], nan=1.0)
-    t      = SELECTION_TARGETS[name]
-    HARD   = 1000.0
-    score  = 0.0
+    if name in ("balanced", "harsh"):
+        if energy < t["energy_low"]:
+            score += 500.0 * (t["energy_low"] - energy)
+        elif energy > t["energy_high"]:
+            score += 500.0 * (energy - t["energy_high"])
+        score += abs(energy - t["target_energy"]) * 30.0
+    elif name == "easy":
+        if energy < t["min_energy"]:
+            score += 500.0 * (t["min_energy"] - energy)
+        score += max(0.0, t["target_energy"] - energy) * 30.0
+    score += e_sd * 5.0
 
+    # ── Priority 4: mother survival (QUATERNARY) ──────────────────────────────
+    surv = _survival_rate(result)
     if name in ("balanced", "harsh"):
         if surv < t["min_survival_rate"]:
-            score += HARD * (t["min_survival_rate"] - surv)
+            score += 200.0 * (t["min_survival_rate"] - surv)
         elif surv > t["max_survival_rate"]:
-            score += HARD * (surv - t["max_survival_rate"])
-        score += abs(surv - t["target_survival_rate"]) * 50.0
-        score += abs(energy - t["target_energy"]) * 10.0
+            score += 200.0 * (surv - t["max_survival_rate"])
+        score += abs(surv - t["target_survival_rate"]) * 10.0
     elif name == "easy":
         if surv < t["min_survival_rate"]:
-            score += HARD * (t["min_survival_rate"] - surv)
-        if energy < t["min_energy"]:
-            score += HARD * (t["min_energy"] - energy)
-        score += abs(surv - t["target_survival_rate"]) * 30.0
-        score += max(0.0, t["target_energy"] - energy) * 10.0
+            score += 200.0 * (t["min_survival_rate"] - surv)
+        score += abs(surv - t["target_survival_rate"]) * 10.0
 
-    # Child proximity penalty (soft)
-    child_t = CHILD_SELECTION_TARGETS[name]
-    if child_t is not None:
-        c_matr   = safe(result.get("child_maturation_rate_mean", 0.0))
-        death_mu = safe(result.get("child_death_tick_mean_mean", 0.0))
-        if c_matr <= child_t["min_c_matr"]:
-            score += 50.0 * (child_t["min_c_matr"] + 0.001 - c_matr)
-        if death_mu < child_t["min_child_death_mu"]:
-            score += 2.0 * (child_t["min_child_death_mu"] - death_mu)
-
-    score += e_sd * 5.0
     return score
 
 
@@ -505,15 +545,28 @@ def select_by_penalty_score(name: str, sweep_records: list):
 def _summarize_ovat_runs(run_results: list, duration: int,
                          tail_window: int = TAIL_WINDOW) -> dict:
     """Lightweight aggregate for OVAT rows (no full history needed)."""
-    final_pops     = np.array([r["final_pop"]   for r in run_results], dtype=float)
-    tail_means     = []
-    c_matr_vals    = np.array([r.get("child_maturation_rate", 0.0) for r in run_results], dtype=float)
-    child_death    = np.array([r.get("child_death_tick_mean", float(duration)) for r in run_results], dtype=float)
-    care_pct_vals  = np.array([r.get("care_pct", 0.0) for r in run_results], dtype=float)
+    final_pops    = np.array([r["final_pop"]   for r in run_results], dtype=float)
+    tail_means    = []
+    c_matr_vals   = np.array([r.get("child_maturation_rate", 0.0) for r in run_results], dtype=float)
+    child_death   = np.array([r.get("child_death_tick_mean", float(duration)) for r in run_results], dtype=float)
+    care_pct_vals = np.array([r.get("care_pct", 0.0) for r in run_results], dtype=float)
+
+    # Child mean energy (PRIMARY metric) — computed per run then averaged
+    child_mean_e_list = []
     for r in run_results:
         e = np.nan_to_num(pad(r["energy_history"], duration), nan=0.0)
         tail_means.append(np.mean(e[-tail_window:]))
-    tail_means = np.array(tail_means, dtype=float)
+        hist = r.get("child_energy_history", [])
+        if hist:
+            arr = np.asarray(hist, dtype=float)
+            mu = float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else 0.0
+        else:
+            mu = 0.0
+        child_mean_e_list.append(mu)
+
+    tail_means       = np.array(tail_means,       dtype=float)
+    child_mean_e_arr = np.array(child_mean_e_list, dtype=float)
+
     return {
         "num_runs":                    len(run_results),
         "survival_rate_mean":          float(np.mean(final_pops) / INIT_MOTHERS),
@@ -521,6 +574,8 @@ def _summarize_ovat_runs(run_results: list, duration: int,
         "final_pop_mean":              float(np.mean(final_pops)),
         "tail_energy_mean":            float(np.mean(tail_means)),
         "tail_energy_sd":              float(np.std(tail_means)),
+        "child_mean_energy_mean":      float(np.mean(child_mean_e_arr)),
+        "child_mean_energy_sd":        float(np.std(child_mean_e_arr)),
         "child_maturation_rate_mean":  float(np.mean(c_matr_vals)),
         "child_maturation_rate_sd":    float(np.std(c_matr_vals)),
         "child_death_tick_mean_mean":  float(np.mean(child_death)),
@@ -531,7 +586,8 @@ def _summarize_ovat_runs(run_results: list, duration: int,
 
 def find_food_anchor(seeds: list, duration: int, workers: int = 1,
                      target_survival: float = 0.50,
-                     food_step: int = 50, food_max: int = 3000) -> tuple:
+                     food_step: int = 50, food_max: int = 3000,
+                     repeats: int = 1) -> tuple:
     """
     Scan init_food upward (all other params from BALANCED_BASELINE) until
     mean mother survival >= target_survival.  Returns (anchor_food, summary).
@@ -554,7 +610,8 @@ def find_food_anchor(seeds: list, duration: int, workers: int = 1,
 
     for food in food_range:
         params = {**base, "init_food": int(food)}
-        tasks  = [(dict(params), seed, duration) for seed in seeds]
+        tasks  = [(dict(params), seed * 1000 + rep, duration)
+                  for seed in seeds for rep in range(repeats)]
 
         if workers <= 1:
             raws = [_run_task(t) for t in tasks]
@@ -586,7 +643,8 @@ def find_food_anchor(seeds: list, duration: int, workers: int = 1,
 
 
 def run_set(set_id: str, sweep: dict, baseline: dict, seeds: list,
-            duration: int, tail_window: int, workers: int = 1) -> list:
+            duration: int, tail_window: int, workers: int = 1,
+            repeats: int = 1) -> list:
     """Run OVAT sweep for one parameter set.  Returns list of summary dicts."""
     key     = sweep["key"]
     results = []
@@ -595,7 +653,8 @@ def run_set(set_id: str, sweep: dict, baseline: dict, seeds: list,
         params = dict(baseline)
         params[key] = int(val) if key == "init_food" else float(val)
 
-        tasks = [(dict(params), seed, duration) for seed in seeds]
+        tasks = [(dict(params), seed * 1000 + rep, duration)
+                 for seed in seeds for rep in range(repeats)]
 
         if workers <= 1:
             raws = [_run_task(t) for t in tasks]
@@ -609,10 +668,12 @@ def run_set(set_id: str, sweep: dict, baseline: dict, seeds: list,
 
         print(
             f"  Set {set_id} [{key}={params[key]}]  "
-            f"runs={s['num_runs']}  m_surv={s['survival_rate_mean']:.2f}  "
+            f"runs={s['num_runs']}  "
+            f"child_E={s['child_mean_energy_mean']:.3f}  "
+            f"child_mu={s['child_death_tick_mean_mean']:.1f}  "
+            f"m_surv={s['survival_rate_mean']:.2f}  "
             f"tailE={s['tail_energy_mean']:.3f}  "
-            f"C_matr={s['child_maturation_rate_mean']:.3f}  "
-            f"child_death_mu={s['child_death_tick_mean_mean']:.1f}"
+            f"C_matr={s['child_maturation_rate_mean']:.3f}"
         )
 
     return results
@@ -623,10 +684,11 @@ def save_csv_ovat(results: list, path: str) -> None:
         return
     fieldnames = [
         "param_value", "num_runs",
+        "child_mean_energy_mean", "child_mean_energy_sd",
+        "child_death_tick_mean_mean", "child_death_tick_mean_sd",
+        "child_maturation_rate_mean", "child_maturation_rate_sd",
         "survival_rate_mean", "survival_rate_sd",
         "tail_energy_mean", "tail_energy_sd",
-        "child_maturation_rate_mean", "child_maturation_rate_sd",
-        "child_death_tick_mean_mean", "child_death_tick_mean_sd",
         "care_pct_mean",
     ]
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -642,10 +704,11 @@ def save_csv_ovat(results: list, path: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def validate_params(params: dict, duration: int, n_seeds: int = None,
-                    workers: int = 1) -> tuple:
-    """Run VALIDATION_SEEDS (or n_seeds) for diagnostic validation."""
+                    n_repeats: int = 1, workers: int = 1) -> tuple:
+    """Run VALIDATION_SEEDS (or n_seeds) x n_repeats for diagnostic validation."""
     seeds = VALIDATION_SEEDS if n_seeds is None else list(range(42, 42 + n_seeds))
-    tasks = [(dict(params), seed, duration) for seed in seeds]
+    tasks = [(dict(params), seed * 1000 + rep, duration)
+             for seed in seeds for rep in range(n_repeats)]
 
     if workers <= 1:
         raw = [_run_task(t) for t in tasks]
@@ -653,12 +716,14 @@ def validate_params(params: dict, duration: int, n_seeds: int = None,
         with ProcessPoolExecutor(max_workers=workers) as pool:
             raw = list(pool.map(_run_task, tasks))
 
-    for seed, r in zip(seeds, raw):
-        r["base_seed"] = seed
-        r["repeat"]    = 1
-        r["run_seed"]  = seed
+    for idx, r in enumerate(raw):
+        seed_idx = idx // n_repeats
+        rep_idx  = idx % n_repeats
+        r["base_seed"] = seeds[seed_idx]
+        r["repeat"]    = rep_idx + 1
+        r["run_seed"]  = seeds[seed_idx] * 1000 + rep_idx
 
-    labels  = [str(s) for s in seeds]
+    labels  = [f"{seeds[i // n_repeats]}-r{(i % n_repeats) + 1}" for i in range(len(raw))]
     summary = summarize_repeats(raw, duration)
     return raw, labels, summary
 
@@ -863,14 +928,56 @@ def generate_diagnostic_plots(name: str, results: list, params: dict,
         from experiments.phase3_survival_full.plot import (
             plot_multiseed_condition_phase3,
             plot_motivation_split,
+            plot_validation_p3,
+            plot_motivation_selection_over_time_p3,
+            plot_action_selection_over_time_p3,
+            plot_stacked_motivation_p3,
+            plot_care_child_energy_correlation_p3,
+            plot_forage_energy_correlation_p3,
+            plot_rate_sum_check_p3,
+            plot_state_space_energy_motivation_p3,
+            plot_food_consumption_p3,
+            plot_spatial_heatmap_p3,
+            plot_energy_expenditure_breakdown_p3,
+            plot_homeostatic_balance_p3,
+            plot_child_metrics_p3,
         )
+        # Original Phase 3 overview plots
         plot_multiseed_condition_phase3(
             name=name, results=results, params=params,
             run_labels=labels, duration=duration, out_dir=out_dir,
         )
         plot_motivation_split(name=name, results=results, out_dir=out_dir)
+
+        # Phase 2-style extended suite
+        plot_validation_p3(name=name, results=results, params=params,
+                           duration=duration, out_dir=out_dir)
+        plot_motivation_selection_over_time_p3(name=name, results=results,
+                                               duration=duration, out_dir=out_dir)
+        plot_action_selection_over_time_p3(name=name, results=results,
+                                           duration=duration, out_dir=out_dir)
+        plot_stacked_motivation_p3(name=name, results=results,
+                                   duration=duration, out_dir=out_dir)
+        plot_care_child_energy_correlation_p3(name=name, results=results,
+                                              duration=duration, out_dir=out_dir)
+        plot_forage_energy_correlation_p3(name=name, results=results,
+                                          duration=duration, out_dir=out_dir)
+        plot_rate_sum_check_p3(name=name, results=results,
+                               duration=duration, out_dir=out_dir)
+        plot_state_space_energy_motivation_p3(name=name, results=results,
+                                              duration=duration, out_dir=out_dir)
+        plot_food_consumption_p3(name=name, results=results,
+                                 duration=duration, out_dir=out_dir)
+        plot_spatial_heatmap_p3(name=name, results=results, out_dir=out_dir)
+        plot_energy_expenditure_breakdown_p3(name=name, results=results, out_dir=out_dir)
+        plot_homeostatic_balance_p3(name=name, results=results,
+                                    duration=duration, out_dir=out_dir)
+        plot_child_metrics_p3(name=name, results=results,
+                              duration=duration, out_dir=out_dir)
     except Exception as exc:
         print(f"  [warn] Diagnostic plots failed: {exc}")
+        import traceback
+        traceback.print_exc()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -878,8 +985,10 @@ def generate_diagnostic_plots(name: str, results: list, params: dict,
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
-    N_SEEDS       = 50
-    pipeline_seeds = list(range(42, 42 + N_SEEDS))
+    N_SEEDS           = 10
+    N_REPEATS         = 3
+    N_RUNS_PER_CONFIG = N_SEEDS * N_REPEATS
+    pipeline_seeds    = list(range(42, 42 + N_SEEDS))
     duration      = args.duration
 
     # Step 1 — Mechanics lock confirmation
@@ -912,6 +1021,7 @@ def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
     anchor_food, _ = find_food_anchor(
         seeds=pipeline_seeds, duration=duration, workers=n_workers,
         target_survival=0.50, food_step=50, food_max=3000,
+        repeats=N_REPEATS,
     )
     anchored_baseline = {**synthetic, "init_food": anchor_food}
     print(f"\n  Anchor init_food = {anchor_food}")
@@ -920,18 +1030,19 @@ def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
     ovat_dir = os.path.join(out_dir, "sensitivity_ovat")
     os.makedirs(ovat_dir, exist_ok=True)
     print("\n" + "=" * 70)
-    print(f"PHASE 3 Step 4 — OVAT Sensitivity (N={N_SEEDS} seeds per point)")
+    print(f"PHASE 3 Step 4 — OVAT Sensitivity ({N_SEEDS} seeds x {N_REPEATS} repeats = {N_RUNS_PER_CONFIG} runs per point)")
     print("=" * 70)
 
     ovat_all = {}
     for set_id in SENSITIVITY_SWEEPS:
         sw = SENSITIVITY_SWEEPS[set_id]
         n_vals = len(sw["values"])
-        print(f"\n-- Set {set_id}: '{sw['key']}'  ({n_vals} values × {N_SEEDS} seeds) --")
+        print(f"\n-- Set {set_id}: '{sw['key']}'  ({n_vals} values x {N_SEEDS} seeds x {N_REPEATS} repeats = {n_vals * N_RUNS_PER_CONFIG} runs) --")
         results = run_set(
             set_id=set_id, sweep=sw, baseline=anchored_baseline,
             seeds=pipeline_seeds, duration=duration,
             tail_window=TAIL_WINDOW, workers=n_workers,
+            repeats=N_REPEATS,
         )
         ovat_all[set_id] = results
         save_csv_ovat(results, os.path.join(ovat_dir, f"set_{set_id}_{sw['key']}.csv"))
@@ -955,15 +1066,15 @@ def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
 
     # Step 6 — Multi-parameter validation grid
     print("\n" + "=" * 70)
-    print(f"PHASE 3 Step 6 — Validation Grid (N={N_SEEDS} per config)")
+    print(f"PHASE 3 Step 6 — Validation Grid ({N_SEEDS} seeds x {N_REPEATS} repeats = {N_RUNS_PER_CONFIG} runs per config)")
     print("=" * 70)
     sweep_configs, grid_desc = _pipeline_multidim_configs(detected, anchored_baseline)
-    total_runs = len(sweep_configs) * N_SEEDS
+    total_runs = len(sweep_configs) * N_RUNS_PER_CONFIG
     print(f"  Grid  : {grid_desc}")
-    print(f"  Runs  : {total_runs}  ({len(sweep_configs)} configs × {N_SEEDS} seeds)")
+    print(f"  Runs  : {total_runs}  ({len(sweep_configs)} configs x {N_SEEDS} seeds x {N_REPEATS} repeats)")
 
-    sweep_tasks = [(dict(p), seed, duration)
-                   for p in sweep_configs for seed in pipeline_seeds]
+    sweep_tasks = [(dict(p), seed * 1000 + rep, duration)
+                   for p in sweep_configs for seed in pipeline_seeds for rep in range(N_REPEATS)]
 
     if n_workers <= 1:
         flat_results = [_run_task(t) for t in sweep_tasks]
@@ -973,28 +1084,28 @@ def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
 
     sweep_records = []
     print(f"\n  {'#':>4}  {'food':>5}  {'eat':>6}  {'cost':>7}  "
-          f"{'m_surv':>7}  {'tailE':>7}  {'C_matr':>7}  {'child_mu':>9}")
+          f"{'child_E':>8}  {'child_mu':>9}  {'m_surv':>7}  {'tailE':>7}")
     for idx, p in enumerate(sweep_configs):
-        reps = flat_results[idx * N_SEEDS: (idx + 1) * N_SEEDS]
+        reps = flat_results[idx * N_RUNS_PER_CONFIG: (idx + 1) * N_RUNS_PER_CONFIG]
         sr   = summarize_repeats(reps, duration)
         sweep_records.append({"params": dict(p), "result": sr})
         if idx % 5 == 0 or idx == len(sweep_configs) - 1:
             print(
                 f"  {idx + 1:>4}  {p['init_food']:>5}  {p['eat_gain']:>6.3f}  "
                 f"{p['move_cost']:>7.4f}  "
+                f"{sr['child_mean_energy_mean']:>8.3f}  "
+                f"{sr['child_death_tick_mean_mean']:>9.1f}  "
                 f"{sr['final_pop'] / INIT_MOTHERS:>7.2f}  "
-                f"{sr['tail_mean_energy']:>7.3f}  "
-                f"{sr['child_maturation_rate_mean']:>7.3f}  "
-                f"{sr['child_death_tick_mean_mean']:>9.1f}"
+                f"{sr['tail_mean_energy']:>7.3f}"
             )
 
     # Step 7 — Select regimes
     print("\n" + "=" * 70)
     print("PHASE 3 Step 7 — Select HARSH / BALANCED / EASY Regimes")
     print("=" * 70)
-    print(f"  {'Condition':<12}  {'Score':>9}  {'m_surv':>7}  "
-          f"{'tailE':>7}  {'C_matr':>7}  {'child_mu':>9}  Config")
-    print("  " + "-" * 80)
+    print(f"  {'Condition':<12}  {'Score':>9}  {'child_E':>8}  {'child_mu':>9}  "
+          f"{'tailE':>7}  {'m_surv':>7}  Config")
+    print("  " + "-" * 85)
 
     selected_recs  = {}
     scored_all_map = {}
@@ -1006,10 +1117,10 @@ def _run_pipeline(args, out_dir: str, n_workers: int) -> None:
         p  = best_rec["params"]
         print(
             f"  {cond_name.upper():<12}  {best_score:>9.2f}  "
-            f"{r['final_pop'] / INIT_MOTHERS:>7.2f}  "
-            f"{r['tail_mean_energy']:>7.3f}  "
-            f"{r['child_maturation_rate_mean']:>7.3f}  "
+            f"{r['child_mean_energy_mean']:>8.3f}  "
             f"{r['child_death_tick_mean_mean']:>9.1f}  "
+            f"{r['tail_mean_energy']:>7.3f}  "
+            f"{r['final_pop'] / INIT_MOTHERS:>7.2f}  "
             f"food={p['init_food']} eat={p['eat_gain']:.2f} cost={p['move_cost']:.4f}"
         )
 
@@ -1084,13 +1195,19 @@ def _run_sweep(args, out_dir: str, n_workers: int) -> None:
                   "name": "candidate"})
         sweep_configs.append(p)
 
-    print(f"\nPhase 3 sweep mode: {len(sweep_configs)} configs × {args.repeats} seeds = "
-          f"{len(sweep_configs) * args.repeats} runs  workers={n_workers}")
+    _N_SWEEP_SEEDS    = 10
+    _N_SWEEP_REPEATS  = 3
+    _N_RUNS_PER_CFG   = _N_SWEEP_SEEDS * _N_SWEEP_REPEATS
+    sweep_seeds       = list(range(42, 42 + _N_SWEEP_SEEDS))
+
+    print(f"\nPhase 3 sweep mode: {len(sweep_configs)} configs x {_N_SWEEP_SEEDS} seeds x {_N_SWEEP_REPEATS} repeats = "
+          f"{len(sweep_configs) * _N_RUNS_PER_CFG} runs  workers={n_workers}")
 
     sweep_tasks = [
-        (dict(p), DEFAULT_SWEEP_SEED_BASE + rep, duration)
+        (dict(p), seed * 1000 + rep, duration)
         for p in sweep_configs
-        for rep in range(args.repeats)
+        for seed in sweep_seeds
+        for rep in range(_N_SWEEP_REPEATS)
     ]
 
     if n_workers <= 1:
@@ -1101,7 +1218,7 @@ def _run_sweep(args, out_dir: str, n_workers: int) -> None:
 
     sweep_records = []
     for idx, p in enumerate(sweep_configs):
-        reps = flat_results[idx * args.repeats: (idx + 1) * args.repeats]
+        reps = flat_results[idx * _N_RUNS_PER_CFG: (idx + 1) * _N_RUNS_PER_CFG]
         sr   = summarize_repeats(reps, duration)
         sweep_records.append({"params": dict(p), "result": sr})
 
@@ -1112,7 +1229,7 @@ def _run_sweep(args, out_dir: str, n_workers: int) -> None:
         params["name"] = cond_name
 
         val_results, val_labels, val_summary = validate_params(
-            params, duration, workers=n_workers,
+            params, duration, n_repeats=3, workers=n_workers,
         )
         print_validation_runs(cond_name, val_results)
         generate_diagnostic_plots(
@@ -1186,8 +1303,8 @@ def run_experiment(args) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Phase 3 Ecological Calibration")
     parser.add_argument("--duration", type=int, default=400)
-    parser.add_argument("--repeats",  type=int, default=10,
-                        help="Seeds per config in sweep mode")
+    parser.add_argument("--repeats",  type=int, default=3,
+                        help="Repeats per seed (10 seeds x repeats = runs per config)")
     parser.add_argument("--mode", type=str,
                         choices=["pipeline", "sweep", "single", "caretrap"],
                         default="pipeline")

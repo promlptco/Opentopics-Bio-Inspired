@@ -143,9 +143,12 @@ class Simulation:
     
     def step(self) -> None:
         # 1. Burst replenishment (Phase 5b params)
-        _food_thresh = int(self.config.init_food * self.config.food_replenish_threshold_ratio)
-        if len(self.world.food_positions) < _food_thresh:
-            self._spawn_food(self.config.food_replenish_amount)
+        # Disabled when Shannon entropy is active (food_entropy_alpha > 0) —
+        # Shannon is the core regeneration mechanism; burst replenishment conflicts.
+        if self.config.food_entropy_alpha == 0:
+            _food_thresh = int(self.config.init_food * self.config.food_replenish_threshold_ratio)
+            if len(self.world.food_positions) < _food_thresh:
+                self._spawn_food(self.config.food_replenish_amount)
 
         # 1b. Continuous trickle (Phase 5d — disabled when continuous_food_rate == 0.0)
         if self.config.continuous_food_rate > 0.0:
@@ -164,12 +167,15 @@ class Simulation:
             self._spawn_food_entropy()
             self.world.recover_patches(self.config.food_entropy_gamma, self.config.food_patch_prior)
 
-        # Per-tick thermal drain — computed once, applied to both agents below
-        _thermal_drain = 0.0
-        if self.config.warm_sensitivity > 0:
-            _thermal_drain = self.config.warm_sensitivity * abs(math.sin(
-                2 * math.pi * self.tick / self.config.temperature_period
-            ))
+        # Per-tick temperature stress — children only, cold and warm have different effects
+        # T(t) = sin(2pi*t/period): +1 = peak warm, -1 = peak cold
+        # warm stress -> direct energy drain; cold stress -> hunger_rate increase
+        _warm_stress = 0.0
+        _cold_stress = 0.0
+        if self.config.temperature_sensitivity > 0:
+            _T = math.sin(2 * math.pi * self.tick / self.config.temperature_period)
+            _warm_stress = max(0.0,  _T) * self.config.temperature_sensitivity
+            _cold_stress  = max(0.0, -_T) * self.config.temperature_sensitivity
 
         # 2. Update children (only if enabled)
         if self.config.children_enabled:
@@ -188,9 +194,14 @@ class Simulation:
                         if dist_to_mother <= self.config.warmth_radius:
                             warmth_prox = max(0.0, 1.0 - dist_to_mother / self.config.warmth_radius)
                             hunger_rate *= (1.0 - self.config.warmth_factor * warmth_prox)
-                if _thermal_drain > 0:
-                    hunger_rate += _thermal_drain
+                # Cold stress: thermoregulation raises metabolic cost -> hunger_rate
+                if _cold_stress > 0:
+                    hunger_rate += _cold_stress
                 child.update_hunger(hunger_rate)
+                # Warm stress: heat drain applied directly to energy; hunger synced before distress
+                if _warm_stress > 0:
+                    child.energy = max(0.0, child.energy - _warm_stress)
+                    child.hunger = 1.0 - child.energy
                 # Infants are immobile; distress is hunger-only (see child.update_distress).
                 # Separation is not computed — it no longer contributes to distress.
                 child.update_distress(self.config.birth_cry_duration, self.config.birth_cry_floor)
@@ -204,8 +215,9 @@ class Simulation:
         # 4. Update mothers
         for mother in alive_mothers:
             mother.update_state(self.config.hunger_rate, self.config.fatigue_rate)
-            if _thermal_drain > 0:
-                mother.energy = max(0.0, mother.energy - _thermal_drain)
+            # Temperature affects children only — mother thermal drain disabled.
+            # if _warm_stress > 0:
+            #     mother.energy = max(0.0, mother.energy - _warm_stress)
             mother.tick_age()
             if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
                 mother.die()
@@ -575,7 +587,8 @@ class Simulation:
             self.lineage.register_birth(child.id, mother.id, mother.lineage_id, new_gen)
 
             mother.own_child_id = child.id
-            mother.has_reproduced = True  # Change F: one-child-per-lifetime
+            if self.config.one_child_per_lifetime:
+                mother.has_reproduced = True
             mother.energy -= self.config.reproduction_cost
             mother.cooldown = self.config.reproduction_cooldown
 

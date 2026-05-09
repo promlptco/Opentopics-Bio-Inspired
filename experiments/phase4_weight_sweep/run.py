@@ -138,20 +138,22 @@ def _n_workers(w: int) -> int:
 
 def run_sweep(workers: int = 4) -> tuple:
     """
-    Run all 25 combos × 5 seeds = 125 runs.
+    Run all 25 combos x 10 seeds x 3 repeats = 750 runs.
 
     Returns (raw_rows, summary_rows) where each row is a dict.
     """
+    _N_REPEATS = 3
     tasks = [
-        (c, f, s)
+        (c, f, s * 1000 + rep)
         for c in CARE_WEIGHT_VALUES
         for f in FORAGE_WEIGHT_VALUES
         for s in SWEEP_SEEDS
+        for rep in range(_N_REPEATS)
     ]
     total = len(tasks)
     print(f"\n  Running {total} Phase 4 sweeps  "
           f"({len(CARE_WEIGHT_VALUES)}x{len(FORAGE_WEIGHT_VALUES)} combos"
-          f" x {len(SWEEP_SEEDS)} seeds)  workers={workers}")
+          f" x {len(SWEEP_SEEDS)} seeds x {_N_REPEATS} repeats)  workers={workers}")
 
     if workers <= 1:
         raw = [_run_task(t) for t in tasks]
@@ -161,7 +163,7 @@ def run_sweep(workers: int = 4) -> tuple:
 
     # Aggregate per (care, forage) combo
     combos = [(c, f) for c in CARE_WEIGHT_VALUES for f in FORAGE_WEIGHT_VALUES]
-    n_seeds = len(SWEEP_SEEDS)
+    n_seeds = len(SWEEP_SEEDS) * _N_REPEATS
     summary_rows = []
 
     for idx, (care, forage) in enumerate(combos):

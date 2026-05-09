@@ -123,7 +123,12 @@ def smooth_series(y, window=25):
         return y
 
     kernel = np.ones(window, dtype=float) / window
-    return np.convolve(y, kernel, mode="same")
+    # TRIAL: edge-replication padding — preserves tick-0 true value, no zero-pad spike.
+    # To revert: comment the 3 lines below and uncomment the original line.
+    pad = window // 2
+    padded = np.pad(y, pad, mode="edge")
+    return np.convolve(padded, kernel, mode="valid")[:len(y)]
+    # return np.convolve(y, kernel, mode="same")  # original (zero-pad, causes spike)
 
 
 def pad_event_history(history, duration, keys):

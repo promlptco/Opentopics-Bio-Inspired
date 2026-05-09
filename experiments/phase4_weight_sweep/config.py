@@ -6,7 +6,7 @@ Research question:
     "What is the minimum care_weight bias that enables child maturation,
      given the Phase 3b BEST_ECOLOGICAL baseline?"
 
-Ecology: Phase 3b BEST_ECOLOGICAL (ISM=1.2, eat_gain=0.70, init_food=600,
+Ecology: Phase 3b BEST_ECOLOGICAL (ISM=1.0, eat_gain=0.70, init_food=600,
          move_cost=0.005).  Loaded from saved JSON; hardcoded fallback included.
 
 Sweep: care_weight × forage_weight  (5 × 5 = 25 combos × 5 seeds = 125 runs).
@@ -27,7 +27,7 @@ INIT_MOTHERS       = 15
 INITIAL_ENERGY     = 1.0
 MATURITY_AGE       = 200
 MAX_TICKS          = 400
-SWEEP_SEEDS        = list(range(42, 47))          # 5 seeds per combo
+SWEEP_SEEDS        = list(range(42, 52))          # 10 seeds per combo
 VALIDATION_SEEDS   = list(range(42, 52))          # 10 seeds for final validation
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ _PHASE3B_PATHS = [
 ]
 
 _FALLBACK_ECOLOGY = {
-    "infant_starvation_multiplier": 1.2,
+    "infant_starvation_multiplier": 1.0,
     "eat_gain":    0.70,
     "init_food":   600,
     "move_cost":   0.005,

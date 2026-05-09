@@ -28,10 +28,21 @@ class Genome:
                 return max(0.0, min(1.0, value + delta))
             return value
 
+        care   = mutate_gene(self.care_weight)
+        forage = mutate_gene(self.forage_weight)
+        self_w = mutate_gene(self.self_weight)
+
+        # Normalize so care + forage + self = 1.0 (design decision Block 2).
+        # genome.care_weight then equals the effective care share directly,
+        # preventing scale drift where all weights inflate without changing behaviour.
+        total = care + forage + self_w
+        if total > 0:
+            care, forage, self_w = care / total, forage / total, self_w / total
+
         return Genome(
-            care_weight=mutate_gene(self.care_weight),
-            forage_weight=mutate_gene(self.forage_weight),
-            self_weight=mutate_gene(self.self_weight),
+            care_weight=care,
+            forage_weight=forage,
+            self_weight=self_w,
             learning_rate=self.learning_rate if lock_learning_rate else mutate_gene(self.learning_rate),
             learning_cost=mutate_gene(self.learning_cost),
             distress_sensitivity=mutate_gene(self.distress_sensitivity),

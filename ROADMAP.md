@@ -1,6 +1,10 @@
 # ROADMAP: A-Life Maternal-Care Emergence
 
-Last updated: 2026-05-08
+> ⚠ **COLLABORATOR NOTE: IF YOU DON'T KNOW, JUST ASK — NO GUESSING.**
+> Do not fill in unknown values, infer undocumented behavior, or assume parameter names.
+> Read the actual source files before writing anything.
+
+Last updated: 2026-05-09
 Branch: V3
 Deadline: 2026-05-17
 
@@ -43,7 +47,7 @@ No explicit fitness function. Ecological pressure is the only selector.
 │  BLOCK 3 — Eco Pressure Analysis  (TO BUILD)        │
 │  Take evolved genome. Vary mechanism values         │
 │  (food_entropy_alpha / cry_decay_radius /           │
-│   warm_sensitivity) one at a time — OVAT.           │
+│   temperature_sensitivity) one at a time — OVAT.           │
 │  Measure care behavior response.                    │
 └─────────────────────────────────────────────────────┘
 ```
@@ -78,22 +82,25 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ## Block 1 — World Setup (⚠ NEEDS RE-RUN)
 
 | Phase | Goal | Previous result | Re-run status |
-|---|---|---|---|
-| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass | 🔁 Re-run with mechanisms ON |
-| Phase 2 | Mother-only eco baselines — HARSH / BALANCED / EASY | Locked | 🔁 Re-run with mechanisms ON |
-| Phase 3 | Children + food sweep | Null: C_matr = 0 | 🔁 Re-run with mechanisms ON |
-| Phase 3b | Eco calibration: ISM / eat_gain / init_food | BEST_ECOLOGICAL locked | 🔁 Re-run with mechanisms ON |
-| Phase 4 | Motivation weight sweep | Viable weight regimes found | 🔁 Re-run with mechanisms ON |
+| --- | --- | --- | --- |
+| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass | ✅ Unaffected by mechanisms — no re-run needed |
+| Phase 2 | Mother-only eco baselines; now sweeps `init_food × food_entropy_alpha × move_cost × eat_gain` (4 params) | Old results invalid | 🔁 Re-run — sweep code extension pending |
+| Phase 3 | Children + full 6-param sweep: `init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius` | Old results invalid | 🔁 Re-run — sweep code extension pending |
+| Phase 3b | Subsumed into Phase 3 (ISM locked at 2.33, not swept) | Old results superseded | ⛔ Deprecated as standalone phase |
+| Phase 4 | Motivation weight sweep with BEST_ECOLOGICAL from Phase 3 | Old results invalid | 🔁 Re-run after Phase 3 locks BEST_ECOLOGICAL |
 
-**⚠ Why re-run:** Three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) must be active at fixed baseline values in ALL blocks. Previous runs used 0.0 for all three. Baseline values must be calibrated first (see PROGRESS.md Step 1).
+**⚠ Why re-run:** Three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) must be active at fixed baseline values in ALL blocks. Previous runs used 0.0 for all three. Calibration is now integrated into Phase 2 and Phase 3 sweeps — no separate calibration step needed. See PROGRESS.md `▶ NEXT SESSION TASK LIST`.
 
 **Engine capabilities (permanent, carry into Block 2/3):**
+
 - Own-child exclusivity — `own_child_id` in `simulation.py`
 - Starvation floor — `care_energy_floor = 0.3`
 - Genome normalization — after every mutation: `w /= w.sum()` so genome always sums to 1.0
+- Shannon entropy food — `food_entropy_alpha` in `config.py`; burst replenishment disabled when active
+- Temperature cycle — `temperature_sensitivity` in `config.py`; asymmetric cold/warm, children only
 
 **Locked output for Block 2:**
-`outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json` → `BEST_ECOLOGICAL`
+`outputs/phase3_survival_full/selected_ecologies.json` → `BEST_ECOLOGICAL` (produced by Phase 3 re-run)
 
 ---
 
@@ -106,7 +113,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 | Starting genome | `care = forage = self = 1/3` — normalized sum = 1, neutral, no pre-baked bias |
 | Genome mutation | After every mutation: renormalize by sum → weights always sum to 1.0 |
 | Ecology | BEST_ECOLOGICAL (loaded from Phase 3b JSON; frozen) |
-| Mechanisms | Same baseline values as Block 1 (food_entropy_alpha, cry_decay_radius, warm_sensitivity) |
+| Mechanisms | Same baseline values as Block 1 (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) |
 | Evolution | mutation ON, reproduction ON |
 | Plasticity (primary) | OFF |
 | Plasticity (control) | ON — for Baldwin comparison |
@@ -180,7 +187,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 |-----------|-------------|---------|-----|------|
 | Shannon entropy food | `food_entropy_alpha` | TBD | 0.0 (uniform) | TBD |
 | Cry attenuation | `cry_decay_radius` | TBD | 0.0 (perfect) | TBD |
-| Temperature cycle | `warm_sensitivity` | TBD | 0.0 (none) | TBD |
+| Temperature cycle | `temperature_sensitivity` | TBD | 0.0 (none) | TBD |
 
 ### Eco Presets (via `--eco-preset` or manual CLI flags)
 
@@ -196,7 +203,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 
 - Higher `food_entropy_alpha`: does patchy food force more foraging, suppressing care?
 - Higher `cry_decay_radius`: does weaker cry signal reduce care responsiveness?
-- Higher `warm_sensitivity`: does thermal pressure compete with care for energy budget?
+- Higher `temperature_sensitivity`: does thermal pressure compete with care for energy budget?
 - What combination of pressures breaks the evolved care behavior?
 
 ### Figures
@@ -287,7 +294,7 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control
 - [ ] `--mode pressure` with mechanism OVAT wired in run.py
 - [ ] food_entropy_alpha sweep complete
 - [ ] cry_decay_radius sweep complete
-- [ ] warm_sensitivity sweep complete
+- [ ] temperature_sensitivity sweep complete
 - [ ] Pressure interpretation written
 
 **Paper**

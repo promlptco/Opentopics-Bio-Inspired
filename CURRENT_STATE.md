@@ -1,6 +1,10 @@
 # Current State
 
-Last updated: 2026-05-08 (V3 branch)
+Last updated: 2026-05-09 (V3 branch)
+
+> ⚠ **COLLABORATOR NOTE: IF YOU DON'T KNOW, JUST ASK — NO GUESSING.**
+> Do not fill in unknown values, infer undocumented behavior, or assume parameter names.
+> Read the actual source files before writing anything.
 
 ---
 
@@ -8,12 +12,14 @@ Last updated: 2026-05-08 (V3 branch)
 
 **Reason:** Three ecological mechanisms must be active at fixed baseline values across all blocks (design decision locked 2026-05-08). Previous runs used 0.0 for all three — results are not comparable to Block 2/3.
 
-**Before re-running anything:**
-1. Calibrate `food_entropy_alpha`, `cry_decay_radius`, `warm_sensitivity` baseline values
-2. Lock values in config
-3. Re-run Phase 1 → 2 → 3 → 3b → 4 in order
+**Re-run plan (calibration is integrated into Phase 2/3 sweeps — no separate calibration step):**
 
-See PROGRESS.md `▶ NEXT SESSION TASK LIST` for step-by-step instructions.
+1. Run Phase 2 with 4-param sweep (`init_food × food_entropy_alpha × move_cost × eat_gain`). Best result becomes provisional ecology baseline + mechanism values.
+2. Run Phase 3 with 6-param sweep (`init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius`). Lock BEST_ECOLOGICAL.
+3. Run Phase 4 weight sweep with locked BEST_ECOLOGICAL values.
+4. Build Block 2.
+
+See PROGRESS.md `▶ NEXT SESSION TASK LIST` for step-by-step commands.
 
 ---
 
@@ -72,11 +78,14 @@ With `move_cost=0.005, eat_gain=0.20`. Baseline `move_cost` was lowered from 0.0
 
 ## SENSITIVITY_SWEEPS (new_config.py)
 
+⚠ Set D added 2026-05-09 — sweep code extension pending.
+
 | Set | Key | Values |
 |-----|-----|--------|
 | A | `init_food` | 10, 20, 40, 80, 150 |
 | B | `eat_gain` | 0.05, 0.10, 0.20, 0.50, 0.80 |
 | C | `move_cost` | 0.005, 0.01, 0.02, 0.05, 0.10 |
+| D | `food_entropy_alpha` | TBD — calibrate via sweep (0.0 = disabled baseline) |
 
 ---
 
@@ -290,13 +299,19 @@ Old sub-folders (`phase3_sweep/`, `phase3b_calibration/`) kept as archives, not 
 
 ---
 
-## OVAT Sweep Axes (same as Phase 2, extended init_food range)
+## OVAT Sweep Axes (same as Phase 2, extended init_food range + 3 new axes)
+
+⚠ Sets D/E/F added 2026-05-09 — sweep code extension pending.
+Phase 3 uses Phase 2 best result as provisional baseline (Step 1), then re-sweeps all 6 axes.
 
 | Set | Key | Values |
 |-----|-----|--------|
 | A | `init_food` | 40, 100, 200, 400, 700, 1000, 1500 |
 | B | `eat_gain` | 0.10, 0.20, 0.30, 0.50, 0.70 |
 | C | `move_cost` | 0.005, 0.01, 0.02, 0.05, 0.10 |
+| D | `food_entropy_alpha` | TBD — same values locked in Phase 2 (0.0 = disabled baseline) |
+| E | `temperature_sensitivity` | TBD — calibrate via sweep (0.0 = disabled baseline; children only) |
+| F | `cry_decay_radius` | TBD — calibrate via sweep (0.0 = global cry baseline) |
 
 Note: `init_food` range extended vs Phase 2 because 15 children add indirect resource pressure on mothers.
 
@@ -678,22 +693,27 @@ All new features default to 0.0 / disabled. Block 1 experiments reproduce identi
 
 ## 3. World Temperature Cycle
 
-**Mechanism**: `thermal_drain(t) = warm_sensitivity × |sin(2π × t / temperature_period)|`
+**Mechanism** (updated 2026-05-09): raw sinusoid with asymmetric cold/warm effects — children only.
+
+```text
+T(t) = sin(2π × t / temperature_period)   →  +1 = peak warm,  -1 = peak cold
+warm phase (T > 0): child.energy -= temperature_sensitivity × T   (heat stress — direct drain)
+cold phase (T < 0): hunger_rate += temperature_sensitivity × |T|  (thermoregulation cost)
+```
 
 | New Config param | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `temperature_period` | 200 | Ticks per full hot/cold cycle |
-| `warm_sensitivity` | 0.0 | Amplitude of thermal drain — 0 = disabled |
+| `temperature_sensitivity` | 0.0 | Amplitude of thermal effect — 0 = disabled |
 
-**Behavior when `warm_sensitivity > 0`**:
-- `abs(sin(...))` model: both summer peak and winter peak drain energy (thermoneutral zone at sin=0)
-- Applied to both mothers (energy drain) and children (additive hunger rate)
-- Computed once per tick as `_thermal_drain`, applied to all agents
-- Block 1–2: set to very low value (e.g., 0.005); Block 3: sweep to observe evolved response
+**Behavior when `temperature_sensitivity > 0`**:
 
-Note: separate from `warmth_factor`/`warmth_radius` (maternal proximity warmth — unchanged).
+- Warm phase (sin > 0): direct energy drain on child (`child.energy -=`); hunger synced immediately after (`child.hunger = 1 - child.energy`) before `update_distress()` is called.
+- Cold phase (sin < 0): extra metabolic cost added to `hunger_rate` before `child.update_hunger()`.
+- **Children only** — mothers are not affected. Old mother thermal drain code is commented out (not deleted) in `simulation/simulation.py`.
+- Separate from `warmth_factor`/`warmth_radius` (maternal proximity warmth — unchanged, locked 0.0).
 
-**Files changed**: `config.py`, `simulation/simulation.py` (`_thermal_drain` in `step()`)
+**Files changed**: `config.py` (rename + updated comment), `simulation/simulation.py` (`_warm_stress`/`_cold_stress` replacing old `_thermal_drain`)
 
 ---
 

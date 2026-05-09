@@ -87,13 +87,17 @@ BALANCED_BASELINE = {
 
     # Provisional values. They make the first scan interpretable, but they
     # are not treated as final calibrated values.
-    "move_cost": 0.005, 
+    "move_cost": 0.005,
     "eat_gain": 0.20,
     "init_food": 80,
 
     # REST is fatigue recovery only. It is held fixed in Phase 2 calibration
     # and later used as a sanity check through REST action rate.
     "rest_recovery": 0.005,
+
+    # Shannon entropy food model — disabled at baseline (0.0 = 1:1 replacement).
+    # Calibrated value locked by Phase 2 sweep (Set D).
+    "food_entropy_alpha": 0.0,
 
     **BASELINE_GENOME_WEIGHTS,
 }
@@ -124,9 +128,9 @@ SENSITIVITY_SWEEPS = {
 }
 
 SENSITIVITY_SUBPLOT_CONFIG = [
-    ("A", "init_food", "Initial Food Count", "#D08770"),
-    ("B", "eat_gain", "Eat Gain (energy per food)", "#8FBCBB"),
-    ("C", "move_cost", "Move Cost (per step)", "#5E81AC"),
+    ("A", "init_food",  "Initial Food Count",         "#D08770"),
+    ("B", "eat_gain",   "Eat Gain (energy per food)", "#8FBCBB"),
+    ("C", "move_cost",  "Move Cost (per step)",       "#5E81AC"),
 ]
 
 # Baseline markers are hidden for the calibrated ecological levers because

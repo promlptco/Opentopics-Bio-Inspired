@@ -90,12 +90,13 @@ class Config:
     # 0.0 = global cry across entire map (Block 1 behavior preserved)
     cry_decay_radius: float = 0.0
 
-    # World temperature cycle (sine wave)
-    # thermal_drain(t) = warm_sensitivity * |sin(2π * t / temperature_period)|
-    # Applied to both agents per tick; abs() = both heat and cold cost energy.
+    # World temperature cycle (sine wave) — children only
+    # T(t) = sin(2pi * t / temperature_period)  ->  +1 = peak warm, -1 = peak cold
+    # warm phase (T > 0): child.energy -= temperature_sensitivity * T  (heat stress)
+    # cold phase (T < 0): hunger_rate += temperature_sensitivity * |T| (thermoregulation cost)
     # 0.0 = disabled (Block 1 behavior preserved)
     temperature_period: int = 200
-    warm_sensitivity: float = 0.0
+    temperature_sensitivity: float = 0.0
 
     # Phase 5 — Ecological Emergence
     # infant_starvation_multiplier=2.33 = 35/15: infant starves in 15 ticks (Change J)
@@ -154,6 +155,13 @@ class Config:
     # If carrying food she eats it (SELF); otherwise breaks commitment and forages.
     # 0.0 = disabled (all prior phases unaffected).
     care_energy_floor: float = 0.0
+
+    # Phase 5 — Reproduction constraint
+    # one_child_per_lifetime: if True, has_reproduced=True is set after first birth and
+    # the mother can never reproduce again. Required for Phase 3/4 fixed-ecology runs.
+    # Set False for Block 2 evolution so mothers can raise multiple offspring over their
+    # lifetime, enabling sustainable multi-generational population dynamics.
+    one_child_per_lifetime: bool = True
 
     # Phase 8 — Genuine Baldwin Effect controls
     # plasticity_noise_sigma: std-dev of multiplicative Gaussian noise added to the
