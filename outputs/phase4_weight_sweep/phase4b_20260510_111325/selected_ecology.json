@@ -1,0 +1,19 @@
+{
+  "BEST_CALIBRATED": {
+    "infant_starvation_multiplier": 1.0,
+    "init_food": 600,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005,
+    "hunger_rate": 0.02857142857142857,
+    "perception_radius": 8,
+    "food_perception_radius": 8,
+    "care_weight": 0.5,
+    "forage_weight": 2.0,
+    "self_weight": 1.0,
+    "c_matr_mean": 0.508888888888889,
+    "m_surv_mean": 1.2333333333333334,
+    "child_death_mu_mean": 135.84982804232806,
+    "selection_status": "validated"
+  }
+}

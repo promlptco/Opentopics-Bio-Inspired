@@ -51,7 +51,7 @@ class Simulation:
                 cx, cy = self._nearby_pos(x, y)
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
                 child.genome = mother.genome.mutate(
-                    mutation_rate=self.config.mutation_rate,
+                    mutation_rate=max(self.config.mutation_rate, self.config.min_mutation_rate),
                     sigma=self.config.mutation_sigma,
                     lock_learning_rate=self.config.lock_learning_rate,
                 ) if self.config.mutation_enabled else mother.genome.copy()
@@ -60,6 +60,7 @@ class Simulation:
                 self.world.place_entity(child, blocking=False)  # children non-blocking (Change C)
                 self.lineage.register_birth(child.id, mother.id, i, 1)
                 mother.own_child_id = child.id
+                mother.total_children += 1
         
         # Spawn food
         self._spawn_food(self.config.init_food)
@@ -373,6 +374,7 @@ class Simulation:
     
     def _execute_action(self, mother: MotherAgent, domain: str, visible_children: list[ChildAgent]) -> None:
         if domain == "care":
+            mother.last_action = "CARE"
             # Get target (committed or new)
             target = None
             if mother.has_commitment():
@@ -403,6 +405,7 @@ class Simulation:
                     # Change C: same-cell feed. Children are non-blocking so the mother
                     # can occupy their cell. feed_child() guards dist > 1 and held_food=0.
                     if mother.held_food <= 0:
+                        mother.last_action = "FAILED_CARE_EMPTY"
                         # Arrived at child empty-handed — release commitment so the
                         # motivation block can switch to FORAGE next tick.
                         mother.commit_ticks = 0
@@ -410,6 +413,7 @@ class Simulation:
                     else:
                         total_cost = mother.get_total_cost(self.config.feed_cost)
                         success, benefit = mother.feed_child(target, self.config.feed_cost, self.world, self.config.eat_gain)
+                        mother.last_action = "FEED" if success else "FAILED_FEED"
                         r = self.lineage.get_relatedness(mother.id, target.id)
                         self.logger.log_care(CareRecord(
                             tick=self.tick,
@@ -436,6 +440,7 @@ class Simulation:
                                         benefit, self.config.plastic_gain,
                                         energy_cost=self.config.plasticity_energy_cost,
                                         noise_sigma=self.config.plasticity_noise_sigma,
+                                        metabolic_alpha=self.config.plasticity_metabolic_alpha,
                                     )
                             # Change D: outcome-based commitment — release only when child sated.
                             if target.hunger < 0.3:
@@ -446,6 +451,7 @@ class Simulation:
                     # the mother moves onto their cell when dist becomes 1→0.
                     new_pos = self.world.get_step_toward(mother.pos, target.pos)
                     if self.world.update_position(mother, new_pos):
+                        mother.last_action = "CARE_MOVE"
                         mother.add_move_cost(self.config.move_cost)
                         mother.energy -= self.config.move_cost
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
@@ -459,9 +465,11 @@ class Simulation:
             # Fix B: cap at 1 held food — if already provisioned, do nothing (motivation
             # block suppresses forage_cue so this branch should not fire when held_food>=1).
             if mother.held_food >= 1:
+                mother.last_action = "FORAGE_HOLDING"
                 pass
             elif mother.pos in self.world.food_positions:
                 if mother.pick_food(self.world):
+                    mother.last_action = "PICK"
                     if self.config.food_entropy_alpha > 0:
                         self.world.deplete_patch(*mother.pos, self.config.food_entropy_beta)
                     elif self.config.food_replace_on_pick:
@@ -473,9 +481,12 @@ class Simulation:
                 if nearest:
                     new_pos = self.world.get_step_toward(mother.pos, nearest)
                     if self.world.update_position(mother, new_pos):
+                        mother.last_action = "FORAGE_MOVE"
                         mother.add_move_cost(self.config.move_cost)
                         mother.energy -= self.config.move_cost
                         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+                else:
+                    mother.last_action = "FAILED_FORAGE"
 
         elif domain == "self":
             # SELF = self-maintenance. Eat held food first (self_cue fires when energy is
@@ -483,8 +494,10 @@ class Simulation:
             # LOGIC.md Section 3.3: REST reduces fatigue, not energy — indirect benefit only.
             if mother.held_food > 0:
                 mother.eat(self.config.eat_gain)
+                mother.last_action = "EAT"
             else:
                 mother.rest(self.config.rest_recovery)
+                mother.last_action = "REST"
     
     def _nearest_food(self, pos: tuple[int, int]) -> tuple[int, int] | None:
         if not self.world.food_positions:
@@ -540,6 +553,7 @@ class Simulation:
                 birth_mother = self._get_mother_by_id(child.mother_id)
                 if birth_mother:
                     birth_mother.own_child_id = None
+                    birth_mother.matured_children += 1
 
                 pos = child.pos  # save before removal
 
@@ -577,7 +591,7 @@ class Simulation:
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
             child.genome = mother.genome.mutate(
-                mutation_rate=self.config.mutation_rate,
+                mutation_rate=max(self.config.mutation_rate, self.config.min_mutation_rate),
                 sigma=self.config.mutation_sigma,
                 lock_learning_rate=self.config.lock_learning_rate,
             ) if self.config.mutation_enabled else mother.genome.copy()
@@ -585,6 +599,7 @@ class Simulation:
             self._child_by_id[child.id] = child
             self.world.place_entity(child, blocking=False)  # Change C: non-blocking child
             self.lineage.register_birth(child.id, mother.id, mother.lineage_id, new_gen)
+            mother.total_children += 1
 
             mother.own_child_id = child.id
             if self.config.one_child_per_lifetime:

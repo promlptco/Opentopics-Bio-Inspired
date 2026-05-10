@@ -48,6 +48,7 @@ class Config:
 
     # Plasticity
     plastic_gain: float = 0.1
+    plasticity_metabolic_alpha: float = 0.01
     # If True, plastic_update fires only on own-child care events (is_own_child=True).
     # This aligns the learning signal with inclusive fitness — proper Baldwin Effect test.
     # If False (default), fires on all care events (lineage-blind — null result by design).
@@ -68,6 +69,7 @@ class Config:
     softmax_tau: float = 0.1
     mutation_rate: float = 0.1
     mutation_sigma: float = 0.05
+    min_mutation_rate: float = 0.01
 
     # Warm behavior — spatial thermoregulation (Change H)
     # Within warmth_radius cells, maternal proximity reduces infant hunger_rate.

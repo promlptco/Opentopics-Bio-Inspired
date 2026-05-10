@@ -9,6 +9,8 @@ class Genome:
     self_weight: float = 0.5
     learning_rate: float = 0.1
     learning_cost: float = 0.05
+    plasticity_coefficient: float = 0.1
+    update_sensitivity: float = 1.0
     # Option A — cortisol analog: energy penalty per tick when ignoring own distressed infant.
     # Default 0.0 leaves all prior experiments (Phase 1–6) unaffected.
     distress_sensitivity: float = 0.0
@@ -45,6 +47,8 @@ class Genome:
             self_weight=self_w,
             learning_rate=self.learning_rate if lock_learning_rate else mutate_gene(self.learning_rate),
             learning_cost=mutate_gene(self.learning_cost),
+            plasticity_coefficient=mutate_gene(self.plasticity_coefficient),
+            update_sensitivity=mutate_gene(self.update_sensitivity),
             distress_sensitivity=mutate_gene(self.distress_sensitivity),
             care_recovery=mutate_gene(self.care_recovery),
         )
@@ -56,6 +60,8 @@ class Genome:
             self_weight=self.self_weight,
             learning_rate=self.learning_rate,
             learning_cost=self.learning_cost,
+            plasticity_coefficient=self.plasticity_coefficient,
+            update_sensitivity=self.update_sensitivity,
             distress_sensitivity=self.distress_sensitivity,
             care_recovery=self.care_recovery,
         )

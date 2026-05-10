@@ -63,6 +63,11 @@ class MotherAgent(Agent):
 
         self.pending_move_cost: float = 0.0
         self.last_motivation: str = "FORAGE"
+        self.last_action: str = "NONE"
+        self.last_learning_delta: float = 0.0
+        self.lifetime_learning_cost: float = 0.0
+        self.total_children: int = 0
+        self.matured_children: int = 0
 
     # ============================================================
     # Tracking Movement Cost
@@ -339,15 +344,22 @@ class MotherAgent(Agent):
         plastic_gain: float,
         energy_cost: float = 0.0,
         noise_sigma: float = 0.0,
+        metabolic_alpha: float | None = None,
     ) -> None:
         if noise_sigma > 0.0:
             # Multiplicative noise on the reward signal — learning is unreliable.
             # Mothers with high genetic care_weight are buffered; those relying on
             # plasticity face stochastic errors. This is the Hinton-Nowlan mechanism.
             reward = reward * max(0.0, 1.0 + random.gauss(0, noise_sigma))
-        delta = self.genome.learning_rate * reward * plastic_gain
+        sensitivity = max(0.0, self.genome.update_sensitivity)
+        coefficient = max(0.0, self.genome.plasticity_coefficient)
+        delta = self.genome.learning_rate * coefficient * sensitivity * reward * plastic_gain
         self.expressed_care_weight = max(0.0, min(1.0, self.expressed_care_weight + delta))
-        self.energy -= self.genome.learning_cost * abs(delta) + energy_cost
+        alpha = self.genome.learning_cost if metabolic_alpha is None else metabolic_alpha
+        cost = alpha * abs(delta) + energy_cost
+        self.energy -= cost
+        self.last_learning_delta = delta
+        self.lifetime_learning_cost += cost
 
     # ============================================================
     # State update
