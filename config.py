@@ -49,6 +49,7 @@ class Config:
     # Plasticity
     plastic_gain: float = 0.1
     plasticity_metabolic_alpha: float = 0.01
+    plasticity_maintenance_beta: float = 0.001  # Phase 5: plasticity maintenance cost
     # If True, plastic_update fires only on own-child care events (is_own_child=True).
     # This aligns the learning signal with inclusive fitness — proper Baldwin Effect test.
     # If False (default), fires on all care events (lineage-blind — null result by design).
@@ -67,9 +68,14 @@ class Config:
 
     # Softmax / mutation hyperparameters — now Config-visible (Change G)
     softmax_tau: float = 0.1
-    mutation_rate: float = 0.1
-    mutation_sigma: float = 0.05
+    mutation_rate: float = 0.05  # Phase 5: reduced to 0.05
+    mutation_sigma: float = 0.02  # Phase 5: reduced to 0.02
     min_mutation_rate: float = 0.01
+
+    # Phase 5 — Learning and Phenotype Inheritance
+    init_learning_rate: float = 0.05
+    init_plasticity_coefficient: float = 0.5
+    phenotype_retention: float = 0.15  # Partial phenotype inheritance: 15% from parent expressed value
 
     # Warm behavior — spatial thermoregulation (Change H)
     # Within warmth_radius cells, maternal proximity reduces infant hunger_rate.

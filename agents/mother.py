@@ -361,6 +361,70 @@ class MotherAgent(Agent):
         self.last_learning_delta = delta
         self.lifetime_learning_cost += cost
 
+    def compute_modulation_signal(
+        self,
+        child_nearby: bool = False,
+        feed_success: bool = False,
+        critical_hunger: bool = False,
+        child_matured: bool = False,
+        mother_died: bool = False,
+    ) -> float:
+        """Compute a sparse ecological modulation signal for plasticity updates.
+
+        Only one event fires per tick (priority order: child_matured >
+        feed_success > child_nearby > critical_hunger > mother_died).
+        Signal is clipped to [-5.0, 5.0].
+
+        Args:
+            child_nearby: Child is within perception range this tick.
+            feed_success: A successful feed event occurred this tick.
+            critical_hunger: Own child has energy < 0.3 this tick.
+            child_matured: Own child reached maturity this tick (+5.0).
+            mother_died: Mother death signal (handled at simulation level).
+
+        Returns:
+            Scalar reward/penalty in [-5.0, 5.0]; 0.0 means no event fired.
+        """
+        if child_matured:
+            return 5.0
+        if feed_success:
+            return 1.0
+        if child_nearby:
+            return 0.2
+        if critical_hunger:
+            return -0.5
+        if mother_died:
+            return -1.0
+        return 0.0
+
+    def compute_plasticity_cost(
+        self,
+        signal: float,
+        plasticity_alpha: float = 0.01,
+        plasticity_beta: float = 0.001,
+    ) -> float:
+        """Compute the energy cost of one plasticity learning step.
+
+        Cost formula: alpha × |Δweights| + beta × plasticity_coefficient.
+        Returns 0.0 immediately when signal is zero (no learning occurred).
+
+        Args:
+            signal: Modulation signal from compute_modulation_signal().
+            plasticity_alpha: Cost coefficient per unit of weight change.
+            plasticity_beta: Maintenance cost per unit of plasticity.
+
+        Returns:
+            Non-negative energy cost for this tick's learning event.
+        """
+        if signal == 0.0:
+            return 0.0
+
+        cost = (
+            plasticity_alpha * abs(self.last_learning_delta)
+            + plasticity_beta * max(0.0, self.genome.plasticity_coefficient)
+        )
+        return float(cost)
+
     # ============================================================
     # State update
     # ============================================================

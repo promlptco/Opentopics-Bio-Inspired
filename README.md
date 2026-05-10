@@ -559,63 +559,103 @@ All outputs → `outputs/phase4_weight_sweep/`:
 
 ---
 
-## 🔬 Phase 5 — Asynchronous Genetic Evolution ▶ CURRENT
+## 🧬 Phase 5 — Baldwin Emergence Evolution ▶ CURRENT
 
-Asynchronous lineage evolution: mutation ON, plasticity OFF, reproduction ON.
-Each lineage breeds and dies independently — no synchronized generations.
-Answers: "Does ecological pressure drive selection toward higher child survival (maturation)?"
+Block 2 of the research pipeline. Asynchronous lineage evolution with a 4-condition control matrix:
+mutation ON/OFF × plasticity ON/OFF. Starting genome: `care = forage = self = 1/3` (neutral, no bias).
+Answers: "Does ecological pressure alone drive genetic care share above the neutral 1/3 baseline?"
 
-**Starting genome:** Phase 4 OPTIMAL (care=0.2, forage=1.0, self=0.1, auto-loaded)
-**Ecology:** Phase 3b BEST_ECOLOGICAL (ISM=1.2, eat_gain=0.70, init_food=900, auto-loaded)
-**Primary fitness objective:** child survival/maturation (`C_matr`).
-**Secondary diagnostics:** alive mothers and births at each snapshot tick (every 50 ticks).
+**Starting genome:** care=forage=self=1/3, renormalized after every mutation (no pre-baked bias)
+**Ecology:** Phase 4b BEST_CALIBRATED (loaded from `outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`)
+**Success criterion:** `mean_genome_care_weight > 1/3` in `mut_on_plast_off`; stays flat in `mut_off_plast_off`
+
+### Pilot run (5 000 ticks, live visualization)
 
 ```powershell
-# Full test run — 10 000 ticks × 10 seeds
-python -m experiments.phase5_evolution.run --mode test --workers 4
+# Live grid visualization — opens a pygame window (single seed, default)
+python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ecology true
 
-# Quick test — 3 seeds
-python -m experiments.phase5_evolution.run --mode test --seeds 3 --workers 4
+# Render every 5 ticks for faster preview
+python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ecology true --vis-every 5
 
-# Parameter sweep — mutation_rate × sigma × tau (18 combos × 3 seeds × 3 000 ticks)
-python -m experiments.phase5_evolution.run --mode sweep --workers 4
+# Headless pilot (no visualization)
+python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ecology true --headless
+```
 
-# Regenerate plots only
-python -m experiments.phase5_evolution.run --mode test --plot_only
+### Control matrix runs (40 000 ticks × 30 seeds each)
+
+```powershell
+# Primary result — mutation ON, plasticity OFF
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --plasticity-enabled false --workers 6 --headless
+
+# Baldwin comparison — mutation ON, plasticity ON
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --plasticity-enabled true --workers 6 --headless
+
+# Null baseline — mutation OFF, plasticity OFF
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --mutation-enabled false --plasticity-enabled false --workers 6 --headless
+```
+
+### Regenerate plots from saved output
+
+```powershell
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir outputs/phase5_evolution/exp_<timestamp>
 ```
 
 ### Key files
 
 | File | Role |
 |------|------|
-| `experiments/phase5_evolution/config.py` | Loads Phase 4 OPTIMAL + Phase 3b BEST_ECO; sweep grid; `make_config()` |
-| `experiments/phase5_evolution/run.py` | Two-mode runner: `test` and `sweep` |
-| `experiments/phase5_evolution/plot.py` | Fig1 (demographic trajectory), Fig2 (genome evolution), Fig3/4 (sweep heatmaps) |
+| `experiments/phase5_evolution/config.py` | `Phase5ConfigFactory` — static factory; loads Phase 4b JSON; builds `Config` |
+| `experiments/phase5_evolution/run.py` | `RunParams` dataclass + `EvolutionRunner` class; parallel sweep + snapshot capture |
+| `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` — reads CSVs only; 4-panel Baldwin trajectory figure |
+| `experiments/phase5_evolution/viewer.py` | `Phase5GridViewer` — live pygame grid window with Phase 5 HUD overlay |
 
 ### Phase 5 CLI reference
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--mode` | `test` | `test` = full evolution run; `sweep` = parameter sensitivity grid |
-| `--workers` | `4` | Parallel workers |
-| `--seeds` | `10` | Number of seeds for test mode |
-| `--plot_only` | off | Regenerate plots from saved CSVs |
+| `--seeds` | `10` | Seeds to run (forced to 1 when `--headless` is not set) |
+| `--max-ticks` | `40000` | Simulation ticks per seed |
+| `--mutation-enabled` | `true` | Enable genetic mutation during reproduction |
+| `--plasticity-enabled` | `true` | Enable phenotypic learning |
+| `--mutation-rate` | `0.05` | Per-gene mutation probability |
+| `--mutation-sigma` | `0.02` | Gaussian σ for mutation magnitude |
+| `--learning-rate` | `0.05` | Initial learning rate for all genomes |
+| `--plasticity-coefficient` | `0.5` | Initial plasticity coefficient |
+| `--relax-ecology` | `false` | Inflate init_food × 1.15 for pilot runs |
+| `--workers` | `4` | Parallel processes (`--headless` only; ignored with visualization) |
+| `--seed-start` | `42` | First seed value; subsequent seeds increment by 1 |
+| `--headless` | off | Disable live visualization; required for `--seeds > 1` |
+| `--vis-every` | `1` | Render one frame every N ticks (use 10+ to preview long runs without slowdown) |
+| `--output-dir` | auto | Explicit output path (auto-timestamped if omitted) |
 
-### Output files
+### Live visualization
 
-All outputs → `outputs/phase5_evolution/`:
+When `--headless` is **not** set, a pygame window shows the grid world in real time:
+
+| Visual element | Meaning |
+| --- | --- |
+| Mother body colour | Energy — gradient from red (dying) to blue (healthy) |
+| Ring around mother | Last motivation: yellow = FORAGE, blue = SELF, green = CARE |
+| Child body colour | Distress — gradient from green (calm) to red (distressed) |
+| Yellow line | Mother-child link (own-child bond) |
+| HUD line 1 | Tick, alive mothers, alive children, condition label |
+| HUD line 2 | `genome_care` vs 1/3 baseline, `c_matr_cum`, mean generation |
+| HUD legend | Motivation ring colour key |
+
+Closing the window mid-run does **not** abort the simulation — it finishes headlessly and writes all output files normally.
+
+Use `--vis-every 10` or higher to run long simulations without slowing them down — only 1 in every N ticks is rendered.
+
+### Phase 5 output files
+
+All outputs → `outputs/phase5_evolution/exp_<timestamp>/`:
 
 | File | Description |
-|------|-------------|
-| `test_trajectory.csv` | Mean ± SD genome + population at each snapshot tick |
-| `test_history_raw.csv` | Per-seed raw snapshots |
-| `test_summary.json` | Final-tick summary (population, generation, care_weight) |
-| `sweep_summary.csv` | Aggregated final-tick stats per (mutation_rate, sigma, tau) combo |
-| `sweep_results_raw.csv` | Per-seed final snapshots for all sweep combos |
-| `fig1_fitness_trajectory.png` | Demographic trajectory: alive mothers + cumulative births over time (mean ± SD) |
-| `fig2_genome_evolution.png` | care / forage / self weight trajectories + mean generation |
-| `fig3_sweep_population.png` | Heatmap: mutation_rate × sigma → final population (panel per tau) |
-| `fig4_sweep_care_weight.png` | Heatmap: mutation_rate × sigma → final mean care_weight (panel per tau) |
+| --- | --- |
+| `snapshots.csv` | Per-tick metrics for all seeds (seed, tick, mean_genome_care, c_matr_cum, …) |
+| `summary.json` | Final-tick summary: params + per-seed final_stats |
+| `phase5_evolution_analysis.png` | 4-panel figure: genome care weight / expressed care / innateness index / genome-behavior distance |
 
 ---
 

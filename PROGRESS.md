@@ -14,59 +14,32 @@ For the full research plan see [ROADMAP.md](./ROADMAP.md).
 
 ## ▶ NEXT SESSION TASK LIST (read this first)
 
-Calibration is now **integrated into Phase 2 and Phase 3 sweeps** — no separate diagnostic runs needed.
+⏭️ **Phase re-runs skipped.** Proceeding directly to Block 2.
 
-### Step 1 — Extend Phase 2 sweep code to 4 parameters
+### SINGLE TASK — Build Block 2
 
-Add `food_entropy_alpha` as Set D to `experiments/phase2_survival_minimal/new_config.py` sweep grid.
-Phase 2 now sweeps: `init_food × food_entropy_alpha × move_cost × eat_gain`.
+Implement `experiments/phase5_evolution/config.py`, `run.py`, `plot.py` per EVO_PROPOSAL.md specification.
 
-```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase2_survival_minimal.new_run --mode pipeline --workers 4
-```
+**Ecology baseline:** Phase 4b BEST_CALIBRATED (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`).
 
-Best result from Phase 2 = provisional ecology baseline (including `food_entropy_alpha` value).
+**Starting genome:** care = forage = self = 1/3 (normalized sum = 1).
 
-### Step 2 — Extend Phase 3 sweep code to 6 parameters
+**Genome renormalization:** After every mutation — renormalize by sum so weights always sum to 1.0.
 
-Add `food_entropy_alpha`, `temperature_sensitivity`, `cry_decay_radius` as Sets D/E/F to `experiments/phase3_survival_full/config.py`.
-Phase 3 now sweeps: `init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius`.
-
-```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase3_survival_full.run --mode pipeline --workers 4
-```
-
-Best result from Phase 3 = BEST_ECOLOGICAL (locked for Block 2).
-
-### Step 3 — Re-run Phase 4 with locked BEST_ECOLOGICAL
-
-```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase4_weight_sweep.run --mode sweep --workers 4
-```
-
-### Step 4 — Build Block 2
-
-Write `experiments/phase5_evolution/config.py`, `run.py`, `plot.py` per ROADMAP.md spec.
-Starting genome: care = forage = self = 1/3 (normalized sum = 1).
-Genome renormalization after every mutation is mandatory (see design decision below).
+**Success path:**
+1. Pilot run: 5 seeds, 5 000 ticks, relax_ecology=True
+2. Real run: 10 seeds, 40 000 ticks, Phase 4b ecology
+3. Plot care weight evolution and plasticity response
 
 ---
 
-## ⚠️ DESIGN DECISION — Locked 2026-05-08
+## ⚠️ DESIGN DECISION — Updated 2026-05-10
 
-**Mechanism consistency principle:** All three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) must be active with **the same fixed baseline values across every phase — Block 1 through Block 3**. Only the mechanism parameter values change between experiments (Block 3 eco-pressure analysis). This ensures all blocks are directly comparable and eco-pressure effects are cleanly isolated.
+**Mechanism baseline — SKIPPED due to time constraints.**
 
-**Consequence: Phase 1–4 must be re-run** with the baseline mechanism values before Block 2 begins.
+Three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) will remain **disabled (0.0)** for Block 2. This is equivalent to Phase 1–4 runs and avoids re-run delays.
 
-**Baseline values — TO BE CALIBRATED before re-run:**
-
-| Mechanism | Config param | Baseline value | Notes |
-| --- | --- | --- | --- |
-| Shannon entropy food | `food_entropy_alpha` | TBD — locked by Phase 2 sweep | Mild spatial heterogeneity |
-| Cry attenuation | `cry_decay_radius` | TBD — locked by Phase 3 sweep | Moderate distance decay |
-| Temperature cycle | `temperature_sensitivity` | TBD — locked by Phase 3 sweep | Children only; cold/warm asymmetric |
-
-**Block 3 eco-pressure analysis** = vary these three values (one at a time or jointly) on top of the evolved Block 2 genome to measure care behavior response.
+**Consequence:** Block 2 operates in baseline ecology with mechanisms disabled. Block 3 eco-pressure analysis (if conducted) would activate mechanisms to measure care behavior response.
 
 **Genome normalization principle (locked):** After every mutation in Block 2/3, genome weights are renormalized by their sum so they always sum to 1.0. `genome.care_weight` IS the effective care share directly.
 
@@ -224,15 +197,16 @@ C_brain = plasticity_alpha × |Δweights| + plasticity_beta × plasticity_coeffi
 `hunger_rate × T_sequence` dominates C_body (≈82% per feeding event). `feed_cost=0.03` is 7%.
 `C_brain` is the Baldwin assimilation driver — innate mothers pay C_body only; learning mothers pay both.
 
-**Architecture decisions:**
+**Architecture decisions (as implemented):**
 
-| Decision | Choice | Reason |
-| -------- | ------ | ------ |
-| Config separation | `EvoConfig` composes `Config` (not inherits) | Root `config.py` frozen; Phase 1–4 unaffected |
-| Agent separation | `Phase5MotherAgent(MotherAgent)` subclass in `agents/phase5_mother.py` | Phase 1–4 MotherAgent untouched; future phases subclass further |
-| Step signature | `step(self, context: StepContext)` typed bundle | Extensible without breaking call sites; `dt=1.0` default for continuous time |
-| Population culling | Weakest-by-energy | Deterministic selection; no random noise masking Baldwin signal |
-| Unmentioned genes | Fixed at defaults; tracked in snapshots only | Zero confound on selection; full diagnostic visibility |
+| Layer | Class | Role |
+| --- | --- | --- |
+| Config | `Phase5ConfigFactory` in `experiments/phase5_evolution/config.py` | Static factory; loads Phase 4b JSON; builds `Config` |
+| Runner | `RunParams` + `EvolutionRunner` in `experiments/phase5_evolution/run.py` | `RunParams` = typed param bundle; `EvolutionRunner` = OOP parallel sweep + snapshot |
+| Plotter | `EvolutionPlotter` in `experiments/phase5_evolution/plot.py` | CSV-only; 4-panel figure; fully decoupled from simulation |
+| Genome | `Genome` in `evolution/genome.py` | `_mutate_gene` + `_renormalize` as `@staticmethod`; Google-style docstrings |
+| Agent | `MotherAgent` in `agents/mother.py` | Guard clauses + docstrings in Phase 5 methods; no new subclass |
+| Unmentioned genes | Fixed at defaults; tracked in `_sample()` only | Zero confound on selection; full diagnostic visibility |
 
 **Missing Block 1 sweep variables (Block 3 sensitivity targets):**
 

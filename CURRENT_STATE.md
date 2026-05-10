@@ -8,18 +8,15 @@ Last updated: 2026-05-09 (V3 branch)
 
 ---
 
-## ⚠ STATUS — All Phase 1–4 results are PENDING RE-RUN
+## ✅ STATUS — Proceeding to Block 2 (Phase re-runs skipped)
 
-**Reason:** Three ecological mechanisms must be active at fixed baseline values across all blocks (design decision locked 2026-05-08). Previous runs used 0.0 for all three — results are not comparable to Block 2/3.
+**Decision:** Phase 1–4 re-runs skipped due to time constraints (deadline 2026-05-17).
 
-**Re-run plan (calibration is integrated into Phase 2/3 sweeps — no separate calibration step):**
+**Ecology baseline:** Using Phase 4b BEST_CALIBRATED ecology (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`).
 
-1. Run Phase 2 with 4-param sweep (`init_food × food_entropy_alpha × move_cost × eat_gain`). Best result becomes provisional ecology baseline + mechanism values.
-2. Run Phase 3 with 6-param sweep (`init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius`). Lock BEST_ECOLOGICAL.
-3. Run Phase 4 weight sweep with locked BEST_ECOLOGICAL values.
-4. Build Block 2.
+**Mechanism configuration:** Ecological mechanisms (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) will NOT be active at fixed baseline values. Block 2 proceeds with mechanisms disabled (0.0) — equivalent to Phase 1–4 runs.
 
-See PROGRESS.md `▶ NEXT SESSION TASK LIST` for step-by-step commands.
+**Next step:** Build Block 2 per EVO_PROPOSAL.md specification.
 
 ---
 
@@ -1212,95 +1209,76 @@ C_total = C_body + C_brain
 
 ---
 
-## Architecture Decisions (Locked 2026-05-10)
+## Architecture Decisions (Implemented 2026-05-10)
 
-### 1. Structural Separation — EvoConfig (composition, not inheritance)
+### 1. Config layer — `Phase5ConfigFactory` (static factory class)
 
-Root `config.py` is **FROZEN**. Phase 5 introduces a separate config layer:
+Root `config.py` is **FROZEN** — Phase 5 adds no fields there. All Phase 5 config logic lives in:
 
 ```
-config.py (root)                   ← FROZEN — Phase 1–4 only, never touch again
-experiments/
-  phase5_evolution/
-    evo_config.py                  ← EvoConfig dataclass (Phase 5 fields only)
-    config.py                      ← make_config() factory: loads Phase 4b JSON → EvoConfig
-    run.py
-    plot.py
+experiments/phase5_evolution/config.py  ← Phase5ConfigFactory class
 ```
 
-`EvoConfig` composes (not inherits) the base `Config`:
+`Phase5ConfigFactory` is a pure-static class (no instances). It owns:
 
-```python
-@dataclass
-class EvoConfig:
-    base: Config                           # Phase 4b ecology — untouched
+- `_ECOLOGY_PATH` — path to Phase 4b JSON (class constant)
+- `_FALLBACK` — hardcoded fallback dict (class constant)
+- `load_ecology() -> dict` — loads and unwraps `"BEST_CALIBRATED"` from JSON
+- `make(...) -> Config` — builds fully configured `Config` from ecology + CLI params
 
-    # Public: evolution hyperparameters (CLI-settable)
-    phenotype_retention: float           = 0.15
-    mutation_rate: float                 = 0.05
-    mutation_sigma: float                = 0.02
-    plasticity_alpha: float              = 0.01
-    plasticity_beta: float               = 0.001
-    sample_window: int                   = 200
+### 2. Run layer — `EvolutionRunner` + `RunParams`
 
-    # Public: genome initialization (neutral starting point)
-    init_care_weight: float              = 1/3
-    init_forage_weight: float            = 1/3
-    init_self_weight: float              = 1/3
-    init_learning_rate: float            = 0.05
-    init_plasticity_coefficient: float   = 0.5
-
-    # Public: experiment flags
-    mutation_enabled: bool               = True
-    plasticity_enabled: bool             = True
-
-    def __post_init__(self): self._validate()
-    def _validate(self) -> None: ...      # private guard
-
-    @property
-    def condition_label(self) -> str: ... # computed, read-only
+```text
+experiments/phase5_evolution/run.py  ← RunParams dataclass + EvolutionRunner class
 ```
 
-Phase 5 code reads `evo_cfg.base.*` for world/ecology and `evo_cfg.*` for evolution.
-Future phases (6, 7) follow the same pattern with their own EvoConfig-equivalent.
+`RunParams` is a plain dataclass holding all hyperparameters. Acts as the single source of truth for what a run looks like — also the only object that crosses the process boundary in multiprocessing.
 
-### 2. Agent Separation — Phase5MotherAgent subclass
+`EvolutionRunner` encapsulates all runtime logic:
 
-```python
-# agents/phase5_mother.py
-class Phase5MotherAgent(MotherAgent):
-    # Adds:    expressed_forage, expressed_self phenotypes
-    # Adds:    compute_modulation_signal(context)
-    # Adds:    compute_plasticity_cost(signal)
-    # Adds:    step(context: StepContext)
-    # Adds:    reproduce() with partial phenotype inheritance (retention=0.15)
-    # Adds:    _apply_expression_noise()  (private)
-    # Overrides: compute_motivation_scores() to use expressed phenotypes
+- `run_sweep(output_dir) -> list[dict]` — parallel orchestration via `ProcessPoolExecutor`
+- `save(results, output_dir)` — CSV + JSON persistence
+- `_run_worker(seed, params)` — `@staticmethod` for picklable multiprocessing
+- `_execute_single(seed)` — one seed end-to-end
+- `_initial_genomes(n)` — neutral genome population (care=forage=self=1/3)
+- `_sample(sim, tick)` — all ROADMAP metrics per snapshot
+- `_write_snapshots_csv(results, path)` — `@staticmethod` persistence helper
+- `_write_summary_json(results, path)` — `@staticmethod` persistence helper
+
+### 3. Plot layer — `EvolutionPlotter`
+
+```text
+experiments/phase5_evolution/plot.py  ← EvolutionPlotter class
 ```
 
-Phase 1–4 `MotherAgent` untouched. Future phases subclass further.
+`EvolutionPlotter` reads `snapshots.csv` only — fully decoupled from simulation:
 
-### 3. Step Signature — StepContext typed bundle
+- `plot(output_file=None)` — public entry point, 4-panel figure
+- `_plot_genome_care(ax, df, seeds, colors)` — private per-subplot
+- `_plot_expressed_care(ax, df, seeds, colors)` — private per-subplot
+- `_plot_innateness(ax, df, seeds, colors)` — private per-subplot
+- `_plot_genome_behavior_distance(ax, df, seeds, colors)` — private per-subplot
+- `_draw_seed_lines(ax, df, seeds, colors, col)` — private DRY helper (used by all 4 subplots)
+- `_style_axes(ax)` — `@staticmethod` academic styling
 
-```python
-@dataclass
-class StepContext:
-    own_child: ChildAgent | None
-    world: GridWorld
-    tick: int
-    dt: float = 1.0     # default integer tick; forward-compatible for continuous time
+### 4. Genome layer — `Genome` (dataclass, minimal OOP refactor)
+
+```text
+evolution/genome.py  ← Genome dataclass
 ```
 
-`step(self, context: StepContext)` — adding future fields to `StepContext` never breaks call sites.
-`dt=1.0` default makes the interface continuous-time compatible without breaking the current tick-based loop.
+- `_mutate_gene(value, mutation_rate, sigma)` — `@staticmethod` private helper (replaces inline function)
+- `_renormalize(care, forage, self_w)` — `@staticmethod` private helper (weight sum = 1.0)
+- `mutate(mutation_rate, sigma, lock_learning_rate)` — now uses both private statics
+- Google-style docstrings on all public methods
 
-### 4. Population Culling — Weakest by energy
+### 5. Agent layer — `MotherAgent` (minimal cleanup only)
 
-When `len(sim.mothers) > max_population`: remove mothers sorted by `energy` ascending (weakest first). Deterministic — no random noise masking the Baldwin signal.
+Phase 5 methods (`compute_modulation_signal`, `compute_plasticity_cost`) remain in `mother.py`:
 
-### 5. Unmentioned genome genes — Fixed, tracked
-
-`distress_sensitivity`, `care_recovery`, `update_sensitivity`, `learning_cost` — fixed at genome dataclass defaults. **Do not mutate** in Phase 5. Track in snapshots for diagnostics only.
+- Guard clauses replace nested if-chains in `compute_modulation_signal()`
+- `hasattr` defensive check removed from `compute_plasticity_cost()` (unnecessary since `__init__` always sets `last_learning_delta`)
+- Google-style docstrings added to both methods
 
 ---
 
@@ -1309,7 +1287,7 @@ When `len(sim.mothers) > max_population`: remove mothers sorted by `energy` asce
 These were never swept in Block 1. They are uncontrolled in Phase 5 but are valid Block 3 sensitivity targets:
 
 | Variable | Current value | Why it matters for Baldwin |
-|----------|--------------|---------------------------|
+| --- | --- | --- |
 | `feed_cost` | 0.03 (never swept) | 7% of C_body — caregiving act cost |
 | `reproduction_threshold` | 0.85 (never swept) | Controls generation turnover speed |
 | `reproduction_cost` | 0.35 (never swept) | Energy per birth — fitness tradeoff |
@@ -1320,12 +1298,13 @@ Speed of Baldwin assimilation observed in Phase 5 is partly a function of these 
 
 ---
 
-## Implementation Order
+## Implementation Status
 
-1. `evolution/genome.py` — targeted delta: clamp `learning_rate` to `[0.0, 0.2]`, verify existing fields match EvoConfig init values
-2. `agents/phase5_mother.py` — NEW: `Phase5MotherAgent(MotherAgent)` + `StepContext`
-3. `experiments/phase5_evolution/__init__.py` — empty module file
-4. `experiments/phase5_evolution/evo_config.py` — `EvoConfig` dataclass
-5. `experiments/phase5_evolution/config.py` — `make_config()` factory, loads `selected_ecology.json`
-6. `experiments/phase5_evolution/run.py` — async evolution loop + parallel sweep
-7. `experiments/phase5_evolution/plot.py` — Baldwin trajectory figures
+| File | Class / Change | Status |
+| --- | --- | --- |
+| `evolution/genome.py` | `Genome` — `_mutate_gene`, `_renormalize` static helpers; `lock_learning_rate` param | ✅ Done |
+| `agents/mother.py` | Guard clauses + docstrings in `compute_modulation_signal`, `compute_plasticity_cost` | ✅ Done |
+| `experiments/phase5_evolution/__init__.py` | Empty module marker | ✅ Done |
+| `experiments/phase5_evolution/config.py` | `Phase5ConfigFactory` static class | ✅ Done |
+| `experiments/phase5_evolution/run.py` | `RunParams` dataclass + `EvolutionRunner` class | ✅ Done |
+| `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` class | ✅ Done |

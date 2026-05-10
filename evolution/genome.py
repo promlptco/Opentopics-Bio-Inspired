@@ -1,59 +1,100 @@
 from __future__ import annotations
-from dataclasses import dataclass
+
 import random
+from dataclasses import dataclass
+
 
 @dataclass
 class Genome:
-    care_weight: float = 0.5
+    """Heritable gene set for one mother agent.
+
+    The three motivation weights (care, forage, self) are always kept normalized
+    so their sum equals 1.0 after every mutation. This means genome.care_weight
+    is the effective care share directly — no conversion needed.
+
+    Attributes:
+        care_weight: Fraction of motivation budget allocated to caregiving.
+        forage_weight: Fraction allocated to food procurement.
+        self_weight: Fraction allocated to self-maintenance.
+        learning_rate: Rate at which expressed phenotype tracks reward signal.
+        learning_cost: Energy coefficient per unit of phenotypic change.
+        plasticity_coefficient: Current degree of phenotypic flexibility [0, 1].
+        update_sensitivity: Scales how strongly reward drives plastic change.
+        distress_sensitivity: Cortisol analog — energy penalty for ignoring
+            own distressed infant. Default 0.0 keeps Phase 1–4 unaffected.
+        care_recovery: Prolactin analog — energy returned per unit hunger
+            reduced in own infant. Default 0.0 keeps Phase 1–4 unaffected.
+    """
+
+    care_weight: float = 1.0
     forage_weight: float = 0.5
-    self_weight: float = 0.5
+    self_weight: float = 0.8
+
     learning_rate: float = 0.1
-    learning_cost: float = 0.05
+    learning_cost: float = 0.005
     plasticity_coefficient: float = 0.1
     update_sensitivity: float = 1.0
-    # Option A — cortisol analog: energy penalty per tick when ignoring own distressed infant.
-    # Default 0.0 leaves all prior experiments (Phase 1–6) unaffected.
+
     distress_sensitivity: float = 0.0
-    # Option D — prolactin analog: energy returned per unit hunger reduced in own infant.
-    # Default 0.0 leaves all prior experiments unaffected.
     care_recovery: float = 0.0
+
+    # ------------------------------------------------------------------
+    # Public interface
+    # ------------------------------------------------------------------
 
     def mutate(
         self,
-        mutation_rate: float = 0.1,
-        sigma: float = 0.05,
+        mutation_rate: float = 0.05,
+        sigma: float = 0.02,
         lock_learning_rate: bool = False,
     ) -> Genome:
-        def mutate_gene(value: float) -> float:
-            if random.random() < mutation_rate:
-                delta = random.gauss(0, sigma)
-                return max(0.0, min(1.0, value + delta))
-            return value
+        """Return a mutated child genome.
 
-        care   = mutate_gene(self.care_weight)
-        forage = mutate_gene(self.forage_weight)
-        self_w = mutate_gene(self.self_weight)
+        Mutates five core genes: care_weight, forage_weight, self_weight,
+        learning_rate, and plasticity_coefficient. All other genes are
+        inherited unchanged. After mutating the three motivation weights,
+        renormalizes them so care + forage + self = 1.0.
 
-        # Normalize so care + forage + self = 1.0 (design decision Block 2).
-        # genome.care_weight then equals the effective care share directly,
-        # preventing scale drift where all weights inflate without changing behaviour.
-        total = care + forage + self_w
-        if total > 0:
-            care, forage, self_w = care / total, forage / total, self_w / total
+        Args:
+            mutation_rate: Per-gene probability of applying a perturbation.
+            sigma: Std-dev of the Gaussian perturbation.
+            lock_learning_rate: If True, learning_rate is not mutated.
+
+        Returns:
+            New Genome with mutated values; caller's genome is unchanged.
+        """
+        care   = self._mutate_gene(self.care_weight,   mutation_rate, sigma)
+        forage = self._mutate_gene(self.forage_weight, mutation_rate, sigma)
+        self_w = self._mutate_gene(self.self_weight,   mutation_rate, sigma)
+
+        care, forage, self_w = self._renormalize(care, forage, self_w)
+
+        new_lr = (
+            self.learning_rate
+            if lock_learning_rate
+            else self._mutate_gene(self.learning_rate, mutation_rate, sigma)
+        )
 
         return Genome(
             care_weight=care,
             forage_weight=forage,
             self_weight=self_w,
-            learning_rate=self.learning_rate if lock_learning_rate else mutate_gene(self.learning_rate),
-            learning_cost=mutate_gene(self.learning_cost),
-            plasticity_coefficient=mutate_gene(self.plasticity_coefficient),
-            update_sensitivity=mutate_gene(self.update_sensitivity),
-            distress_sensitivity=mutate_gene(self.distress_sensitivity),
-            care_recovery=mutate_gene(self.care_recovery),
+            learning_rate=new_lr,
+            learning_cost=self.learning_cost,
+            plasticity_coefficient=self._mutate_gene(
+                self.plasticity_coefficient, mutation_rate, sigma
+            ),
+            update_sensitivity=self.update_sensitivity,
+            distress_sensitivity=self.distress_sensitivity,
+            care_recovery=self.care_recovery,
         )
 
     def copy(self) -> Genome:
+        """Return an exact copy of this genome.
+
+        Returns:
+            New Genome with identical field values.
+        """
         return Genome(
             care_weight=self.care_weight,
             forage_weight=self.forage_weight,
@@ -65,3 +106,44 @@ class Genome:
             distress_sensitivity=self.distress_sensitivity,
             care_recovery=self.care_recovery,
         )
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _mutate_gene(value: float, mutation_rate: float, sigma: float) -> float:
+        """Apply Gaussian mutation to one gene with probability mutation_rate.
+
+        Args:
+            value: Current gene value.
+            mutation_rate: Probability of applying a perturbation.
+            sigma: Std-dev of the Gaussian perturbation.
+
+        Returns:
+            Mutated gene clamped to [0.0, 1.0], or original value unchanged.
+        """
+        if random.random() >= mutation_rate:
+            return value
+        return max(0.0, min(1.0, value + random.gauss(0, sigma)))
+
+    @staticmethod
+    def _renormalize(
+        care: float, forage: float, self_w: float
+    ) -> tuple[float, float, float]:
+        """Normalize three motivation weights so they sum to 1.0.
+
+        If all three are zero (degenerate case), returns equal thirds.
+
+        Args:
+            care: Raw care motivation weight.
+            forage: Raw forage motivation weight.
+            self_w: Raw self motivation weight.
+
+        Returns:
+            Tuple (care, forage, self_w) summing to 1.0.
+        """
+        total = care + forage + self_w
+        if total <= 0.0:
+            return 1 / 3, 1 / 3, 1 / 3
+        return care / total, forage / total, self_w / total

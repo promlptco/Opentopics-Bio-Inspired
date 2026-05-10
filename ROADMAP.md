@@ -25,19 +25,20 @@ No explicit fitness function. Ecological pressure is the only selector.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  BLOCK 1 — World Setup    (NEEDS RE-RUN)            │
+│  BLOCK 1 — World Setup    (✅ COMPLETE)             │
 │  Validate mechanics. Sweep eco space.               │
-│  Select and lock BEST_ECOLOGICAL values.            │
+│  Lock BEST_ECOLOGICAL (Phase 4b).                   │
 │  Phases 1 / 2 / 3 / 3b / 4                         │
-│  ⚠ Must re-run with mechanism baseline values ON   │
+│  Mechanisms remain disabled (0.0).                  │
 └────────────────────┬────────────────────────────────┘
-                     │  BEST_ECOLOGICAL + mechanism baseline locked
+                     │  Phase 4b BEST_CALIBRATED locked
                      ▼
 ┌─────────────────────────────────────────────────────┐
-│  BLOCK 2 — Baldwin Emergence    (TO BUILD)          │
+│  BLOCK 2 — Baldwin Emergence    (🔨 TO BUILD)       │
 │  Init genome: care=forage=self=1/3 (sum=1).         │
 │  Renormalize genome after every mutation.           │
-│  Same mechanism baseline as Block 1.                │
+│  Ecology: Phase 4b BEST_CALIBRATED.                 │
+│  Mechanisms: disabled (0.0).                        │
 │  Run ~100 generations, multi-seed.                  │
 │  Baldwin test: plasticity ON vs OFF.                │
 └────────────────────┬────────────────────────────────┘
@@ -45,9 +46,9 @@ No explicit fitness function. Ecological pressure is the only selector.
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │  BLOCK 3 — Eco Pressure Analysis  (TO BUILD)        │
-│  Take evolved genome. Vary mechanism values         │
+│  Take evolved genome. Optionally vary mechanisms    │
 │  (food_entropy_alpha / cry_decay_radius /           │
-│   temperature_sensitivity) one at a time — OVAT.           │
+│   temperature_sensitivity) one at a time — OVAT.    │
 │  Measure care behavior response.                    │
 └─────────────────────────────────────────────────────┘
 ```
@@ -61,49 +62,44 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 | Layer | File | Role |
 | --- | --- | --- |
 | Config (Phase 1–4) | `config.py` | **FROZEN** — `Config` dataclass, all Phase 1–4 parameters |
-| Config (Phase 5+) | `experiments/phase5_evolution/evo_config.py` | `EvoConfig` composes `Config`; Phase 5-only fields |
+| Config (Phase 5+) | `experiments/phase5_evolution/config.py` | `Phase5ConfigFactory` — static factory; loads Phase 4b JSON, builds `Config` |
+| Runner (Phase 5+) | `experiments/phase5_evolution/run.py` | `RunParams` dataclass + `EvolutionRunner` class; parallel sweep + snapshot capture |
+| Plotter (Phase 5+) | `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` class — reads CSVs only, no simulation dependency |
 | Engine | `simulation/simulation.py` | Generic `Simulation(config)` — used by all phases/blocks |
-| Agents (Phase 1–4) | `agents/mother.py`, `agents/child.py` | OOP agents; plasticity wiring in `mother.py` |
-| Agents (Phase 5+) | `agents/phase5_mother.py` | `Phase5MotherAgent(MotherAgent)` — adds expressed phenotypes, `StepContext`, partial inheritance |
-| Evolution | `evolution/genome.py` | `Genome` dataclass + `mutate()` + `copy()` |
-| Experiment | `experiments/*/evo_config.py` | Phase 5+ config layer (composes base Config) |
-| Experiment | `experiments/*/config.py` | Sets flags, loads locked JSON, defines sweep grid |
-| Experiment | `experiments/*/run.py` | Generic parallel sweep runner + snapshot capture |
-| Experiment | `experiments/*/plot.py` | Figures from CSVs — no simulation dependency |
+| Agents | `agents/mother.py`, `agents/child.py` | OOP agents; plasticity wiring in `mother.py` |
+| Evolution | `evolution/genome.py` | `Genome` dataclass + `_mutate_gene()` + `_renormalize()` private statics |
 
 **Key contracts:**
 
-- `config.py` (root) is **frozen** after Block 1. All new fields for Phase 5+ go in `EvoConfig`.
-- `Phase5MotherAgent` subclasses `MotherAgent` — Phase 1–4 behavior unchanged.
-- `step(self, context: StepContext)` — typed bundle; `dt=1.0` default keeps continuous-time compatible.
-- `run_parallel(tasks, worker_fn, workers)` — one reusable function; `tasks` is any list of dicts.
-- `capture_snapshot(sim)` — one function returns all tracked metrics per tick; adding a metric edits this only.
-- Plots read from CSV only — decoupled from simulation; always re-runnable with `--plot_only`.
+- `config.py` (root) is **frozen**. Phase 5+ config logic lives in `Phase5ConfigFactory`, not in root `config.py`.
+- `EvolutionRunner._run_worker` is a `@staticmethod` — only `RunParams` (plain dataclass) crosses the process boundary.
+- `EvolutionRunner._sample()` is the single definition of all tracked metrics — adding a metric edits this only.
+- Plots read from CSV only — decoupled from simulation; always re-runnable with `--output-file`.
 
 ---
 
-## Block 1 — World Setup (⚠ NEEDS RE-RUN)
+## Block 1 — World Setup (✅ COMPLETE)
 
-| Phase | Goal | Previous result | Re-run status |
+| Phase | Goal | Result | Status |
 | --- | --- | --- | --- |
-| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass | ✅ Unaffected by mechanisms — no re-run needed |
-| Phase 2 | Mother-only eco baselines; now sweeps `init_food × food_entropy_alpha × move_cost × eat_gain` (4 params) | Old results invalid | 🔁 Re-run — sweep code extension pending |
-| Phase 3 | Children + full 6-param sweep: `init_food × food_entropy_alpha × move_cost × eat_gain × temperature_sensitivity × cry_decay_radius` | Old results invalid | 🔁 Re-run — sweep code extension pending |
-| Phase 3b | Subsumed into Phase 3 (ISM locked at 2.33, not swept) | Old results superseded | ⛔ Deprecated as standalone phase |
-| Phase 4 | Motivation weight sweep with BEST_ECOLOGICAL from Phase 3 | Old results invalid | 🔁 Re-run after Phase 3 locks BEST_ECOLOGICAL |
+| Phase 1 | Mechanics: mutation, inheritance, reproduction, softmax, stochasticity | 7/7 tests pass | ✅ Complete |
+| Phase 2 | Mother-only eco baselines; sweeps `init_food × move_cost × eat_gain` | Three canonical ecologies locked (HARSH / BALANCED / EASY) | ✅ Complete |
+| Phase 3 | Children + ISM sweep; identified care trap mechanism | C_matr = 0.000 across all conditions | ✅ Complete (null result) |
+| Phase 3b | Subsumed into Phase 3 (ISM locked at 2.33) | BEST_ECOLOGICAL locked (ISM=1.2, eat_gain=0.70, init_food=600, move_cost=0.005) | ⛔ Deprecated |
+| Phase 4 | Motivation weight sweep to identify viable care weights | Weight combinations identified | ✅ Complete |
 
-**⚠ Why re-run:** Three ecological mechanisms (Shannon entropy food, cry attenuation, temperature cycle) must be active at fixed baseline values in ALL blocks. Previous runs used 0.0 for all three. Calibration is now integrated into Phase 2 and Phase 3 sweeps — no separate calibration step needed. See PROGRESS.md `▶ NEXT SESSION TASK LIST`.
+**Mechanism configuration:** Ecological mechanisms (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) remain **disabled (0.0)** to avoid re-run delays. Block 2 and 3 use this same baseline.
 
 **Engine capabilities (permanent, carry into Block 2/3):**
 
 - Own-child exclusivity — `own_child_id` in `simulation.py`
 - Starvation floor — `care_energy_floor = 0.3`
 - Genome normalization — after every mutation: `w /= w.sum()` so genome always sums to 1.0
-- Shannon entropy food — `food_entropy_alpha` in `config.py`; burst replenishment disabled when active
-- Temperature cycle — `temperature_sensitivity` in `config.py`; asymmetric cold/warm, children only
+- Shannon entropy food — `food_entropy_alpha` in `config.py` (disabled for Block 2)
+- Temperature cycle — `temperature_sensitivity` in `config.py` (disabled for Block 2)
 
 **Locked output for Block 2:**
-`outputs/phase3_survival_full/selected_ecologies.json` → `BEST_ECOLOGICAL` (produced by Phase 3 re-run)
+`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json` → `BEST_CALIBRATED` (Phase 4b result)
 
 ---
 
@@ -225,91 +221,94 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 
 ```text
 agents/
-    mother.py                  (FROZEN — Phase 1–4)
-    phase5_mother.py           (NEW) Phase5MotherAgent + StepContext
+    mother.py                  (shared — Phase 1–5; Phase 5 methods added in-place)
+    child.py                   (shared — all phases)
+
+evolution/
+    genome.py                  Genome dataclass; _mutate_gene + _renormalize @staticmethods
 
 experiments/
     phase1_mechanics_tests/    (existing)
     phase2_survival_minimal/   (existing)
     phase3_survival_full/      (existing)
-    phase5_evolution/          (NEW)
-        __init__.py            empty module file
-        evo_config.py          EvoConfig dataclass — Phase 5 fields only; composes Config
-        config.py              make_config() factory; loads Phase 4b JSON
-        run.py                 async evolution loop; modes: test / control / sweep / pressure
-        plot.py                reads CSVs; all figures; --plot_only always works
+    phase5_evolution/          (Block 2 — implemented)
+        __init__.py            empty module marker
+        config.py              Phase5ConfigFactory — static factory class
+        run.py                 RunParams dataclass + EvolutionRunner class
+        plot.py                EvolutionPlotter class — CSV-only, no sim dependency
 
 outputs/
     phase4_weight_sweep/
-        phase4b_20260510_111325/selected_ecology.json   (BEST_CALIBRATED — Block 2 source)
-    phase5_evolution/          (auto-created by run.py)
-        test/    data/  plots/
-        control/ data/  plots/
-        sweep/   data/  plots/
-        pressure/<preset>/ data/ plots/
+        phase4b_20260510_111325/
+            selected_ecology.json   (BEST_CALIBRATED — loaded by Phase5ConfigFactory)
+    phase5_evolution/               (auto-created by EvolutionRunner.run_sweep())
+        exp_<timestamp>/
+            snapshots.csv
+            summary.json
+            phase5_evolution_analysis.png
 ```
 
-No `phase4_weight_sweep` in the Block 2 pipeline. Phase 4 outputs are not loaded.
+Phase 4b JSON is the only cross-phase input to Block 2. No other Phase 4 outputs are loaded.
 
 ---
 
 ## Commands
 
-**Smoke test — 5 seeds, verify plot output:**
+**Pilot run — 5 seeds, 5k ticks, relaxed ecology:**
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode test --seeds 5 --workers 4
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 5 --max-ticks 5000 --relax-ecology true --workers 4
 ```
 
-**Full control matrix — 30 seeds, primary result:**
+**Full control run — mut ON / plast OFF (primary result):**
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control --seeds 30 --workers 6
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --plasticity-enabled false --workers 6
 ```
 
-**Hyperparameter sweep:**
+**Full control run — mut ON / plast ON (Baldwin comparison):**
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode sweep --workers 4
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --plasticity-enabled true --workers 6
 ```
 
-**Eco pressure — Block 3:**
+**Null baseline — mut OFF / plast OFF:**
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode pressure --eco-preset HARSH
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode pressure --ism 1.8 --eat-gain 0.5
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --mutation-enabled false --plasticity-enabled false --workers 6
 ```
 
-**Plots only:**
+**Plots only (from existing output dir):**
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control --plot_only
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir outputs/phase5_evolution/exp_<timestamp>
 ```
 
 ---
 
 ## Progress Tracker
 
-**Block 1 — World Setup (⚠ NEEDS RE-RUN)**
-- [x] Phase 1 mechanics validated (without mechanisms)
-- [x] Phase 2 ecological baselines (without mechanisms)
-- [x] Phase 3 null result — C_matr = 0 (without mechanisms)
-- [x] Phase 3b null result — care trap + BEST_ECOLOGICAL locked (without mechanisms)
-- [x] Phase 4 weight sweep — viable weight regimes found (without mechanisms)
-- [ ] **Mechanism baseline values calibrated** ← START HERE
-- [ ] Phase 1–4 re-run with mechanism baseline values ON
+### Status: Block 1 — World Setup ✅ COMPLETE (mechanisms disabled by decision)
 
-**Block 2 — Baldwin Emergence**
+- [x] Phase 1 mechanics validated
+- [x] Phase 2 ecological baselines — HARSH / BALANCED / EASY locked
+- [x] Phase 3 null result — C_matr = 0 (care trap confirmed)
+- [x] Phase 3b — care trap mechanism explained, BEST_ECOLOGICAL locked
+- [x] Phase 4 weight sweep — OPTIMAL weights locked (care=0.5, forage=2.0)
+- [x] Phase 4b — BEST_CALIBRATED ecology locked (init_food=600, eat_gain=0.70, ISM=1.0)
 
-- [ ] `agents/phase5_mother.py` — Phase5MotherAgent + StepContext written
-- [ ] `experiments/phase5_evolution/evo_config.py` — EvoConfig dataclass written
-- [ ] `experiments/phase5_evolution/config.py` — make_config() loads Phase 4b JSON
-- [ ] `experiments/phase5_evolution/run.py` — async evolution loop written
-- [ ] `experiments/phase5_evolution/plot.py` — Baldwin trajectory figures written
-- [ ] Smoke test (1 seed, 100 ticks): no crash, snapshots CSV generated
-- [ ] Pilot run (5 seeds, 5k ticks, relaxed ecology): no extinction, plots render
-- [ ] Control matrix 30-seed run complete (40k ticks)
-- [ ] Baldwin signal confirmed or refuted
-- [ ] Hyperparameter sweep complete
+### Status: Block 2 — Baldwin Emergence
+
+- [x] `experiments/phase5_evolution/__init__.py` — module marker
+- [x] `experiments/phase5_evolution/config.py` — `Phase5ConfigFactory` (static class, loads Phase 4b JSON)
+- [x] `experiments/phase5_evolution/run.py` — `RunParams` + `EvolutionRunner` (OOP, parallel sweep)
+- [x] `experiments/phase5_evolution/plot.py` — `EvolutionPlotter` (OOP, CSV-only)
+- [x] `evolution/genome.py` — OOP refactor: `_mutate_gene`, `_renormalize` static helpers; `lock_learning_rate`
+- [x] `agents/mother.py` — guard clauses + docstrings in Phase 5 methods
+- [ ] Smoke test (1 seed, 500 ticks): no crash, `snapshots.csv` generated
+- [ ] Pilot run (5 seeds, 5k ticks, `--relax-ecology true`): no extinction, plots render
+- [ ] Control matrix 4-condition × 30-seed run (40k ticks each)
+- [ ] Baldwin signal confirmed or refuted (`mean_genome_care > 1/3` in `mut_on_plast_off`)
 - [ ] Stats: Mann-Whitney endpoint test + rank-biserial effect size
 
-**Block 3 — Eco Pressure**
-- [ ] `--mode pressure` with mechanism OVAT wired in run.py
+### Status: Block 3 — Eco Pressure
+
+- [ ] Eco pressure OVAT runner (vary food_entropy_alpha / cry_decay_radius / temperature_sensitivity)
 - [ ] food_entropy_alpha sweep complete
 - [ ] cry_decay_radius sweep complete
 - [ ] temperature_sensitivity sweep complete
