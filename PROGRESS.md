@@ -154,7 +154,7 @@ With tau=0.1 and equal weights, forage_cue ≈ 0.86 at typical food densities. C
 **Two structural fixes required:**
 
 | Fix | Problem | Solution | Biological basis |
-|-----|---------|----------|-----------------|
+| --- | --- | --- | --- |
 | Approach A | All 15 mothers converged on 2–3 most-distressed strangers (allomothering pool) | Own-child exclusivity via `own_child_id` | Oxytocin-driven maternal imprinting at birth |
 | Approach E | High care_weight caused mothers to starve (delivered all food, never ate) | Starvation floor `care_energy_floor=0.3` | Corticosterone foraging override under extreme hunger |
 
@@ -186,7 +186,7 @@ The care trap (Phase 3b) and its resolution (Phase 4) together define the resear
 **Starting conditions:**
 - Genome: `care = forage = self = 1/3` (normalized to sum = 1.0 at initialization and after every mutation)
 - Effective shares at start: care = forage = self = 33.3% — no motivational advantage
-- Ecology: BEST_ECOLOGICAL (locked from Phase 3b)
+- Ecology: Phase 4b BEST_CALIBRATED (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`)
 - Evolution: mutation ON, reproduction ON
 - Run length: ~40 000 ticks ≈ 100 async generations
 
@@ -207,6 +207,36 @@ The care trap (Phase 3b) and its resolution (Phase 4) together define the resear
 **Success criterion:** `mean_genome_care_weight` rises above 1/3 in `mut_on_plast_off`. `mut_off_plast_off` stays flat at 1/3 (confirms it's selection, not drift).
 
 **Code location:** `experiments/phase5_evolution/` (not yet written — see [ROADMAP.md](./ROADMAP.md))
+
+---
+
+### Locked Design Decisions (2026-05-10)
+
+**Metabolic cost model — two aspects:**
+
+```
+C_total = C_body + C_brain
+
+C_body  = hunger_rate × T_sequence + move_cost × (d_forage + d_deliver) + feed_cost
+C_brain = plasticity_alpha × |Δweights| + plasticity_beta × plasticity_coefficient
+```
+
+`hunger_rate × T_sequence` dominates C_body (≈82% per feeding event). `feed_cost=0.03` is 7%.
+`C_brain` is the Baldwin assimilation driver — innate mothers pay C_body only; learning mothers pay both.
+
+**Architecture decisions:**
+
+| Decision | Choice | Reason |
+| -------- | ------ | ------ |
+| Config separation | `EvoConfig` composes `Config` (not inherits) | Root `config.py` frozen; Phase 1–4 unaffected |
+| Agent separation | `Phase5MotherAgent(MotherAgent)` subclass in `agents/phase5_mother.py` | Phase 1–4 MotherAgent untouched; future phases subclass further |
+| Step signature | `step(self, context: StepContext)` typed bundle | Extensible without breaking call sites; `dt=1.0` default for continuous time |
+| Population culling | Weakest-by-energy | Deterministic selection; no random noise masking Baldwin signal |
+| Unmentioned genes | Fixed at defaults; tracked in snapshots only | Zero confound on selection; full diagnostic visibility |
+
+**Missing Block 1 sweep variables (Block 3 sensitivity targets):**
+
+`feed_cost=0.03`, `reproduction_threshold=0.85`, `reproduction_cost=0.35`, `mother_max_age=400` — never swept. Uncontrolled in Phase 5 but valid Block 3 targets. Not blockers: Phase 4b validated the system at these values.
 
 ---
 

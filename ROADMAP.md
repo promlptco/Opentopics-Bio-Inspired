@@ -59,22 +59,25 @@ No explicit fitness function. Ecological pressure is the only selector.
 All three blocks run on the **same core engine**. No phase-specific logic lives in `simulation.py`.
 
 | Layer | File | Role |
-|---|---|---|
-| Config | `config.py` | Single `Config` dataclass — every parameter in one place |
+| --- | --- | --- |
+| Config (Phase 1–4) | `config.py` | **FROZEN** — `Config` dataclass, all Phase 1–4 parameters |
+| Config (Phase 5+) | `experiments/phase5_evolution/evo_config.py` | `EvoConfig` composes `Config`; Phase 5-only fields |
 | Engine | `simulation/simulation.py` | Generic `Simulation(config)` — used by all phases/blocks |
-| Agents | `agents/mother.py`, `agents/child.py` | OOP agents; plasticity wiring in `mother.py` |
+| Agents (Phase 1–4) | `agents/mother.py`, `agents/child.py` | OOP agents; plasticity wiring in `mother.py` |
+| Agents (Phase 5+) | `agents/phase5_mother.py` | `Phase5MotherAgent(MotherAgent)` — adds expressed phenotypes, `StepContext`, partial inheritance |
 | Evolution | `evolution/genome.py` | `Genome` dataclass + `mutate()` + `copy()` |
+| Experiment | `experiments/*/evo_config.py` | Phase 5+ config layer (composes base Config) |
 | Experiment | `experiments/*/config.py` | Sets flags, loads locked JSON, defines sweep grid |
 | Experiment | `experiments/*/run.py` | Generic parallel sweep runner + snapshot capture |
 | Experiment | `experiments/*/plot.py` | Figures from CSVs — no simulation dependency |
 
 **Key contracts:**
-- `Simulation.initialize(genomes=None)` — pass explicit genomes or it reads `Config` weights.
-  Block 2 passes `genomes=None` with `Config(care_weight=0.5, forage_weight=0.5, self_weight=0.5)`.
-- `run_parallel(tasks, worker_fn, workers)` — one reusable function in `run.py`;
-  `tasks` is any list of parameter dicts. No phase-specific sweep functions.
-- `capture_snapshot(sim)` — one function returns a dict of all tracked metrics per tick.
-  Adding a new metric means editing this function only.
+
+- `config.py` (root) is **frozen** after Block 1. All new fields for Phase 5+ go in `EvoConfig`.
+- `Phase5MotherAgent` subclasses `MotherAgent` — Phase 1–4 behavior unchanged.
+- `step(self, context: StepContext)` — typed bundle; `dt=1.0` default keeps continuous-time compatible.
+- `run_parallel(tasks, worker_fn, workers)` — one reusable function; `tasks` is any list of dicts.
+- `capture_snapshot(sim)` — one function returns all tracked metrics per tick; adding a metric edits this only.
 - Plots read from CSV only — decoupled from simulation; always re-runnable with `--plot_only`.
 
 ---
@@ -109,10 +112,10 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ### Design
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | Starting genome | `care = forage = self = 1/3` — normalized sum = 1, neutral, no pre-baked bias |
 | Genome mutation | After every mutation: renormalize by sum → weights always sum to 1.0 |
-| Ecology | BEST_ECOLOGICAL (loaded from Phase 3b JSON; frozen) |
+| Ecology | Phase 4b BEST_CALIBRATED (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`) |
 | Mechanisms | Same baseline values as Block 1 (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) |
 | Evolution | mutation ON, reproduction ON |
 | Plasticity (primary) | OFF |
@@ -126,7 +129,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ### Control Matrix (4 conditions)
 
 | Condition | mutation | plasticity | Purpose |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `mut_on_plast_off` | ON | OFF | Genetic selection only — **primary result** |
 | `mut_on_plast_on` | ON | ON | Baldwin scaffold + genetic evolution |
 | `mut_off_plast_on` | OFF | ON | Phenotypic adjustment only, no selection |
@@ -135,7 +138,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ### Hyperparameter Sweep Grid
 
 | Parameter | Values |
-|---|---|
+| --- | --- |
 | `mutation_rate` | 0.05, 0.10, 0.20 |
 | `sigma` | 0.02, 0.05, 0.10 |
 | `tau` | 0.05, 0.10 |
@@ -151,9 +154,11 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ### Tracked Metrics (per snapshot tick)
 
 | Metric | Description |
-|---|---|
+| --- | --- |
 | `mean_genome_care_weight` | Genetic drift / selection signal |
 | `mean_expressed_care_weight` | Phenotypic signal (plasticity-ON runs only) |
+| `innateness_index` | `1 - mean(plasticity_coefficient)` — genetic assimilation signal |
+| `genome_behavior_distance` | `mean(\|expressed - genome\|)` — decreasing = learned → innate |
 | `c_matr_cum` | Cumulative child maturation rate |
 | `n_alive_mothers` | Population health |
 | `mean_mother_energy` | Mother energy dynamics |
@@ -163,10 +168,11 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 ### Figures
 
 | Figure | Content |
-|---|---|
+| --- | --- |
 | `fig1_baldwin_template.png` | 4-panel: genome care_weight / plasticity drift / C_matr / mean energy vs generation |
 | `fig2_control_endpoints.png` | Endpoint box plots across 4 conditions |
 | `fig3_sweep_heatmap.png` | C_matr endpoint across mutation_rate × sigma grid |
+| `fig4_assimilation.png` | innateness_index + genome_behavior_distance over generations |
 
 ---
 
@@ -215,21 +221,28 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 
 ---
 
-## File Organization (Minimal New Files)
+## File Organization
 
-```
+```text
+agents/
+    mother.py                  (FROZEN — Phase 1–4)
+    phase5_mother.py           (NEW) Phase5MotherAgent + StepContext
+
 experiments/
-    phase1_mechanics_tests/    ← existing ✓
-    phase2_survival_minimal/   ← existing ✓
-    phase3_survival_full/      ← existing ✓
-    phase5_evolution/          ← NEW (3 files only)
-        config.py              loads BEST_ECO JSON; defines sweep grid; no simulation logic
-        run.py                 generic parallel runner; 3 modes: test / control / sweep + pressure
+    phase1_mechanics_tests/    (existing)
+    phase2_survival_minimal/   (existing)
+    phase3_survival_full/      (existing)
+    phase5_evolution/          (NEW)
+        __init__.py            empty module file
+        evo_config.py          EvoConfig dataclass — Phase 5 fields only; composes Config
+        config.py              make_config() factory; loads Phase 4b JSON
+        run.py                 async evolution loop; modes: test / control / sweep / pressure
         plot.py                reads CSVs; all figures; --plot_only always works
 
 outputs/
-    phase3_survival_full/      ← provides BEST_ECOLOGICAL ✓
-    phase5_evolution/          ← auto-created by run.py
+    phase4_weight_sweep/
+        phase4b_20260510_111325/selected_ecology.json   (BEST_CALIBRATED — Block 2 source)
+    phase5_evolution/          (auto-created by run.py)
         test/    data/  plots/
         control/ data/  plots/
         sweep/   data/  plots/
@@ -282,10 +295,15 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --mode control
 - [ ] Phase 1–4 re-run with mechanism baseline values ON
 
 **Block 2 — Baldwin Emergence**
-- [ ] `experiments/phase5_evolution/` code written (config + run + plot)
-- [ ] Genome normalization (sum=1 after mutation) implemented
-- [ ] Smoke test: generation x-axis, energy panels, genome drift visible
-- [ ] Control matrix 30-seed run complete
+
+- [ ] `agents/phase5_mother.py` — Phase5MotherAgent + StepContext written
+- [ ] `experiments/phase5_evolution/evo_config.py` — EvoConfig dataclass written
+- [ ] `experiments/phase5_evolution/config.py` — make_config() loads Phase 4b JSON
+- [ ] `experiments/phase5_evolution/run.py` — async evolution loop written
+- [ ] `experiments/phase5_evolution/plot.py` — Baldwin trajectory figures written
+- [ ] Smoke test (1 seed, 100 ticks): no crash, snapshots CSV generated
+- [ ] Pilot run (5 seeds, 5k ticks, relaxed ecology): no extinction, plots render
+- [ ] Control matrix 30-seed run complete (40k ticks)
 - [ ] Baldwin signal confirmed or refuted
 - [ ] Hyperparameter sweep complete
 - [ ] Stats: Mann-Whitney endpoint test + rank-biserial effect size

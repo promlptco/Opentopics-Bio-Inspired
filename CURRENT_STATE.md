@@ -1139,3 +1139,193 @@ python -m experiments.phase4_weight_sweep.experiment \
 | Phase 2 | `python -m experiments.phase2_survival_minimal.experiment` |
 | Phase 3 | `python -m experiments.phase3_survival_full.experiment` |
 | Phase 4 | `python -m experiments.phase4_weight_sweep.experiment` |
+
+---
+
+---
+
+## Phase 5 Block 2 — Pre-Implementation Decisions
+
+Last updated: 2026-05-10 (V3 branch)
+
+---
+
+## Status: APPROVED — Ready to implement
+
+All design decisions locked in review session 2026-05-10.
+
+---
+
+## Ecology Source (corrected from EVO_PROPOSAL)
+
+EVO_PROPOSAL referenced `BEST_ECOLOGICAL.json` — file does not exist.
+Actual source:
+
+```
+outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json → "BEST_CALIBRATED"
+```
+
+Phase 5 inherits Phase 4b values exactly. No re-calibration. Energy regime is unchanged.
+
+---
+
+## Full Metabolic Cost Model (Two Aspects)
+
+### 1. Body Metabolism (caregiving)
+
+```
+C_body = hunger_rate × T_sequence
+       + move_cost × (d_forage + d_deliver)
+       + feed_cost
+```
+
+Typical breakdown per feeding event:
+
+| Component | Formula | Approx value |
+| --- | --- | --- |
+| Base metabolism (time cost) | `(1/35) × ~12 ticks` | **≈ 0.343** (82%) |
+| Movement cost | `0.005 × ~10 steps` | ≈ 0.050 (12%) |
+| Feed act | `feed_cost = 0.03` | ≈ 0.030 (7%) |
+| **Total C_body** | | **≈ 0.423** |
+
+`feed_cost` was never swept in Block 1 — it is 7% of C_body. The dominant cost is `hunger_rate × T_sequence` (time spent in the care sequence). This was validated empirically in Phase 4b (C_matr=0.509 at these values).
+
+### 2. Brain Metabolism (plasticity)
+
+```
+C_brain = alpha × |Δweights| + beta × plasticity_coefficient
+
+Where:
+  alpha = plasticity_alpha  = 0.01   (per magnitude of weight change)
+  beta  = plasticity_beta   = 0.001  (maintenance cost baseline)
+```
+
+Only paid when `plasticity_enabled=True` AND `modulation_signal ≠ 0`.
+
+### Total
+
+```
+C_total = C_body + C_brain
+```
+
+**Baldwin selection mechanism**: a mother with innate care (high `genome.care_weight`, low `plasticity_coefficient`) pays `C_body` only. A mother who learns to care pays `C_body + C_brain` every event. Evolution selects toward the cheaper strategy → genetic assimilation.
+
+---
+
+## Architecture Decisions (Locked 2026-05-10)
+
+### 1. Structural Separation — EvoConfig (composition, not inheritance)
+
+Root `config.py` is **FROZEN**. Phase 5 introduces a separate config layer:
+
+```
+config.py (root)                   ← FROZEN — Phase 1–4 only, never touch again
+experiments/
+  phase5_evolution/
+    evo_config.py                  ← EvoConfig dataclass (Phase 5 fields only)
+    config.py                      ← make_config() factory: loads Phase 4b JSON → EvoConfig
+    run.py
+    plot.py
+```
+
+`EvoConfig` composes (not inherits) the base `Config`:
+
+```python
+@dataclass
+class EvoConfig:
+    base: Config                           # Phase 4b ecology — untouched
+
+    # Public: evolution hyperparameters (CLI-settable)
+    phenotype_retention: float           = 0.15
+    mutation_rate: float                 = 0.05
+    mutation_sigma: float                = 0.02
+    plasticity_alpha: float              = 0.01
+    plasticity_beta: float               = 0.001
+    sample_window: int                   = 200
+
+    # Public: genome initialization (neutral starting point)
+    init_care_weight: float              = 1/3
+    init_forage_weight: float            = 1/3
+    init_self_weight: float              = 1/3
+    init_learning_rate: float            = 0.05
+    init_plasticity_coefficient: float   = 0.5
+
+    # Public: experiment flags
+    mutation_enabled: bool               = True
+    plasticity_enabled: bool             = True
+
+    def __post_init__(self): self._validate()
+    def _validate(self) -> None: ...      # private guard
+
+    @property
+    def condition_label(self) -> str: ... # computed, read-only
+```
+
+Phase 5 code reads `evo_cfg.base.*` for world/ecology and `evo_cfg.*` for evolution.
+Future phases (6, 7) follow the same pattern with their own EvoConfig-equivalent.
+
+### 2. Agent Separation — Phase5MotherAgent subclass
+
+```python
+# agents/phase5_mother.py
+class Phase5MotherAgent(MotherAgent):
+    # Adds:    expressed_forage, expressed_self phenotypes
+    # Adds:    compute_modulation_signal(context)
+    # Adds:    compute_plasticity_cost(signal)
+    # Adds:    step(context: StepContext)
+    # Adds:    reproduce() with partial phenotype inheritance (retention=0.15)
+    # Adds:    _apply_expression_noise()  (private)
+    # Overrides: compute_motivation_scores() to use expressed phenotypes
+```
+
+Phase 1–4 `MotherAgent` untouched. Future phases subclass further.
+
+### 3. Step Signature — StepContext typed bundle
+
+```python
+@dataclass
+class StepContext:
+    own_child: ChildAgent | None
+    world: GridWorld
+    tick: int
+    dt: float = 1.0     # default integer tick; forward-compatible for continuous time
+```
+
+`step(self, context: StepContext)` — adding future fields to `StepContext` never breaks call sites.
+`dt=1.0` default makes the interface continuous-time compatible without breaking the current tick-based loop.
+
+### 4. Population Culling — Weakest by energy
+
+When `len(sim.mothers) > max_population`: remove mothers sorted by `energy` ascending (weakest first). Deterministic — no random noise masking the Baldwin signal.
+
+### 5. Unmentioned genome genes — Fixed, tracked
+
+`distress_sensitivity`, `care_recovery`, `update_sensitivity`, `learning_cost` — fixed at genome dataclass defaults. **Do not mutate** in Phase 5. Track in snapshots for diagnostics only.
+
+---
+
+## Missing Block 1 Sweep Variables (Block 3 Sensitivity Targets)
+
+These were never swept in Block 1. They are uncontrolled in Phase 5 but are valid Block 3 sensitivity targets:
+
+| Variable | Current value | Why it matters for Baldwin |
+|----------|--------------|---------------------------|
+| `feed_cost` | 0.03 (never swept) | 7% of C_body — caregiving act cost |
+| `reproduction_threshold` | 0.85 (never swept) | Controls generation turnover speed |
+| `reproduction_cost` | 0.35 (never swept) | Energy per birth — fitness tradeoff |
+| `mother_max_age` | 400 (never swept) | Generation length and overlap |
+
+Phase 4b validated the system (C_matr=0.509) with all four fixed. Not blockers for Phase 5.
+Speed of Baldwin assimilation observed in Phase 5 is partly a function of these values.
+
+---
+
+## Implementation Order
+
+1. `evolution/genome.py` — targeted delta: clamp `learning_rate` to `[0.0, 0.2]`, verify existing fields match EvoConfig init values
+2. `agents/phase5_mother.py` — NEW: `Phase5MotherAgent(MotherAgent)` + `StepContext`
+3. `experiments/phase5_evolution/__init__.py` — empty module file
+4. `experiments/phase5_evolution/evo_config.py` — `EvoConfig` dataclass
+5. `experiments/phase5_evolution/config.py` — `make_config()` factory, loads `selected_ecology.json`
+6. `experiments/phase5_evolution/run.py` — async evolution loop + parallel sweep
+7. `experiments/phase5_evolution/plot.py` — Baldwin trajectory figures
