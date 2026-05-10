@@ -94,13 +94,13 @@ class Phase5ConfigFactory:
 
         return Config(
             # World
-            width=50,
-            height=50,
+            width=50, # 50
+            height=50, # 50
 
             # Population — neutral genome start (care=forage=self=1/3)
-            init_mothers=15,
+            init_mothers=15, # 15
             init_food=init_food,
-            max_population=100,
+            max_population=300,
 
             # Perception
             perception_radius=15,
@@ -110,17 +110,17 @@ class Phase5ConfigFactory:
             initial_energy=1.0,
             hunger_rate=1 / 35,
             move_cost=eco.get("move_cost", fb["move_cost"]),
-            feed_cost=0.0001,
+            feed_cost=0.01,
             eat_gain=eco.get("eat_gain", fb["eat_gain"]),
             rest_recovery=0.5,
 
             # Reproduction — Phase 4b validated thresholds
-            reproduction_threshold=0.85,
-            reproduction_cost=0.35,
+            reproduction_threshold=0.70, # 0.85
+            reproduction_cost=0.25,
             reproduction_cooldown=80,
 
             # Child
-            maturity_age=200,
+            maturity_age=80, # 200
             starvation_threshold=1.0,
             infant_starvation_multiplier=eco.get(
                 "infant_starvation_multiplier",
@@ -128,7 +128,7 @@ class Phase5ConfigFactory:
             ),
 
             # Mother lifetime
-            mother_max_age=400,
+            mother_max_age=200, # 400
 
             # Fatigue
             fatigue_rate=0.01,
@@ -146,6 +146,7 @@ class Phase5ConfigFactory:
             # Mode flags — all active for Block 2 evolution
             children_enabled=True,
             care_enabled=True,
+            allow_allomothering=False, # On
             plasticity_enabled=plasticity_enabled,
             reproduction_enabled=True,
             mutation_enabled=mutation_enabled,
@@ -158,14 +159,14 @@ class Phase5ConfigFactory:
 
             # Thermoregulation — disabled
             warmth_radius=3,
-            warmth_factor=0.0,
+            warmth_factor=1.0, # must be 0.0 to disable thermoregulation
 
             # Ecological mechanisms — disabled for Block 2
-            food_entropy_alpha=0.0,
-            food_entropy_beta=0.1,
+            food_entropy_alpha=0.01,
+            food_entropy_beta=0.01,
             food_entropy_gamma=0.01,
-            food_patch_prior=0.5,
-            cry_decay_radius=0.0,
+            food_patch_prior=0.2,
+            cry_decay_radius=10.0, # 0.0 disables cry-based patch learning
             temperature_period=200,
             temperature_sensitivity=0.0,
 

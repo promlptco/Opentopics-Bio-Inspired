@@ -46,7 +46,7 @@ class Phase5GridViewer:
         self,
         grid_width: int,
         grid_height: int,
-        cell_size: int = 14,
+        cell_size: int = 15,
         fps: int = 10,
         vis_every: int = 1,
         condition_label: str = "",
@@ -192,10 +192,19 @@ class Phase5GridViewer:
                 continue
             cx = child.x * cs + cs // 2
             cy = child.y * cs + cs // 2
-            r  = cs // 4
+            r = max(3, cs // 4)
             body = lerp_color(1.0 - child.distress, t.child_color_low, t.child_color_high)
-            pygame.draw.circle(self._screen, body, (cx, cy), r)
-            pygame.draw.circle(self._screen, t.outline_color, (cx, cy), r, width=1)
+            diamond = [
+                (cx, cy - r),
+                (cx + r, cy),
+                (cx, cy + r),
+                (cx - r, cy),
+            ]
+            pygame.draw.polygon(self._screen, body, diamond)
+            pygame.draw.polygon(self._screen, t.outline_color, diamond, width=1)
+            pygame.draw.circle(
+                self._screen, t.outline_color, (cx, cy), max(1, r // 3)
+            )
 
     def _draw_mothers(self, mothers, t: RendererTheme, cs: int) -> None:
         for mother in mothers:
@@ -203,12 +212,12 @@ class Phase5GridViewer:
                 continue
             mx = mother.x * cs + cs // 2
             my = mother.y * cs + cs // 2
-            r  = cs // 3
+            r  = cs // 2.5
             ring_key = self._MOTIVATION_RINGS.get(mother.last_motivation)
             if ring_key:
                 pygame.draw.circle(
                     self._screen, getattr(t, ring_key),
-                    (mx, my), r + 5, width=2,
+                    (mx, my), r + 3, width=1,
                 )
             body = lerp_color(mother.energy, t.mother_color_low, t.mother_color_high)
             pygame.draw.circle(self._screen, body, (mx, my), r)

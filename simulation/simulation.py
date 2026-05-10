@@ -255,16 +255,12 @@ class Simulation:
                     else None
                 )
                 if self.config.care_enabled:
-                    # Birth-imprinting (oxytocin bond at parturition): mother's care
-                    # motivation is driven by her own child's distress only. She hears
-                    # all cries but responds selectively to the infant she bonded with
-                    # at birth. Allomothering can still occur in _execute_action when
-                    # own child is sated or dead. Required for Hamilton r to be meaningful.
-                    if mother.own_child_id is not None:
-                        _own = self._get_child_by_id(mother.own_child_id)
-                        care_child = _own if (_own and _own.alive) else None
-                    else:
-                        care_child = mother.choose_child(visible_children) if visible_children else None
+                    # Birth-imprinting (oxytocin bond at parturition): mothers still
+                    # prioritize their own child, while stranger-care eligibility is
+                    # filtered separately by allow_allomothering and perception radius.
+                    care_child = self._choose_care_target(
+                        mother, visible_children, include_commitment=False
+                    )
                 else:
                     care_child = None
                 _heard_care_distress = None
@@ -372,14 +368,57 @@ class Simulation:
         # No distance filter; all alive children are always detectable.
         return [c for c in self.children if c.alive]
     
+    def _get_allomother_candidates(
+        self,
+        mother: MotherAgent,
+        visible_children: list[ChildAgent],
+    ) -> list[ChildAgent]:
+        """Return stranger children eligible for allomothering."""
+        if not self.config.allow_allomothering:
+            return []
+        return [
+            child for child in visible_children
+            if self.world.get_distance(mother.pos, child.pos) <= self.config.perception_radius
+        ]
+
+    def _choose_care_target(
+        self,
+        mother: MotherAgent,
+        visible_children: list[ChildAgent],
+        include_commitment: bool = True,
+    ) -> ChildAgent | None:
+        """Choose the child this mother would care for under current rules."""
+        if include_commitment and mother.has_commitment():
+            target = self._get_child_by_id(mother.target_child_id)
+            if target is not None and target.alive:
+                return target
+
+        if mother.own_child_id is not None:
+            own_child = self._get_child_by_id(mother.own_child_id)
+            if own_child and own_child.alive:
+                return own_child
+
+        candidates = self._get_allomother_candidates(mother, visible_children)
+        if not candidates:
+            return None
+
+        return max(
+            candidates,
+            key=lambda child: mother.expressed_care_weight
+                              * (1.0 + self.lineage.get_relatedness(mother.id, child.id))
+                              * child.distress,
+        )
+
     def _execute_action(self, mother: MotherAgent, domain: str, visible_children: list[ChildAgent]) -> None:
         if domain == "care":
             mother.last_action = "CARE"
             # Get target (committed or new)
-            target = None
-            if mother.has_commitment():
+            target = self._choose_care_target(mother, visible_children)
+            if target and (not mother.has_commitment() or mother.target_child_id != target.id):
+                mother.set_target(target.id, duration=2)
+            if False and mother.has_commitment():
                 target = self._get_child_by_id(mother.target_child_id)
-            if target is None or not target.alive:
+            if False and (target is None or not target.alive):
                 # Approach A: own-child exclusivity gate.
                 # Commit to own infant first; allomother only when own child is absent or dead.
                 # Maps to oxytocin-driven maternal imprinting — mother responds to her own
@@ -396,9 +435,7 @@ class Simulation:
                                       * (1.0 + self.lineage.get_relatedness(mother.id, c.id))
                                       * c.distress,
                     )
-                if target:
-                    mother.set_target(target.id, duration=20)
-            
+
             if target:
                 dist = self.world.get_distance(mother.pos, target.pos)
                 if dist == 0:
@@ -513,12 +550,7 @@ class Simulation:
     
     def _log_choice(self, mother: MotherAgent, visible_children: list[ChildAgent], domain: str) -> None:
         if domain == "care":
-            if mother.has_commitment():
-                target = self._get_child_by_id(mother.target_child_id)
-                if target is None or not target.alive:
-                    target = mother.choose_child(visible_children)
-            else:
-                target = mother.choose_child(visible_children)
+            target = self._choose_care_target(mother, visible_children)
         else:
             target = None
         

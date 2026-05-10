@@ -85,7 +85,7 @@ class MotherAgent(Agent):
     # Commitment
     # ============================================================
 
-    def set_target(self, child_id: int, duration: int = 20) -> None:
+    def set_target(self, child_id: int, duration: int = 2) -> None:
         # Outcome-based commitment: up to 20 ticks (4 days). Cleared early when
         # child.hunger < 0.3 (sated) — see simulation._execute_action (Change D).
         self.target_child_id = child_id

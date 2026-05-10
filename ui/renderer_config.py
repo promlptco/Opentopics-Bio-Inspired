@@ -73,13 +73,13 @@ DARK_THEME = RendererTheme(
     food_color=(0, 255, 90),
     mother_color_low=(255, 50, 80),
     mother_color_high=(0, 230, 255),
-    child_color_low=(255, 50, 80),
-    child_color_high=(0, 255, 120),
+    child_color_low=(255, 80, 120),
+    child_color_high=(255, 170, 40),
     outline_color=(80, 80, 100),
     ring_forage=(255, 220, 0),
     ring_self=(0, 140, 255),
     ring_care=(0, 255, 120),
-    link_color=(80, 80, 120),
+    link_color=(255, 240, 120),
 )
 
 # ── Registry ───────────────────────────────────────────────────────────────────

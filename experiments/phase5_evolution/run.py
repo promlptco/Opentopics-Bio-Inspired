@@ -47,6 +47,7 @@ class RunParams:
             seeds=1 and runs in the main process. Set True for multi-seed runs.
         vis_every: Render one frame every N ticks (1 = every tick; 10+ = fast
             preview for long runs). Ignored when headless=True.
+        cell_size: Pixels per grid cell for the live Phase 5 viewer.
     """
 
     mutation_enabled: bool = True
@@ -64,6 +65,7 @@ class RunParams:
     ecology_relaxation_factor: float = 1.15
     headless: bool = False
     vis_every: int = 1
+    cell_size: int = 15
 
 
 # ===========================================================================
@@ -226,6 +228,7 @@ class EvolutionRunner:
                 "phenotype_retention": p.phenotype_retention,
                 "max_ticks": p.max_ticks,
                 "relax_ecology": p.relax_ecology,
+                "cell_size": p.cell_size,
             },
         }
 
@@ -275,6 +278,7 @@ class EvolutionRunner:
         viewer = Phase5GridViewer(
             grid_width=cfg.width,
             grid_height=cfg.height,
+            cell_size=p.cell_size,
             vis_every=p.vis_every,
             condition_label=condition,
         )
@@ -314,6 +318,7 @@ class EvolutionRunner:
                 "phenotype_retention":    p.phenotype_retention,
                 "max_ticks":              p.max_ticks,
                 "relax_ecology":          p.relax_ecology,
+                "cell_size":              p.cell_size,
             },
         }
 
@@ -333,9 +338,9 @@ class EvolutionRunner:
         p = self._params
         return [
             Genome(
-                care_weight=1 / 3,
-                forage_weight=1 / 3,
-                self_weight=1 / 3,
+                care_weight= 1.75 / 3,
+                forage_weight=0.75 / 3,
+                self_weight=0.5 / 3,
                 learning_rate=p.learning_rate,
                 plasticity_coefficient=p.plasticity_coefficient,
             )
@@ -481,6 +486,12 @@ def main() -> None:
         default=1,
         help="Render one frame every N ticks (1=every tick; 10+ for fast preview).",
     )
+    parser.add_argument(
+        "--cell-size",
+        type=int,
+        default=15,
+        help="Pixels per grid cell in the live Phase 5 viewer.",
+    )
 
     args = parser.parse_args()
 
@@ -500,6 +511,7 @@ def main() -> None:
         ecology_relaxation_factor=args.ecology_relaxation_factor,
         headless=args.headless,
         vis_every=args.vis_every,
+        cell_size=args.cell_size,
     )
 
     output_dir = (

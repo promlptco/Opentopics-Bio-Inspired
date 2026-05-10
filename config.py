@@ -62,6 +62,10 @@ class Config:
     # Mode Flags
     children_enabled: bool = True
     care_enabled: bool = True
+    # allow_allomothering: when False, mothers will only CARE for their own child.
+    # When True, childless mothers may target strangers, but simulations can still
+    # add extra gates such as distance limits.
+    allow_allomothering: bool = True
     plasticity_enabled: bool = True
     reproduction_enabled: bool = True
     mutation_enabled: bool = True
@@ -162,14 +166,14 @@ class Config:
     # care_energy_floor: mother cannot commit to CARE when energy < this threshold.
     # If carrying food she eats it (SELF); otherwise breaks commitment and forages.
     # 0.0 = disabled (all prior phases unaffected).
-    care_energy_floor: float = 0.0
+    care_energy_floor: float = 0.35
 
     # Phase 5 — Reproduction constraint
     # one_child_per_lifetime: if True, has_reproduced=True is set after first birth and
     # the mother can never reproduce again. Required for Phase 3/4 fixed-ecology runs.
     # Set False for Block 2 evolution so mothers can raise multiple offspring over their
     # lifetime, enabling sustainable multi-generational population dynamics.
-    one_child_per_lifetime: bool = True
+    one_child_per_lifetime: bool = False # True
 
     # Phase 8 — Genuine Baldwin Effect controls
     # plasticity_noise_sigma: std-dev of multiplicative Gaussian noise added to the
