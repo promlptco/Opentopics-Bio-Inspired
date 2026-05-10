@@ -378,6 +378,8 @@ python -m experiments.phase4_weight_sweep.experiment     --mode sweep    --worke
 | `--workers N` | 4 | Parallel workers (`0` = `os.cpu_count()`) |
 | `--output-dir PATH` | auto | Explicit output directory (timestamped if omitted) |
 | `--param key=value` | — | Override any `Config` field (repeatable; highest priority) |
+| `--caretrap_json PATH` | — | (`caretrap` mode only) Path to `selected_ecologies.json`; uses Phase 3-selected params instead of `BALANCED_BASELINE` |
+| `--caretrap_cond` | `balanced` | (`caretrap` mode only) Which ecology to load from `--caretrap_json` (`balanced` / `harsh` / `easy`) |
 
 **Priority (lowest → highest):** `--load` < `--config` < `--param`
 

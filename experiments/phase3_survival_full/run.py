@@ -872,17 +872,30 @@ def build_validation_summary(results: list) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_caretrap_diagnostic(out_dir: str, seed: int = 42,
-                             duration: int = MAX_TICKS) -> None:
+                             duration: int = MAX_TICKS,
+                             params_json: str = None,
+                             condition: str = "balanced") -> None:
     """
-    Run one seed under BALANCED_BASELINE (unbiased weights) and produce the
-    5 care-trap diagnostic plots.  No long sweep needed.
+    Run one seed and produce the 5 care-trap diagnostic plots.
+
+    By default uses BALANCED_BASELINE (Phase 2 anchor + unbiased weights).
+    Pass params_json=<path to selected_ecologies.json> and condition=
+    "balanced"|"harsh"|"easy" to use Phase 3-selected ecology params instead.
     """
-    params = dict(BALANCED_BASELINE)
+    if params_json is not None:
+        import json as _json
+        with open(params_json) as _f:
+            _eco = _json.load(_f)
+        params = dict(_eco[condition]["selected_config"])
+        print(f"\n-- Phase 3 Care-Trap Diagnostic (source={params_json}, condition={condition}) --")
+    else:
+        params = dict(BALANCED_BASELINE)
+        print(f"\n-- Phase 3 Care-Trap Diagnostic (source=BALANCED_BASELINE) --")
     params["name"] = "caretrap"
     cfg        = make_config(params, duration)
     cfg.seed   = seed
 
-    print(f"\n-- Phase 3 Care-Trap Diagnostic (seed={seed}, duration={duration}) --")
+    print(f"   seed={seed}, duration={duration}")
     for k in ("move_cost", "eat_gain", "init_food", "care_weight",
               "forage_weight", "self_weight"):
         print(f"  {k:<20} = {params.get(k, getattr(cfg, k, '?'))}")
@@ -1281,7 +1294,11 @@ def run_experiment(args) -> None:
         caretrap_dir = os.path.join(
             PROJECT_ROOT, "outputs", "phase3_survival_full", "caretrap_diagnostic"
         )
-        run_caretrap_diagnostic(caretrap_dir, seed=42, duration=args.duration)
+        run_caretrap_diagnostic(
+            caretrap_dir, seed=42, duration=args.duration,
+            params_json=args.caretrap_json,
+            condition=args.caretrap_cond,
+        )
         return
 
     # single mode — one config, all diagnostic plots
@@ -1310,5 +1327,11 @@ if __name__ == "__main__":
                         default="pipeline")
     parser.add_argument("--workers", type=int, default=4,
                         help="Parallel workers (0=auto, 1=sequential)")
+    parser.add_argument("--caretrap_json", type=str, default=None,
+                        help="Path to selected_ecologies.json; if set, caretrap uses "
+                             "Phase 3-selected params instead of BALANCED_BASELINE")
+    parser.add_argument("--caretrap_cond", type=str, default="balanced",
+                        choices=["balanced", "harsh", "easy"],
+                        help="Which ecology condition to pull from --caretrap_json")
     args = parser.parse_args()
     run_experiment(args)

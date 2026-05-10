@@ -48,24 +48,33 @@ PHASE4_FLAGS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Ecology baseline — load Phase 3b BEST_ECOLOGICAL
+# Ecology baseline — Phase 3b BEST_ECOLOGICAL (ISM=1.2)
+#
+# Phase 3 (ISM=2.33 locked) showed the care trap null result.
+# Phase 3b swept ISM and found ISM=1.2 as the ecology where child maturation
+# is most feasible (feeds_needed=8.4 vs 17.6 at ISM=2.33).
+# Phase 4's question is "what weight bias enables maturation?" — which requires
+# an ecology where maturation is physically possible, hence ISM=1.2.
 # ─────────────────────────────────────────────────────────────────────────────
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Phase 3b BEST_ECOLOGICAL — hardcoded (Phase 3b JSON may not exist after restructure)
+BEST_ECOLOGICAL = {
+    "infant_starvation_multiplier": 1.2,
+    "eat_gain":               0.70,
+    "init_food":              600,
+    "move_cost":              0.005,
+    "rest_recovery":          0.005,
+    "hunger_rate":            1.0 / 35.0,
+    "food_perception_radius": 8,
+    "perception_radius":      8,
+}
+
+# Try to load from saved Phase 3b JSON — overrides hardcoded values if found.
 _PHASE3B_PATHS = [
     _PROJECT_ROOT / "outputs/phase3b_calibration/selected_ecologies.json",
     _PROJECT_ROOT / "outputs/phase3_survival_full/phase3b_calibration/selected_ecologies.json",
 ]
-
-_FALLBACK_ECOLOGY = {
-    "infant_starvation_multiplier": 1.0,
-    "eat_gain":    0.70,
-    "init_food":   600,
-    "move_cost":   0.005,
-    "rest_recovery": 0.005,
-    "hunger_rate": 1.0 / 35.0,
-    "food_perception_radius": 8,
-    "perception_radius":      8,
-}
 
 
 def _load_phase3b_ecology() -> dict:
@@ -75,7 +84,6 @@ def _load_phase3b_ecology() -> dict:
         try:
             with open(path) as f:
                 data = json.load(f)
-            # May be stored under "best_ecological" or as the only key
             ec = data.get("best_ecological", {}).get("selected_config", {})
             if not ec:
                 for v in data.values():
@@ -83,27 +91,21 @@ def _load_phase3b_ecology() -> dict:
                         ec = v["selected_config"]
                         break
             if ec and "eat_gain" in ec and "init_food" in ec:
+                print(f"  [Phase4 ecology] loaded BEST_ECOLOGICAL from {path.name}")
                 return {
-                    "infant_starvation_multiplier": float(
-                        ec.get("infant_starvation_multiplier", 1.2)
-                    ),
+                    "infant_starvation_multiplier": float(ec.get("infant_starvation_multiplier", 1.2)),
                     "eat_gain":    float(ec["eat_gain"]),
                     "init_food":   int(ec["init_food"]),
                     "move_cost":   float(ec.get("move_cost", 0.005)),
                     "rest_recovery": float(ec.get("rest_recovery", 0.005)),
                     "hunger_rate": float(ec.get("hunger_rate", 1.0 / 35.0)),
-                    "food_perception_radius": int(
-                        ec.get("food_perception_radius",
-                               ec.get("perception_radius", 8))
-                    ),
-                    "perception_radius": int(
-                        ec.get("perception_radius",
-                               ec.get("food_perception_radius", 8))
-                    ),
+                    "food_perception_radius": int(ec.get("food_perception_radius", ec.get("perception_radius", 8))),
+                    "perception_radius":      int(ec.get("perception_radius", ec.get("food_perception_radius", 8))),
                 }
         except Exception:
             continue
-    return dict(_FALLBACK_ECOLOGY)
+    print("  [Phase4 ecology] using hardcoded Phase 3b BEST_ECOLOGICAL (ISM=1.2)")
+    return dict(BEST_ECOLOGICAL)
 
 
 BEST_ECOLOGICAL = _load_phase3b_ecology()

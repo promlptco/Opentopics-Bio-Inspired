@@ -1,0 +1,16 @@
+{
+  "VIABLE_MIN": {
+    "care_weight": 0.5,
+    "forage_weight": 2.0,
+    "self_weight": 1.0,
+    "c_matr_mean": 0.008888888888888889,
+    "m_surv_mean": 0.64
+  },
+  "OPTIMAL": {
+    "care_weight": 0.5,
+    "forage_weight": 2.0,
+    "self_weight": 1.0,
+    "c_matr_mean": 0.008888888888888889,
+    "m_surv_mean": 0.64
+  }
+}
