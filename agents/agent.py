@@ -9,6 +9,8 @@ class Agent(Entity):
         self.age: int = 0
         self.energy: float = 1.0
         self.hunger: float = 0.0
+        self.birth_tick: int = 0
+        self.death_cause: str | None = None
     
     def tick_age(self) -> None:
         self.age += 1
@@ -16,6 +18,7 @@ class Agent(Entity):
     def check_death(self) -> str | None:
         """Return cause of death or None if alive"""
         if self.energy <= 0:
+            self.death_cause = "starvation"
             self.die()
             return "starvation"
         return None

@@ -563,11 +563,13 @@ All outputs → `outputs/phase4_weight_sweep/`:
 
 Block 2 of the research pipeline. Asynchronous lineage evolution with a 4-condition control matrix:
 mutation ON/OFF × plasticity ON/OFF. Starting genome: `care = forage = self = 1/3` (neutral, no bias).
-Answers: "Does ecological pressure alone drive genetic care share above the neutral 1/3 baseline?"
+The world is stochastic and has **no explicit caregiving bias**, but selection pressure still favors selfish lineage persistence.
+The question is whether kin-directed caregiving emerges anyway under ecological pressure.
 
 **Starting genome:** care=forage=self=1/3, renormalized after every mutation (no pre-baked bias)
 **Ecology:** Phase 4b BEST_CALIBRATED (loaded from `outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`)
-**Success criterion:** `mean_genome_care_weight > 1/3` in `mut_on_plast_off`; stays flat in `mut_off_plast_off`
+**Primary interpretation:** viable cohort fitness + stable child outcomes + reduced plasticity dependence
+**Supporting mechanism:** inherited substrate drift (including optional genome-care plots)
 
 ### Pilot run (5 000 ticks, live visualization)
 
@@ -580,6 +582,9 @@ python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ec
 
 # Headless pilot (no visualization)
 python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ecology true --headless
+
+# Save one snapshot every 500 ticks
+python -m experiments.phase5_evolution.run --seeds 1 --max-ticks 5000 --relax-ecology true --headless --checkpoint 500
 ```
 
 ### Control matrix runs (40 000 ticks × 30 seeds each)
@@ -598,7 +603,20 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --m
 ### Regenerate plots from saved output
 
 ```powershell
-$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir outputs/phase5_evolution/exp_<timestamp>
+# Full saved trajectory dashboard + lifecycle cohort plots
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --output-dir outputs/phase5_evolution/exp_<timestamp>
+
+# Dashboard only
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --output-dir outputs/phase5_evolution/exp_<timestamp> --mode dashboard
+
+# Lifecycle cohort plots only (up to 77 standalone PNGs when all families are available)
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --output-dir outputs/phase5_evolution/exp_<timestamp> --mode cohort
+
+# Dashboard only, ticks divisible by 500
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --output-dir outputs/phase5_evolution/exp_<timestamp> --checkpoint 500
+
+# Dashboard from 0 to 1500 only (with 5-tick sampling)
+$env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --output-dir outputs/phase5_evolution/exp_<timestamp> --checkpoint 5 --snapshot 1500
 ```
 
 ### Key files
@@ -607,7 +625,7 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir o
 |------|------|
 | `experiments/phase5_evolution/config.py` | `Phase5ConfigFactory` — static factory; loads Phase 4b JSON; builds `Config` |
 | `experiments/phase5_evolution/run.py` | `RunParams` dataclass + `EvolutionRunner` class; parallel sweep + snapshot capture |
-| `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` — reads CSVs only; 4-panel Baldwin trajectory figure |
+| `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` — reads CSVs only; 9-panel Baldwin/dashboard plot with optional checkpoint/snapshot filtering |
 | `experiments/phase5_evolution/viewer.py` | `Phase5GridViewer` — live pygame grid window with Phase 5 HUD overlay |
 
 ### Phase 5 CLI reference
@@ -623,11 +641,28 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir o
 | `--learning-rate` | `0.05` | Initial learning rate for all genomes |
 | `--plasticity-coefficient` | `0.5` | Initial plasticity coefficient |
 | `--relax-ecology` | `false` | Inflate init_food × 1.15 for pilot runs |
+| `--checkpoint` | `10` | Snapshot interval in ticks for `snapshots.csv` |
 | `--workers` | `4` | Parallel processes (`--headless` only; ignored with visualization) |
 | `--seed-start` | `42` | First seed value; subsequent seeds increment by 1 |
 | `--headless` | off | Disable live visualization; required for `--seeds > 1` |
 | `--vis-every` | `1` | Render one frame every N ticks (use 10+ to preview long runs without slowdown) |
+| `--cell-size` | `15` | Pixels per grid cell in the live Phase 5 viewer |
+| `--circle-world` | off | Restrict the arena to an inscribed circular world |
 | `--output-dir` | auto | Explicit output path (auto-timestamped if omitted) |
+
+### Phase 5 plot CLI reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| positional `run_dir` | — | Phase 5 output directory containing `snapshots.csv` |
+| `--output-dir` / `--input-dir` | — | Alternative way to pass the Phase 5 output directory |
+| `--mode` | `all` | `dashboard`, `cohort`, or `all` |
+| `--checkpoint` | all rows | Dashboard only: plot rows where `tick % checkpoint == 0` |
+| `--snapshot` | full run | Dashboard only: plot rows from tick `0` through this cutoff |
+| `--output-file` | auto | Dashboard PNG path (default: `<run-dir>/phase5_evolution_analysis.png`) |
+| `--plots-dir` | auto | Cohort plot directory (default: `<run-dir>/cohort_plots`) |
+| `--ma-window` | `25` | Rolling-mean window for individual cohort seed plots |
+| `--min-seeds` | `3` | Minimum contributing seeds required for each overall cohort point |
 
 ### Live visualization
 
@@ -640,7 +675,7 @@ When `--headless` is **not** set, a pygame window shows the grid world in real t
 | Child body colour | Distress — gradient from green (calm) to red (distressed) |
 | Yellow line | Mother-child link (own-child bond) |
 | HUD line 1 | Tick, alive mothers, alive children, condition label |
-| HUD line 2 | `genome_care` vs 1/3 baseline, `c_matr_cum`, mean generation |
+| HUD line 2 | `genome_care` vs 1/3 baseline, `c_matr_cum`, mean generation, highest generation |
 | HUD legend | Motivation ring colour key |
 
 Closing the window mid-run does **not** abort the simulation — it finishes headlessly and writes all output files normally.
@@ -653,9 +688,12 @@ All outputs → `outputs/phase5_evolution/exp_<timestamp>/`:
 
 | File | Description |
 | --- | --- |
-| `snapshots.csv` | Per-tick metrics for all seeds (seed, tick, mean_genome_care, c_matr_cum, …) |
-| `summary.json` | Final-tick summary: params + per-seed final_stats |
-| `phase5_evolution_analysis.png` | 4-panel figure: genome care weight / expressed care / innateness index / genome-behavior distance |
+| `snapshots.csv` | Snapshot metrics for all seeds at the configured `--checkpoint` interval (seed, tick, mean_genome_care, c_matr_cum, highest_generation, …) |
+| `mother_lifecycle.csv` | One row per mother lifecycle end-state (death or censoring) for cohort statistics |
+| `child_lifecycle.csv` | One row per child lifecycle end-state (death, maturation, or censoring) for cohort statistics |
+| `summary.json` | Run params + per-seed final_stats sampled at the actual final observed tick |
+| `phase5_evolution_analysis.png` | 9-panel exploratory dashboard from `snapshots.csv` |
+| `cohort_plots/` | Standalone lifecycle plots: reproductive success, maturation fraction, plasticity drift, learning cost, child TTD, mother TTD, genome care |
 
 ---
 

@@ -12,6 +12,36 @@ For the full research plan see [ROADMAP.md](./ROADMAP.md).
 
 ---
 
+## Current Priority (2026-05-11)
+
+Phase 5 core implementation is now present. The project is no longer blocked on
+building the runner / plotter scaffolding.
+
+**Current focus:**
+
+- run the updated Phase 5 conditions
+- interpret cohort statistics, not only snapshot dashboards
+- evaluate the stronger Baldwin mechanism where:
+  - global search = inherited genome mutation + selection
+  - local search = expressed motivation vector (`care`, `forage`, `self`)
+
+**Key current outputs:**
+
+- `snapshots.csv` for exploratory monitoring
+- `mother_lifecycle.csv`
+- `child_lifecycle.csv`
+- `cohort_plots/` for inferential Phase 5 analysis
+
+**Most important new metrics:**
+
+- reproductive success
+- maturation fraction
+- plasticity drift as **vector** genotype–phenotype distance
+- lifetime learning cost (update + maintenance)
+- child / mother nRMST
+
+---
+
 ## ▶ NEXT SESSION TASK LIST (read this first)
 
 ⏭️ **Phase re-runs skipped.** Proceeding directly to Block 2.
@@ -245,3 +275,58 @@ Three mechanisms implemented in `simulation/simulation.py` and `config.py`. Acti
 **Baseline values:** TBD — must be calibrated before Phase 1 re-run.
 
 **Technical detail:** [World Mechanism Updates](./CURRENT_STATE.md#world-mechanism-updates-block-2-preparation)
+
+---
+
+## Phase 5 Implementation Update (2026-05-11)
+
+This section supersedes the older "Block 2 to build" notes above.
+
+### Core status
+
+Phase 5 is now implemented and runnable. The following components are active:
+
+- `experiments/phase5_evolution/config.py`
+- `experiments/phase5_evolution/run.py`
+- `experiments/phase5_evolution/plot.py`
+- lifecycle export in `simulation/simulation.py`
+- vector local-search phenotype in `agents/mother.py`
+
+### Strong Baldwin update
+
+The Baldwin mechanism was strengthened from a care-only phenotype update to a full
+expressed motivation simplex:
+
+- `expressed_care_weight`
+- `expressed_forage_weight`
+- `expressed_self_weight`
+
+These now:
+
+- initialize from the genome
+- renormalize to sum to 1.0
+- drive CARE / FORAGE / SELF action choice directly
+- receive domain-aware local updates from action outcomes
+
+### Cost model now active in code
+
+Plasticity cost is now split into:
+
+1. **update cost** — when the expressed phenotype actually shifts
+2. **maintenance cost** — an ongoing metabolic burden for remaining plastic
+
+This makes the Baldwin tradeoff more faithful: a lineage can benefit from learning,
+but plasticity is no longer metabolically free.
+
+### Current analysis stance
+
+The preferred Phase 5 interpretation is now:
+
+- reproductive success over generation
+- offspring maturation fraction over generation
+- plasticity drift as **vector** genome–phenotype distance
+- lifetime learning cost
+- child / mother nRMST
+
+`genome.care_weight` is still useful, but it is now a supporting mechanism signal
+rather than the only criterion for success.

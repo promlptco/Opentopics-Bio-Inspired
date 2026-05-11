@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-05-09 (V3 branch)
+Last updated: 2026-05-11 (V3 branch)
 
 > ⚠ **COLLABORATOR NOTE: IF YOU DON'T KNOW, JUST ASK — NO GUESSING.**
 > Do not fill in unknown values, infer undocumented behavior, or assume parameter names.
@@ -8,15 +8,121 @@ Last updated: 2026-05-09 (V3 branch)
 
 ---
 
-## ✅ STATUS — Proceeding to Block 2 (Phase re-runs skipped)
+## ✅ STATUS — Phase 5 core implementation active
 
-**Decision:** Phase 1–4 re-runs skipped due to time constraints (deadline 2026-05-17).
+**Decision:** Phase 1–4 re-runs remain skipped due to time constraints. The current
+work focus is Phase 5 asynchronous evolution under the locked Phase 4b ecology.
 
-**Ecology baseline:** Using Phase 4b BEST_CALIBRATED ecology (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`).
+**Ecology baseline:** Phase 4b BEST_CALIBRATED
+(`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`).
 
-**Mechanism configuration:** Ecological mechanisms (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) will NOT be active at fixed baseline values. Block 2 proceeds with mechanisms disabled (0.0) — equivalent to Phase 1–4 runs.
+**Mechanism configuration:** Ecological mechanisms remain available in the engine,
+but the default Phase 5 configuration still keeps the Block 1/2 baseline stance of
+no explicit caregiving bias.
 
-**Next step:** Build Block 2 per EVO_PROPOSAL.md specification.
+**Current implementation milestone (2026-05-11):** the Baldwin mechanism is now a
+**motivation-vector local search**, not a care-only scalar update.
+
+---
+
+## Phase 5 Current State (active)
+
+### What is implemented now
+
+1. **Global search remains genetic and intergenerational**
+   - Inherited genes still mutate in [`evolution/genome.py`](./evolution/genome.py):
+     `care_weight`, `forage_weight`, `self_weight`, `learning_rate`,
+     `plasticity_coefficient`.
+   - Genome weights are renormalized after mutation so the motivation genome remains
+     a simplex.
+
+2. **Local search is now phenotype-vector based**
+   - [`MotherAgent`](./agents/mother.py) now carries:
+     - `expressed_care_weight`
+     - `expressed_forage_weight`
+     - `expressed_self_weight`
+   - These are renormalized to sum to 1.0 after every local update.
+   - Action selection in `compute_motivation_scores()` now uses the **expressed**
+     vector for CARE / FORAGE / SELF, instead of only care being phenotypic.
+
+3. **Domain-aware plasticity is active**
+   - Local updates are now domain-specific:
+     - CARE updates when caregiving succeeds or clearly fails
+     - FORAGE updates on food acquisition / weak failure penalties
+     - SELF updates on eating/rest success
+   - The local learner therefore adapts the current behavioral allocation, not just
+     caregiving intensity.
+
+4. **Plasticity cost now has two live components**
+   - **Update cost:** charged when a plasticity update occurs.
+   - **Maintenance cost:** charged every tick as
+     `plasticity_maintenance_beta * plasticity_coefficient` when plasticity is enabled.
+   - `lifetime_learning_cost` now reflects the total metabolic burden of being plastic
+     across the mother's life.
+
+5. **Lifecycle export and cohort plotting are active**
+   - Phase 5 runs now write:
+     - `snapshots.csv`
+     - `mother_lifecycle.csv`
+     - `child_lifecycle.csv`
+     - `summary.json`
+   - The cohort plotter now supports the Baldwin-aligned families:
+     - reproductive success
+     - offspring maturation fraction
+     - plasticity reliance / vector drift
+     - learning cost
+     - child nRMST / TTD
+     - mother nRMST / TTD
+     - optional genome-care support
+
+### What changed conceptually
+
+The local search is no longer “care-only learning.” It is now:
+
+- **global search** in genotype space
+- **local search** in expressed motivation space
+
+This is a stronger Baldwin interpretation because the phenotype can now redistribute
+behavioral effort across care, forage, and self within a lifetime.
+
+### What is still intentionally *not* implemented
+
+1. **No local search over all genes**
+   - Only the expressed motivation phenotype is locally updated.
+   - Deep genotype parameters are still global-search only.
+
+2. **No Lamarckian inheritance of learned phenotype**
+   - `phenotype_retention` remains present in configuration / runner plumbing, but it is
+     still not used to directly seed offspring phenotype from parental learned state.
+   - This is intentional for the current Baldwin interpretation.
+
+3. **No explicit time-cost variable for learning**
+   - Time cost remains indirect through TTD / nRMST and cohort viability.
+   - The live explicit cost is metabolic / energetic.
+
+### Active analysis semantics
+
+- `genome_behavior_distance` in snapshots is now the **total-variation distance**
+  between the genome motivation simplex and the expressed motivation simplex.
+- `plasticity_drift` in cohort plots now uses the same vector notion whenever the full
+  lifecycle columns are present.
+- `c_matr_cum` / `child_survival_rate` in `snapshots.csv` remain exploratory-only and
+  survivor-biased.
+
+### Verification completed after the update
+
+- `python -m py_compile agents\\mother.py simulation\\simulation.py experiments\\phase5_evolution\\run.py experiments\\phase5_evolution\\plot.py experiments\\phase1_mechanics_tests\\test_07_engine_fixes.py`
+  passed.
+- `python experiments\\phase1_mechanics_tests\\test_07_engine_fixes.py`
+  passed with added vector-plasticity and maintenance-cost checks.
+- Smoke outputs created successfully:
+  - `outputs/phase5_evolution/exp_20260511_211342/`
+  - `outputs/phase5_evolution/exp_20260511_211418/`
+
+### Historical sections below
+
+The remainder of this file preserves the earlier Phase 2–4 record. Those sections are
+historical context; the status above is the current Phase 5 truth.
 
 ---
 

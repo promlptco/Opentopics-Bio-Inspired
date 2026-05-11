@@ -29,6 +29,10 @@ class Simulation:
         self._mother_by_id: dict[int, MotherAgent] = {}
         self._child_by_id:  dict[int, ChildAgent]  = {}
         self._food_frac: float = 0.0  # fractional accumulator for continuous trickle
+        self.mother_lifecycle_rows: list[dict[str, object]] = []
+        self.child_lifecycle_rows: list[dict[str, object]] = []
+        self._recorded_mother_ids: set[int] = set()
+        self._recorded_child_ids: set[int] = set()
 
         random.seed(config.seed)
         np.random.seed(config.seed)
@@ -44,6 +48,7 @@ class Simulation:
                 self_weight=self.config.self_weight,
             )
             mother = MotherAgent(x, y, lineage_id=i, generation=0, genome=genome)
+            mother.birth_tick = 0
             self.mothers.append(mother)
             self._mother_by_id[mother.id] = mother
             self.world.place_entity(mother)  # mothers block movement
@@ -53,6 +58,7 @@ class Simulation:
             if self.config.children_enabled:
                 cx, cy = self._nearby_pos(x, y)
                 child = ChildAgent(cx, cy, lineage_id=i, generation=1, mother_id=mother.id)
+                child.birth_tick = 0
                 child.genome = mother.genome.mutate(
                     mutation_rate=max(self.config.mutation_rate, self.config.min_mutation_rate),
                     sigma=self.config.mutation_sigma,
@@ -98,6 +104,101 @@ class Simulation:
         for _ in range(count):
             x, y = self._random_world_pos()
             self.world.place_food(x, y)
+
+    def _record_mother_lifecycle(
+        self,
+        mother: MotherAgent,
+        event_type: str,
+        cause: str,
+        event_tick: int,
+    ) -> None:
+        if mother.id in self._recorded_mother_ids:
+            return
+        self._recorded_mother_ids.add(mother.id)
+        genome_care, genome_forage, genome_self = mother.get_genome_vector()
+        expressed_care, expressed_forage, expressed_self = mother.get_expressed_vector()
+        self.mother_lifecycle_rows.append(
+            {
+                "agent_id": mother.id,
+                "lineage_id": mother.lineage_id,
+                "generation": mother.generation,
+                "birth_tick": mother.birth_tick,
+                "event_tick": event_tick,
+                "age_at_event": mother.age,
+                "event_type": event_type,
+                "cause": cause,
+                "death_observed": int(event_type == "died"),
+                "final_energy": mother.energy,
+                "final_genome_care": genome_care,
+                "final_genome_forage": genome_forage,
+                "final_genome_self": genome_self,
+                "final_expressed_care": expressed_care,
+                "final_expressed_forage": expressed_forage,
+                "final_expressed_self": expressed_self,
+                "final_learning_rate": mother.genome.learning_rate,
+                "final_plasticity_coefficient": mother.genome.plasticity_coefficient,
+                "lifetime_learning_cost": mother.lifetime_learning_cost,
+                "lifetime_update_learning_cost": mother.lifetime_update_learning_cost,
+                "lifetime_maintenance_cost": mother.lifetime_maintenance_cost,
+                "lifetime_care_learning_cost": mother.lifetime_care_learning_cost,
+                "lifetime_forage_learning_cost": mother.lifetime_forage_learning_cost,
+                "lifetime_self_learning_cost": mother.lifetime_self_learning_cost,
+                "matured_children": mother.matured_children,
+                "total_children": mother.total_children,
+            }
+        )
+
+    def _record_child_lifecycle(
+        self,
+        child: ChildAgent,
+        event_type: str,
+        cause: str,
+        event_tick: int,
+    ) -> None:
+        if child.id in self._recorded_child_ids:
+            return
+        self._recorded_child_ids.add(child.id)
+        self.child_lifecycle_rows.append(
+            {
+                "agent_id": child.id,
+                "lineage_id": child.lineage_id,
+                "mother_id": child.mother_id,
+                "generation": child.generation,
+                "birth_tick": child.birth_tick,
+                "event_tick": event_tick,
+                "age_at_event": child.age,
+                "event_type": event_type,
+                "cause": cause,
+                "death_observed": int(event_type == "died"),
+                "final_energy": child.energy,
+                "final_genome_care": child.genome.care_weight if child.genome is not None else None,
+                "final_genome_forage": child.genome.forage_weight if child.genome is not None else None,
+                "final_genome_self": child.genome.self_weight if child.genome is not None else None,
+                "final_expressed_care": None,
+                "final_expressed_forage": None,
+                "final_expressed_self": None,
+            }
+        )
+
+    def finalize_lifecycle_rows(self, final_tick: int) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+        """Record censored survivors at the end of an observed run."""
+        for mother in self.mothers:
+            if mother.alive:
+                self._record_mother_lifecycle(
+                    mother,
+                    event_type="censored",
+                    cause="max_ticks",
+                    event_tick=final_tick,
+                )
+        for child in self.children:
+            if child.alive:
+                self._record_child_lifecycle(
+                    child,
+                    event_type="censored",
+                    cause="max_ticks",
+                    event_tick=final_tick,
+                )
+        return self.mother_lifecycle_rows, self.child_lifecycle_rows
             
     def _spawn_food_entropy(self) -> None:
         alpha = self.config.food_entropy_alpha
@@ -155,6 +256,27 @@ class Simulation:
         mother.add_move_cost(self.config.move_cost)
         mother.energy -= self.config.move_cost
         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+
+    def _apply_domain_learning(
+        self,
+        mother: MotherAgent,
+        domain: str,
+        reward: float,
+        *,
+        is_own_child: bool | None = None,
+    ) -> None:
+        if not self.config.plasticity_enabled or reward == 0.0:
+            return
+        if domain == "CARE" and self.config.plasticity_kin_conditional and not is_own_child:
+            return
+        mother.plastic_update_domain(
+            domain=domain,
+            reward=reward,
+            plastic_gain=self.config.plastic_gain,
+            energy_cost=self.config.plasticity_energy_cost,
+            noise_sigma=self.config.plasticity_noise_sigma,
+            metabolic_alpha=self.config.plasticity_metabolic_alpha,
+        )
 
     def _move_mother(self, mother: MotherAgent, new_pos: tuple[int, int], action: str) -> bool:
         old_pos = mother.pos
@@ -307,11 +429,14 @@ class Simulation:
         # 4. Update mothers
         for mother in alive_mothers:
             mother.update_state(self.config.hunger_rate, self.config.fatigue_rate)
+            if self.config.plasticity_enabled and self.config.plasticity_maintenance_beta > 0.0:
+                mother.apply_plasticity_maintenance_cost(self.config.plasticity_maintenance_beta)
             # Temperature affects children only — mother thermal drain disabled.
             # if _warm_stress > 0:
             #     mother.energy = max(0.0, mother.energy - _warm_stress)
             mother.tick_age()
             if self.config.mother_max_age is not None and mother.age >= self.config.mother_max_age:
+                mother.death_cause = "max_age"
                 mother.die()
             mother.tick_commit()
             
@@ -439,21 +564,26 @@ class Simulation:
         dead_child_ids = {c.id for c in self.children if not c.alive}
         for m in self.mothers:
             if not m.alive:
+                cause = m.death_cause or "starvation"
                 self.logger.log_death(DeathRecord(
                     tick=self.tick, agent_id=m.id, agent_type="mother",
-                    lineage_id=m.lineage_id, generation=m.generation, cause="starvation",
+                    lineage_id=m.lineage_id, generation=m.generation, cause=cause,
+                    final_energy=m.energy,
                 ))
+                self._record_mother_lifecycle(m, event_type="died", cause=cause, event_tick=self.tick)
             elif m.own_child_id in dead_child_ids:
                 # Bug #19 fix: child died — clear so mother can reproduce again
                 m.own_child_id = None
         for c in self.children:
             if not c.alive:
-                cause = "matured" if c.matured else "hunger"
+                cause = c.death_cause or ("matured" if c.matured else "starvation")
                 self.logger.log_death(DeathRecord(
                     tick=self.tick, agent_id=c.id, agent_type="child",
                     lineage_id=c.lineage_id, generation=c.generation, cause=cause,
                     final_energy=c.energy,
                 ))
+                event_type = "matured" if cause == "matured" else "died"
+                self._record_child_lifecycle(c, event_type=event_type, cause=cause, event_tick=self.tick)
         for m in self.mothers:
             if not m.alive:
                 self._mother_by_id.pop(m.id, None)
@@ -554,6 +684,12 @@ class Simulation:
                         # motivation block can switch to FORAGE next tick.
                         mother.commit_ticks = 0
                         mother.target_child_id = None
+                        self._apply_domain_learning(
+                            mother,
+                            "CARE",
+                            reward=-self.config.feed_cost,
+                            is_own_child=(target.mother_id == mother.id),
+                        )
                     else:
                         total_cost = mother.get_total_cost(self.config.feed_cost)
                         success, benefit = mother.feed_child(target, self.config.feed_cost, self.world, self.config.eat_gain)
@@ -571,25 +707,30 @@ class Simulation:
                             child_lineage_id=target.lineage_id,
                             is_own_child=(target.mother_id == mother.id),
                         ))
+                        is_own = (target.mother_id == mother.id)
                         if success:
-                            is_own = (target.mother_id == mother.id)
                             if is_own and mother.genome.care_recovery > 0:
                                 mother.energy = min(
                                     1.0,
                                     mother.energy + mother.genome.care_recovery * benefit,
                                 )
-                            if self.config.plasticity_enabled:
-                                if not self.config.plasticity_kin_conditional or is_own:
-                                    mother.plastic_update(
-                                        benefit, self.config.plastic_gain,
-                                        energy_cost=self.config.plasticity_energy_cost,
-                                        noise_sigma=self.config.plasticity_noise_sigma,
-                                        metabolic_alpha=self.config.plasticity_metabolic_alpha,
-                                    )
+                            self._apply_domain_learning(
+                                mother,
+                                "CARE",
+                                reward=benefit,
+                                is_own_child=is_own,
+                            )
                             # Change D: outcome-based commitment — release only when child sated.
                             if target.hunger < 0.3:
                                 mother.commit_ticks = 0  # child sated; release commitment
                             # else: keep commitment; tick_commit() decrements naturally
+                        else:
+                            self._apply_domain_learning(
+                                mother,
+                                "CARE",
+                                reward=-self.config.feed_cost,
+                                is_own_child=is_own,
+                            )
                 else:
                     # Move toward child (when dist > 0). Children are non-blocking so
                     # the mother moves onto their cell when dist becomes 1→0.
@@ -600,6 +741,16 @@ class Simulation:
                         detour_action="CARE_DETOUR",
                         failed_action="FAILED_CARE_PATH",
                     )
+                    if mother.last_action == "FAILED_CARE_PATH":
+                        self._apply_domain_learning(
+                            mother,
+                            "CARE",
+                            reward=-self.config.move_cost,
+                            is_own_child=(target.mother_id == mother.id),
+                        )
+            else:
+                mother.last_action = "FAILED_CARE_TARGET"
+                self._apply_domain_learning(mother, "CARE", reward=-self.config.move_cost, is_own_child=False)
         
         elif domain == "forage":
             # FORAGE = food procurement only (pick or navigate). Eating is handled in SELF
@@ -615,6 +766,11 @@ class Simulation:
             elif mother.pos in self.world.food_positions:
                 if mother.pick_food(self.world):
                     mother.last_action = "PICK"
+                    self._apply_domain_learning(
+                        mother,
+                        "FORAGE",
+                        reward=self.config.eat_gain,
+                    )
                     if self.config.food_entropy_alpha > 0:
                         self.world.deplete_patch(*mother.pos, self.config.food_entropy_beta)
                     elif self.config.food_replace_on_pick:
@@ -631,6 +787,12 @@ class Simulation:
                         detour_action="FORAGE_DETOUR",
                         failed_action="FAILED_FORAGE_PATH",
                     )
+                    if mother.last_action == "FAILED_FORAGE_PATH":
+                        self._apply_domain_learning(
+                            mother,
+                            "FORAGE",
+                            reward=-self.config.move_cost,
+                        )
                 else:
                     # No visible food: wander stochastically instead of freezing in place.
                     # This keeps search behavior emergent and seed-sensitive while reducing
@@ -645,19 +807,41 @@ class Simulation:
                             pass
                         else:
                             mother.last_action = "FAILED_FORAGE"
+                            self._apply_domain_learning(
+                                mother,
+                                "FORAGE",
+                                reward=-self.config.move_cost,
+                            )
                     else:
                         mother.last_action = "FAILED_FORAGE"
+                        self._apply_domain_learning(
+                            mother,
+                            "FORAGE",
+                            reward=-self.config.move_cost,
+                        )
 
         elif domain == "self":
             # SELF = self-maintenance. Eat held food first (self_cue fires when energy is
             # low, so the 0.5 gain is used efficiently). Rest only when no food in hand.
             # LOGIC.md Section 3.3: REST reduces fatigue, not energy — indirect benefit only.
             if mother.held_food > 0:
+                pre_energy = mother.energy
                 mother.eat(self.config.eat_gain)
                 mother.last_action = "EAT"
+                self._apply_domain_learning(
+                    mother,
+                    "SELF",
+                    reward=max(0.0, mother.energy - pre_energy),
+                )
             else:
+                pre_fatigue = mother.fatigue
                 mother.rest(self.config.rest_recovery)
                 mother.last_action = "REST"
+                self._apply_domain_learning(
+                    mother,
+                    "SELF",
+                    reward=max(0.0, pre_fatigue - mother.fatigue),
+                )
     
     def _nearest_food(self, pos: tuple[int, int]) -> tuple[int, int] | None:
         if not self.world.food_positions:
@@ -717,6 +901,7 @@ class Simulation:
                 # Mark matured BEFORE die() so the cleanup block logs cause="matured"
                 # rather than cause="hunger" (R05 fix).
                 child.matured = True
+                child.death_cause = "matured"
                 child.die()
                 self._child_by_id.pop(child.id, None)
                 self.world.remove_entity(child.id)
@@ -731,6 +916,7 @@ class Simulation:
                     generation=child.generation,
                     genome=genome
                 )
+                new_mother.birth_tick = self.tick
                 # A matured child becomes a new mother, but should not be able to
                 # reproduce again in the same tick it enters the adult pool.
                 new_mother.cooldown = self.config.reproduction_cooldown
@@ -753,6 +939,7 @@ class Simulation:
             cx, cy = self._birth_pos(mother.x, mother.y)
             new_gen = mother.generation + 1
             child = ChildAgent(cx, cy, mother.lineage_id, new_gen, mother.id)
+            child.birth_tick = self.tick
             child.genome = mother.genome.mutate(
                 mutation_rate=max(self.config.mutation_rate, self.config.min_mutation_rate),
                 sigma=self.config.mutation_sigma,

@@ -114,7 +114,7 @@ class EvolutionRunner:
         if not self._params.headless:
             if self._params.seeds != 1:
                 print(
-                    f"[vis] seeds={self._params.seeds} ignored — "
+                    f"[vis] seeds={self._params.seeds} ignored - "
                     "visualization requires 1 seed. Pass --headless for multi-seed runs."
                 )
             results = [self._execute_single_visual(self._params.seed_start)]
@@ -138,15 +138,15 @@ class EvolutionRunner:
                 seed = futures[future]
                 try:
                     results.append(future.result())
-                    print(f"✓ Seed {seed} complete")
+                    print(f"[ok] Seed {seed} complete")
                 except Exception as exc:
-                    print(f"✗ Seed {seed} failed: {exc}")
+                    print(f"[fail] Seed {seed} failed: {exc}")
 
         self.save(results, output_dir)
         return results
 
     def save(self, results: list[dict], output_dir: Path) -> None:
-        """Write snapshots.csv and summary.json to output_dir.
+        """Write snapshots.csv, lifecycle CSVs, and summary.json to output_dir.
 
         Args:
             results: List of per-seed result dicts from run_sweep().
@@ -154,6 +154,8 @@ class EvolutionRunner:
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         self._write_snapshots_csv(results, output_dir / "snapshots.csv")
+        self._write_lifecycle_csv(results, output_dir / "mother_lifecycle.csv", "mother_lifecycle_rows")
+        self._write_lifecycle_csv(results, output_dir / "child_lifecycle.csv", "child_lifecycle_rows")
         self._write_summary_json(results, output_dir / "summary.json")
 
     # ------------------------------------------------------------------
@@ -211,8 +213,10 @@ class EvolutionRunner:
         sim.initialize(genomes=self._initial_genomes(cfg.init_mothers))
 
         snapshots: list[dict] = []
+        final_tick = 0
         for tick in range(p.max_ticks):
             sim.step()
+            final_tick = tick
 
             if self._should_sample_tick(tick):
                 snapshots.append(self._sample(sim, tick))
@@ -221,24 +225,16 @@ class EvolutionRunner:
                 print(f"Seed {seed}: extinction at tick {tick}")
                 break
 
+        mother_rows, child_rows = sim.finalize_lifecycle_rows(final_tick)
+
         return {
             "seed": seed,
             "snapshots": snapshots,
-            "final_stats": self._sample(sim, p.max_ticks - 1),
-            "params": {
-                "mutation_enabled": p.mutation_enabled,
-                "plasticity_enabled": p.plasticity_enabled,
-                "mutation_rate": p.mutation_rate,
-                "mutation_sigma": p.mutation_sigma,
-                "learning_rate": p.learning_rate,
-                "plasticity_coefficient": p.plasticity_coefficient,
-                "phenotype_retention": p.phenotype_retention,
-                "max_ticks": p.max_ticks,
-                "relax_ecology": p.relax_ecology,
-                "checkpoint": p.checkpoint,
-                "cell_size": p.cell_size,
-                "circle_world": p.circle_world,
-            },
+            "final_stats": self._sample(sim, final_tick),
+            "actual_final_tick": final_tick,
+            "mother_lifecycle_rows": mother_rows,
+            "child_lifecycle_rows": child_rows,
+            "params": self._build_params_record(cfg),
         }
 
     def _execute_single_visual(self, seed: int) -> dict:
@@ -297,10 +293,12 @@ class EvolutionRunner:
         snapshots: list[dict] = []
         last_snapshot: dict = {}
         window_open = True
+        final_tick = 0
 
         try:
             for tick in range(p.max_ticks):
                 sim.step()
+                final_tick = tick
 
                 if self._should_sample_tick(tick):
                     last_snapshot = self._sample(sim, tick)
@@ -315,24 +313,16 @@ class EvolutionRunner:
         finally:
             viewer.close()
 
+        mother_rows, child_rows = sim.finalize_lifecycle_rows(final_tick)
+
         return {
             "seed": seed,
             "snapshots": snapshots,
-            "final_stats": self._sample(sim, p.max_ticks - 1),
-            "params": {
-                "mutation_enabled":       p.mutation_enabled,
-                "plasticity_enabled":     p.plasticity_enabled,
-                "mutation_rate":          p.mutation_rate,
-                "mutation_sigma":         p.mutation_sigma,
-                "learning_rate":          p.learning_rate,
-                "plasticity_coefficient": p.plasticity_coefficient,
-                "phenotype_retention":    p.phenotype_retention,
-                "max_ticks":              p.max_ticks,
-                "relax_ecology":          p.relax_ecology,
-                "checkpoint":             p.checkpoint,
-                "cell_size":              p.cell_size,
-                "circle_world":           p.circle_world,
-            },
+            "final_stats": self._sample(sim, final_tick),
+            "actual_final_tick": final_tick,
+            "mother_lifecycle_rows": mother_rows,
+            "child_lifecycle_rows": child_rows,
+            "params": self._build_params_record(cfg),
         }
 
     def _should_sample_tick(self, tick: int) -> bool:
@@ -378,15 +368,21 @@ class EvolutionRunner:
         mothers  = sim.mothers
         children = sim.children
 
-        genome_care       = [m.genome.care_weight         for m in mothers]
-        expressed_care    = [m.expressed_care_weight       for m in mothers]
-        learning_rates    = [m.genome.learning_rate        for m in mothers]
+        genome_vectors    = [m.get_genome_vector()          for m in mothers]
+        genome_care       = [vec[0]                         for vec in genome_vectors]
+        genome_forage     = [vec[1]                         for vec in genome_vectors]
+        genome_self       = [vec[2]                         for vec in genome_vectors]
+        expressed_care    = [m.expressed_care_weight        for m in mothers]
+        expressed_forage  = [m.expressed_forage_weight      for m in mothers]
+        expressed_self    = [m.expressed_self_weight        for m in mothers]
+        learning_rates    = [m.genome.learning_rate         for m in mothers]
         plasticity_coeffs = [m.genome.plasticity_coefficient for m in mothers]
-        mother_energies   = [m.energy                      for m in mothers]
-        generations       = [m.generation                  for m in mothers]
+        mother_energies   = [m.energy                        for m in mothers]
+        learning_costs    = [m.lifetime_learning_cost        for m in mothers]
+        generations       = [m.generation                    for m in mothers]
 
         mean_pc   = float(np.mean(plasticity_coeffs)) if plasticity_coeffs else 0.0
-        distances = [abs(e - g) for e, g in zip(expressed_care, genome_care)]
+        distances = [m.genome_behavior_distance() for m in mothers]
         highest_generation = int(max(generations)) if generations else 0
 
         total_matured = sum(m.matured_children for m in mothers)
@@ -399,20 +395,50 @@ class EvolutionRunner:
             "n_children":             len(children),
             "mean_genome_care":       float(np.mean(genome_care))       if genome_care       else 0.0,
             "std_genome_care":        float(np.std(genome_care))        if genome_care       else 0.0,
+            "mean_genome_forage":     float(np.mean(genome_forage))     if genome_forage     else 0.0,
+            "std_genome_forage":      float(np.std(genome_forage))      if genome_forage     else 0.0,
+            "mean_genome_self":       float(np.mean(genome_self))       if genome_self       else 0.0,
+            "std_genome_self":        float(np.std(genome_self))        if genome_self       else 0.0,
             "mean_expressed_care":    float(np.mean(expressed_care))    if expressed_care    else 0.0,
             "std_expressed_care":     float(np.std(expressed_care))     if expressed_care    else 0.0,
+            "mean_expressed_forage":  float(np.mean(expressed_forage))  if expressed_forage  else 0.0,
+            "std_expressed_forage":   float(np.std(expressed_forage))   if expressed_forage  else 0.0,
+            "mean_expressed_self":    float(np.mean(expressed_self))    if expressed_self    else 0.0,
+            "std_expressed_self":     float(np.std(expressed_self))     if expressed_self    else 0.0,
             "mean_learning_rate":     float(np.mean(learning_rates))    if learning_rates    else 0.0,
             "std_learning_rate":      float(np.std(learning_rates))     if learning_rates    else 0.0,
             "mean_plasticity":        mean_pc,
             "std_plasticity":         float(np.std(plasticity_coeffs))  if plasticity_coeffs else 0.0,
             "innateness_index":       1.0 - mean_pc,
             "genome_behavior_distance": float(np.mean(distances))       if distances         else 0.0,
+            "mean_learning_cost":     float(np.mean(learning_costs))    if learning_costs    else 0.0,
             "mean_mother_energy":     float(np.mean(mother_energies))   if mother_energies   else 0.0,
             "mean_child_energy":      float(np.mean([c.energy for c in children])) if children else 0.0,
             "mean_generation":        float(np.mean(generations))       if generations       else 0.0,
             "highest_generation":     highest_generation,
             "child_survival_rate":    child_survival_rate,
             "c_matr_cum":             child_survival_rate,
+        }
+
+    def _build_params_record(self, cfg) -> dict:
+        """Persist both run knobs and analysis horizons used by the engine."""
+        p = self._params
+        return {
+            "mutation_enabled": p.mutation_enabled,
+            "plasticity_enabled": p.plasticity_enabled,
+            "mutation_rate": p.mutation_rate,
+            "mutation_sigma": p.mutation_sigma,
+            "learning_rate": p.learning_rate,
+            "plasticity_coefficient": p.plasticity_coefficient,
+            "phenotype_retention": p.phenotype_retention,
+            "plasticity_local_search": "motivation_vector",
+            "max_ticks": p.max_ticks,
+            "relax_ecology": p.relax_ecology,
+            "checkpoint": p.checkpoint,
+            "cell_size": p.cell_size,
+            "circle_world": p.circle_world,
+            "maturity_age": cfg.maturity_age,
+            "mother_max_age": cfg.mother_max_age,
         }
 
     # ------------------------------------------------------------------
@@ -443,6 +469,22 @@ class EvolutionRunner:
         print(f"Wrote snapshots to {path}")
 
     @staticmethod
+    def _write_lifecycle_csv(results: list[dict], path: Path, key: str) -> None:
+        """Write one combined lifecycle CSV across all seeds."""
+        with open(path, "w", newline="") as f:
+            writer = None
+            for result in results:
+                seed = result["seed"]
+                for row in result.get(key, []):
+                    record = dict(row)
+                    record["seed"] = seed
+                    if writer is None:
+                        writer = csv.DictWriter(f, fieldnames=list(record.keys()))
+                        writer.writeheader()
+                    writer.writerow(record)
+        print(f"Wrote lifecycle rows to {path}")
+
+    @staticmethod
     def _write_summary_json(results: list[dict], path: Path) -> None:
         """Write run summary (params + per-seed final stats) to JSON.
 
@@ -452,6 +494,8 @@ class EvolutionRunner:
         """
         summary = {
             "n_seeds":    len(results),
+            "seeds": [r["seed"] for r in results],
+            "actual_final_ticks": [r.get("actual_final_tick", 0) for r in results],
             "final_stats": [r["final_stats"] for r in results],
             "params":      results[0]["params"] if results else {},
         }
@@ -564,7 +608,7 @@ def main() -> None:
 
     runner = EvolutionRunner(params)
     results = runner.run_sweep(output_dir)
-    print(f"✓ Sweep complete: {len(results)} seeds")
+    print(f"[ok] Sweep complete: {len(results)} seeds")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
 > Do not fill in unknown values, infer undocumented behavior, or assume parameter names.
 > Read the actual source files before writing anything.
 
-Last updated: 2026-05-09
+Last updated: 2026-05-11
 Branch: V3
 Deadline: 2026-05-17
 
@@ -12,12 +12,36 @@ Deadline: 2026-05-17
 
 ## Research Question (Locked)
 
-Can maternal-care instinct emerge from selfish-lineage selection under asynchronous evolution,
-without a dedicated altruism gene?
+Can kin-directed maternal caregiving emerge from selfish-lineage persistence under
+asynchronous evolution, without a dedicated altruism gene or hardcoded altruistic policy?
+
+**Scope statement (locked):**
+This project does **not** search for the "best mother." It builds a highly stochastic
+world with **no explicit caregiving bias** and asks whether caregiving emerges cleanly
+under ecological pressure. Selection pressure primarily favors selfish lineage
+persistence. If a stable caregiving strategy appears, we interpret it as a
+**world-specific local optimum**, not a universal optimum.
 
 **Implicit fitness (locked):**
-`C_matr` — cumulative child maturation rate (matured / (matured + hunger_dead)).
-No explicit fitness function. Ecological pressure is the only selector.
+No explicit reward function is optimized. Ecological pressure is the only selector.
+Primary Phase 5 interpretation will use **cohort-level lineage viability**:
+
+- child survival / maturation viability
+- mother persistence
+- cohort fitness (matured offspring per mother cohort)
+- plasticity dependence over generations
+
+The current tick-snapshot `c_matr_cum` in `snapshots.csv` is exploratory only and is
+not the final inferential fitness statistic.
+
+**Baldwin decomposition (locked):**
+
+- **Global search** = inherited genome mutation + selection across generations
+- **Local search** = within-life adjustment of the expressed motivation vector
+  (`care`, `forage`, `self`)
+- **Learning cost** = energetic burden of plastic updates plus plasticity maintenance
+- **Not in scope** = local search over all genes, or direct inheritance of learned phenotype
+- `phenotype_retention` remains reserved / inactive for the current non-Lamarckian interpretation
 
 ---
 
@@ -34,13 +58,13 @@ No explicit fitness function. Ecological pressure is the only selector.
                      │  Phase 4b BEST_CALIBRATED locked
                      ▼
 ┌─────────────────────────────────────────────────────┐
-│  BLOCK 2 — Baldwin Emergence    (🔨 TO BUILD)       │
+│  BLOCK 2 — Emergence Under Eco Pressure (🔨 TO BUILD)│
 │  Init genome: care=forage=self=1/3 (sum=1).         │
 │  Renormalize genome after every mutation.           │
 │  Ecology: Phase 4b BEST_CALIBRATED.                 │
-│  Mechanisms: disabled (0.0).                        │
+│  Keep world stochastic / minimally hardcoded.       │
 │  Run ~100 generations, multi-seed.                  │
-│  Baldwin test: plasticity ON vs OFF.                │
+│  Compare plasticity ON vs OFF.                      │
 └────────────────────┬────────────────────────────────┘
                      │  evolved genome weights
                      ▼
@@ -55,6 +79,10 @@ No explicit fitness function. Ecological pressure is the only selector.
 
 ---
 
+**Status note (2026-05-11):** the block schematic is historical. In code, Block 2
+software is now implemented; the remaining work is experiment execution and
+interpretation.
+
 ## Software Architecture (Scalability Contract)
 
 All three blocks run on the **same core engine**. No phase-specific logic lives in `simulation.py`.
@@ -64,9 +92,9 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 | Config (Phase 1–4) | `config.py` | **FROZEN** — `Config` dataclass, all Phase 1–4 parameters |
 | Config (Phase 5+) | `experiments/phase5_evolution/config.py` | `Phase5ConfigFactory` — static factory; loads Phase 4b JSON, builds `Config` |
 | Runner (Phase 5+) | `experiments/phase5_evolution/run.py` | `RunParams` dataclass + `EvolutionRunner` class; parallel sweep + snapshot capture |
-| Plotter (Phase 5+) | `experiments/phase5_evolution/plot.py` | `EvolutionPlotter` class — reads CSVs only, no simulation dependency |
+| Plotter (Phase 5+) | `experiments/phase5_evolution/plot.py` | Exploratory snapshot dashboard + lifecycle/cohort plotter |
 | Engine | `simulation/simulation.py` | Generic `Simulation(config)` — used by all phases/blocks |
-| Agents | `agents/mother.py`, `agents/child.py` | OOP agents; plasticity wiring in `mother.py` |
+| Agents | `agents/mother.py`, `agents/child.py` | OOP agents; phenotype-vector plasticity wiring in `mother.py` |
 | Evolution | `evolution/genome.py` | `Genome` dataclass + `_mutate_gene()` + `_renormalize()` private statics |
 
 **Key contracts:**
@@ -112,7 +140,7 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 | Starting genome | `care = forage = self = 1/3` — normalized sum = 1, neutral, no pre-baked bias |
 | Genome mutation | After every mutation: renormalize by sum → weights always sum to 1.0 |
 | Ecology | Phase 4b BEST_CALIBRATED (`outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json`) |
-| Mechanisms | Same baseline values as Block 1 (food_entropy_alpha, cry_decay_radius, temperature_sensitivity) |
+| Mechanisms | Same baseline values as Block 1; avoid extra hardcoded prosocial rules |
 | Evolution | mutation ON, reproduction ON |
 | Plasticity (primary) | OFF |
 | Plasticity (control) | ON — for Baldwin comparison |
@@ -120,7 +148,29 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 | Control seeds | 30 |
 | Sweep seeds | 3 |
 
-**Why 1/3 each?** Genome is normalized to sum=1, so 1/3 each = equal budget shares = perfectly neutral start. Any rise in `mean_genome_care_weight` above 1/3 is pure ecological selection. `genome.care_weight` IS the effective care share directly — no conversion needed.
+**Why 1/3 each?** Genome is normalized to sum=1, so 1/3 each = equal budget shares = perfectly neutral start. This keeps the world-builder claim clean: no pre-baked caregiving bias is injected into the starting population.
+
+**Current local-search implementation:**
+
+- Mothers carry an expressed motivation simplex:
+  - `expressed_care_weight`
+  - `expressed_forage_weight`
+  - `expressed_self_weight`
+- Action selection uses that expressed simplex directly.
+- Local updates are domain-aware:
+  - CARE learns from caregiving outcomes
+  - FORAGE learns from resource-acquisition outcomes
+  - SELF learns from self-maintenance outcomes
+- The expressed simplex renormalizes after each update.
+- The inherited genome remains the baseline and mutation substrate.
+
+### Interpretive stance
+
+- We are **not** hand-constructing an optimal caregiver.
+- We are **not** hardcoding altruism into the action policy.
+- The mother is implicitly selfish at the lineage level: preserve her genes as long as possible.
+- Under ecological pressure, that selfish lineage logic may still produce **kin-directed altruistic-looking behavior** toward her own child.
+- Future work may study environmental sensitivity and epigenetic-like modulation, but that is **outside the scope of this project**.
 
 ### Control Matrix (4 conditions)
 
@@ -142,33 +192,85 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 
 ### Success Criteria
 
-1. `mut_on_plast_off`: `mean_genome_care_weight` rises above 1/3 over ~100 generations.
-2. `mut_off_plast_off`: care_weight stays flat at 1/3 (no drift, no selection).
-3. `C_matr` improves over generations in mutation-ON only.
-4. Baldwin signal: `mut_on_plast_on` shows faster early C_matr rise, converges to same endpoint as `mut_on_plast_off`.
+**Primary Block 2 criterion:**
 
-### Tracked Metrics (per snapshot tick)
+1. A caregiving-capable lineage remains viable over a shared multi-seed generation window without heavy hardcoding.
+2. Cohort reproductive success stabilizes at a non-zero level:
+   `reproductive_success(seed s, generation g) = matured offspring of cohort g / mothers in cohort g`.
+3. Offspring maturation fraction remains viable:
+   `maturation_fraction(seed s, generation g) = matured offspring of cohort g / total children born to cohort g`.
+4. In plasticity-ON conditions, learning reliance and/or learning cost drop while reproductive success remains stable.
+5. Own-lineage child outcomes remain viable (child survival / maturation does not collapse to extinction).
+
+**Supporting mechanism criteria:**
+
+6. Any heritable shift (including but not limited to `genome.care_weight`) is evidence about the substrate carrying the behavior.
+7. If `mean genome care share` rises above the neutral baseline, that is a useful supporting signal — but it is **not the sole definition of success**.
+
+### Metrics
+
+#### A. Exploratory snapshot metrics (tick-based, survivor-biased; dashboard only)
 
 | Metric | Description |
 | --- | --- |
-| `mean_genome_care_weight` | Genetic drift / selection signal |
-| `mean_expressed_care_weight` | Phenotypic signal (plasticity-ON runs only) |
-| `innateness_index` | `1 - mean(plasticity_coefficient)` — genetic assimilation signal |
-| `genome_behavior_distance` | `mean(\|expressed - genome\|)` — decreasing = learned → innate |
-| `c_matr_cum` | Cumulative child maturation rate |
-| `n_alive_mothers` | Population health |
-| `mean_mother_energy` | Mother energy dynamics |
-| `mean_child_energy` | Child energy dynamics |
-| `mean_generation` | Async generation clock |
+| `mean_genome_care_weight` | Mean genome care among currently alive mothers |
+| `mean_expressed_care_weight` | Mean expressed care among currently alive mothers |
+| `innateness_index` | `1 - mean(plasticity_coefficient)` among currently alive mothers |
+| `genome_behavior_distance` | mean total-variation distance between expressed and genome motivation vectors among currently alive mothers |
+| `c_matr_cum` | Current cumulative child maturation proxy from living mothers only |
+| `n_alive_mothers`, `n_alive_children` | Population state |
+| `mean_mother_energy`, `mean_child_energy` | Tick-level energy state |
+| `mean_generation`, `highest_generation` | Async generation clock |
 
-### Figures
+#### B. Inferential lifecycle / cohort metrics (Phase 5 statistical analysis)
 
-| Figure | Content |
+These are the metrics to use for statistical claims. Seed is the replicate; generation is the cohort index.
+
+| Metric | Definition |
 | --- | --- |
-| `fig1_baldwin_template.png` | 4-panel: genome care_weight / plasticity drift / C_matr / mean energy vs generation |
-| `fig2_control_endpoints.png` | Endpoint box plots across 4 conditions |
-| `fig3_sweep_heatmap.png` | C_matr endpoint across mutation_rate × sigma grid |
-| `fig4_assimilation.png` | innateness_index + genome_behavior_distance over generations |
+| `reproductive_success_s,g` | matured offspring of cohort `g` in seed `s` / mothers in cohort `g` |
+| `maturation_fraction_s,g` | matured offspring of cohort `g` in seed `s` / total children born to cohort `g` |
+| `plasticity_drift_s,g` | mean total-variation distance between the final expressed motivation vector and the genome motivation vector for mothers in cohort `g` |
+| `learning_cost_s,g` | mean lifetime plasticity cost for mothers in cohort `g` = update cost + maintenance cost |
+| `child_nRMST_s,g` | normalized restricted mean survival time for children in cohort `g`, horizon = `maturity_age` |
+| `mother_nRMST_s,g` | normalized restricted mean survival time for mothers in cohort `g`, horizon = verified mother lifespan horizon |
+| `genome_care_s,g` | optional supporting metric: mean `genome.care_weight` of mothers in cohort `g` |
+
+### Planned outputs
+
+**Primary statistical plot families (66 plots total):**
+
+- Reproductive success over generation
+- Offspring maturation fraction over generation
+- Plasticity reliance / drift over generation
+- Learning cost over generation
+- Mean child time to death / nRMST over generation
+- Mean mother time to death / nRMST over generation
+
+For each family:
+- 10 individual seed plots
+- 1 overall plot with mean ± 95% CI across seeds
+
+**Optional supporting family (adds 11 more plots, total = 77):**
+
+- Mean genome care share over generation
+
+This supporting family is recommended because it directly visualizes which inherited substrate is changing, but it is not the only success criterion.
+
+### Data requirement for inferential plots
+
+`snapshots.csv` is insufficient for the cohort plot framework. Phase 5 statistical analysis requires lifecycle tables:
+
+- `mother_lifecycle.csv` — one row per mother end-state
+- `child_lifecycle.csv` — one row per child death or maturation
+
+Minimum fields:
+
+`seed, agent_id, agent_type, generation, birth_tick, event_tick, event_type, cause, final_genome_care, final_genome_forage, final_genome_self, final_expressed_care, final_expressed_forage, final_expressed_self`
+
+Mother rows also need:
+
+`matured_children, total_children, lifetime_learning_cost, lifetime_update_learning_cost, lifetime_maintenance_cost`
 
 ---
 
@@ -208,6 +310,16 @@ All three blocks run on the **same core engine**. No phase-specific logic lives 
 - Higher `temperature_sensitivity`: does thermal pressure compete with care for energy budget?
 - What combination of pressures breaks the evolved care behavior?
 
+### Future-work note
+
+Block 3 is the natural home for world sensitivity analysis and later epigenetic-like extensions:
+
+- how different worlds pull behavior toward different local optima
+- whether environmental structure changes the inherited substrate carrying caregiving
+- whether stochastic environmental pressures improve or degrade the emergent strategy
+
+These questions are **future work**, not part of the current Block 2 claim.
+
 ### Figures
 
 | Figure | Content |
@@ -246,6 +358,9 @@ outputs/
             snapshots.csv
             summary.json
             phase5_evolution_analysis.png
+            mother_lifecycle.csv
+            child_lifecycle.csv
+            cohort_plots/
 ```
 
 Phase 4b JSON is the only cross-phase input to Block 2. No other Phase 4 outputs are loaded.
@@ -274,7 +389,7 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --m
 $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.run --seeds 30 --max-ticks 40000 --mutation-enabled false --plasticity-enabled false --workers 6
 ```
 
-**Plots only (from existing output dir):**
+**Exploratory plots only (from existing output dir):**
 ```powershell
 $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir outputs/phase5_evolution/exp_<timestamp>
 ```
@@ -297,14 +412,17 @@ $env:MPLBACKEND='Agg'; python -m experiments.phase5_evolution.plot --input-dir o
 - [x] `experiments/phase5_evolution/__init__.py` — module marker
 - [x] `experiments/phase5_evolution/config.py` — `Phase5ConfigFactory` (static class, loads Phase 4b JSON)
 - [x] `experiments/phase5_evolution/run.py` — `RunParams` + `EvolutionRunner` (OOP, parallel sweep)
-- [x] `experiments/phase5_evolution/plot.py` — `EvolutionPlotter` (OOP, CSV-only)
+- [x] `experiments/phase5_evolution/plot.py` — exploratory `snapshots.csv` dashboard
 - [x] `evolution/genome.py` — OOP refactor: `_mutate_gene`, `_renormalize` static helpers; `lock_learning_rate`
 - [x] `agents/mother.py` — guard clauses + docstrings in Phase 5 methods
 - [ ] Smoke test (1 seed, 500 ticks): no crash, `snapshots.csv` generated
 - [ ] Pilot run (5 seeds, 5k ticks, `--relax-ecology true`): no extinction, plots render
 - [ ] Control matrix 4-condition × 30-seed run (40k ticks each)
-- [ ] Baldwin signal confirmed or refuted (`mean_genome_care > 1/3` in `mut_on_plast_off`)
-- [ ] Stats: Mann-Whitney endpoint test + rank-biserial effect size
+- [x] Lifecycle log export (`mother_lifecycle.csv`, `child_lifecycle.csv`)
+- [x] Cohort statistical plotter (44 primary plots; optional +11 support plots)
+- [ ] Emergence / assimilation criterion confirmed or refuted:
+  viable cohort fitness + reduced plasticity dependence under ecological pressure
+- [ ] Supporting mechanism check: identify which inherited substrate, if any, carries the stabilized behavior
 
 ### Status: Block 3 — Eco Pressure
 

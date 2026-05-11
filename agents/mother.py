@@ -48,7 +48,10 @@ class MotherAgent(Agent):
         super().__init__(x, y, lineage_id, generation)
 
         self.genome: Genome = genome
-        self.expressed_care_weight: float = genome.care_weight  # phenotypic; genome.care_weight is heritable
+        self.expressed_care_weight: float = genome.care_weight
+        self.expressed_forage_weight: float = genome.forage_weight
+        self.expressed_self_weight: float = genome.self_weight
+        self._renormalize_expressed_weights()
 
         self.stress: float = 0.0
         self.fatigue: float = 0.0
@@ -65,10 +68,58 @@ class MotherAgent(Agent):
         self.last_pos: tuple[int, int] | None = None
         self.last_motivation: str = "FORAGE"
         self.last_action: str = "NONE"
+        self.last_learning_domain: str | None = None
         self.last_learning_delta: float = 0.0
         self.lifetime_learning_cost: float = 0.0
+        self.lifetime_update_learning_cost: float = 0.0
+        self.lifetime_maintenance_cost: float = 0.0
+        self.lifetime_care_learning_cost: float = 0.0
+        self.lifetime_forage_learning_cost: float = 0.0
+        self.lifetime_self_learning_cost: float = 0.0
         self.total_children: int = 0
         self.matured_children: int = 0
+
+    def _renormalize_expressed_weights(self) -> None:
+        total = (
+            max(0.0, self.expressed_care_weight)
+            + max(0.0, self.expressed_forage_weight)
+            + max(0.0, self.expressed_self_weight)
+        )
+        if total <= 0.0:
+            self.expressed_care_weight = 1 / 3
+            self.expressed_forage_weight = 1 / 3
+            self.expressed_self_weight = 1 / 3
+            return
+        self.expressed_care_weight = max(0.0, self.expressed_care_weight) / total
+        self.expressed_forage_weight = max(0.0, self.expressed_forage_weight) / total
+        self.expressed_self_weight = max(0.0, self.expressed_self_weight) / total
+
+    def get_expressed_vector(self) -> tuple[float, float, float]:
+        return (
+            self.expressed_care_weight,
+            self.expressed_forage_weight,
+            self.expressed_self_weight,
+        )
+
+    def get_genome_vector(self) -> tuple[float, float, float]:
+        total = (
+            max(0.0, self.genome.care_weight)
+            + max(0.0, self.genome.forage_weight)
+            + max(0.0, self.genome.self_weight)
+        )
+        if total <= 0.0:
+            return (1 / 3, 1 / 3, 1 / 3)
+        return (
+            max(0.0, self.genome.care_weight) / total,
+            max(0.0, self.genome.forage_weight) / total,
+            max(0.0, self.genome.self_weight) / total,
+        )
+
+    def genome_behavior_distance(self) -> float:
+        """Return total-variation distance between genome and expressed simplex."""
+        expressed = self.get_expressed_vector()
+        genome = self.get_genome_vector()
+        return 0.5 * sum(abs(e - g) for e, g in zip(expressed, genome))
 
     # ============================================================
     # Tracking Movement Cost
@@ -116,10 +167,10 @@ class MotherAgent(Agent):
         return effective_weight * child.distress
 
     def calc_forage_motivation(self) -> float:
-        return self.genome.forage_weight * (1.0 - self.energy)
+        return self.expressed_forage_weight * (1.0 - self.energy)
 
     def calc_self_motivation(self) -> float:
-        return self.genome.self_weight * (self.stress + self.fatigue) / 2.0
+        return self.expressed_self_weight * (self.stress + self.fatigue) / 2.0
 
     def choose_domain(self, visible_children: list[ChildAgent]) -> str:
         """
@@ -234,8 +285,8 @@ class MotherAgent(Agent):
         )
         self_cue = self.compute_self_cue()
 
-        fw = max(0.0, self.genome.forage_weight)
-        sw = max(0.0, self.genome.self_weight)
+        fw = max(0.0, self.expressed_forage_weight)
+        sw = max(0.0, self.expressed_self_weight)
         cw = max(0.0, self.expressed_care_weight) if care_enabled else 0.0
 
         w_total = fw + sw + cw
@@ -348,6 +399,66 @@ class MotherAgent(Agent):
     # Plasticity
     # ============================================================
 
+    def _record_learning_cost(self, domain: str, cost: float, is_maintenance: bool = False) -> None:
+        if cost <= 0.0:
+            return
+        self.lifetime_learning_cost += cost
+        if is_maintenance:
+            self.lifetime_maintenance_cost += cost
+            return
+        self.lifetime_update_learning_cost += cost
+        if domain == "CARE":
+            self.lifetime_care_learning_cost += cost
+        elif domain == "FORAGE":
+            self.lifetime_forage_learning_cost += cost
+        elif domain == "SELF":
+            self.lifetime_self_learning_cost += cost
+
+    def apply_plasticity_maintenance_cost(self, plasticity_beta: float) -> float:
+        """Charge the ongoing metabolic burden of remaining plastic."""
+        beta = max(0.0, plasticity_beta)
+        coefficient = max(0.0, self.genome.plasticity_coefficient)
+        cost = beta * coefficient
+        if cost <= 0.0:
+            return 0.0
+        self.energy -= cost
+        self._record_learning_cost("MAINTENANCE", cost, is_maintenance=True)
+        return cost
+
+    def plastic_update_domain(
+        self,
+        domain: str,
+        reward: float,
+        plastic_gain: float,
+        energy_cost: float = 0.0,
+        noise_sigma: float = 0.0,
+        metabolic_alpha: float | None = None,
+    ) -> None:
+        domain = domain.upper()
+        if domain not in {"CARE", "FORAGE", "SELF"}:
+            raise ValueError(f"Unknown plasticity domain: {domain}")
+
+        if noise_sigma > 0.0:
+            reward = reward * max(0.0, 1.0 + random.gauss(0, noise_sigma))
+        sensitivity = max(0.0, self.genome.update_sensitivity)
+        coefficient = max(0.0, self.genome.plasticity_coefficient)
+        delta = self.genome.learning_rate * coefficient * sensitivity * reward * plastic_gain
+
+        if domain == "CARE":
+            self.expressed_care_weight = max(0.0, self.expressed_care_weight + delta)
+        elif domain == "FORAGE":
+            self.expressed_forage_weight = max(0.0, self.expressed_forage_weight + delta)
+        else:
+            self.expressed_self_weight = max(0.0, self.expressed_self_weight + delta)
+        self._renormalize_expressed_weights()
+
+        alpha = self.genome.learning_cost if metabolic_alpha is None else metabolic_alpha
+        cost = alpha * abs(delta) + energy_cost
+        self.energy -= cost
+        self.last_learning_domain = domain
+        self.last_learning_delta = delta
+        self._record_learning_cost(domain, cost)
+
     def plastic_update(
         self,
         reward: float,
@@ -356,20 +467,15 @@ class MotherAgent(Agent):
         noise_sigma: float = 0.0,
         metabolic_alpha: float | None = None,
     ) -> None:
-        if noise_sigma > 0.0:
-            # Multiplicative noise on the reward signal — learning is unreliable.
-            # Mothers with high genetic care_weight are buffered; those relying on
-            # plasticity face stochastic errors. This is the Hinton-Nowlan mechanism.
-            reward = reward * max(0.0, 1.0 + random.gauss(0, noise_sigma))
-        sensitivity = max(0.0, self.genome.update_sensitivity)
-        coefficient = max(0.0, self.genome.plasticity_coefficient)
-        delta = self.genome.learning_rate * coefficient * sensitivity * reward * plastic_gain
-        self.expressed_care_weight = max(0.0, min(1.0, self.expressed_care_weight + delta))
-        alpha = self.genome.learning_cost if metabolic_alpha is None else metabolic_alpha
-        cost = alpha * abs(delta) + energy_cost
-        self.energy -= cost
-        self.last_learning_delta = delta
-        self.lifetime_learning_cost += cost
+        """Backward-compatible alias for care-domain learning."""
+        self.plastic_update_domain(
+            domain="CARE",
+            reward=reward,
+            plastic_gain=plastic_gain,
+            energy_cost=energy_cost,
+            noise_sigma=noise_sigma,
+            metabolic_alpha=metabolic_alpha,
+        )
 
     def compute_modulation_signal(
         self,

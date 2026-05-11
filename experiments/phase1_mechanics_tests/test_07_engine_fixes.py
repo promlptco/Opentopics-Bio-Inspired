@@ -732,6 +732,71 @@ def test_blocked_visible_food_avoids_immediate_backtrack_when_detouring():
     )
 
 
+def test_expressed_vector_initializes_from_genome_and_sums_to_one():
+    """The expressed motivation phenotype should mirror the genome simplex at birth."""
+    genome = Genome(care_weight=0.2, forage_weight=0.3, self_weight=0.5)
+    mother = MotherAgent(0, 0, lineage_id=0, generation=0, genome=genome)
+
+    total = (
+        mother.expressed_care_weight
+        + mother.expressed_forage_weight
+        + mother.expressed_self_weight
+    )
+    assert abs(mother.expressed_care_weight - 0.2) < 1e-9
+    assert abs(mother.expressed_forage_weight - 0.3) < 1e-9
+    assert abs(mother.expressed_self_weight - 0.5) < 1e-9
+    assert abs(total - 1.0) < 1e-9, f"Expected expressed simplex sum=1.0, got {total}"
+    _log(
+        "test_expressed_vector_initializes_from_genome_and_sums_to_one",
+        f"expressed=({mother.expressed_care_weight:.3f},{mother.expressed_forage_weight:.3f},{mother.expressed_self_weight:.3f})",
+    )
+
+
+def test_domain_plastic_update_changes_selected_axis_and_preserves_simplex():
+    """Domain-aware local search should shift one expressed axis while renormalizing the simplex."""
+    genome = Genome(care_weight=1 / 3, forage_weight=1 / 3, self_weight=1 / 3, learning_rate=1.0, plasticity_coefficient=1.0)
+    mother = MotherAgent(0, 0, lineage_id=0, generation=0, genome=genome)
+
+    before = mother.get_expressed_vector()
+    mother.plastic_update_domain(
+        "FORAGE",
+        reward=0.2,
+        plastic_gain=0.5,
+        energy_cost=0.0,
+        noise_sigma=0.0,
+        metabolic_alpha=0.0,
+    )
+    after = mother.get_expressed_vector()
+    total = sum(after)
+
+    assert after[1] > before[1], f"Expected expressed forage to increase: before={before}, after={after}"
+    assert abs(total - 1.0) < 1e-9, f"Expected renormalized simplex sum=1.0, got {total}"
+    assert mother.last_learning_domain == "FORAGE"
+    assert mother.last_learning_delta > 0.0
+    _log(
+        "test_domain_plastic_update_changes_selected_axis_and_preserves_simplex",
+        f"before={before};after={after};delta={mother.last_learning_delta:.6f}",
+    )
+
+
+def test_plasticity_maintenance_cost_accumulates_even_without_update():
+    """Plasticity should carry an ongoing metabolic burden even on no-learning ticks."""
+    genome = Genome(plasticity_coefficient=0.4)
+    mother = MotherAgent(0, 0, lineage_id=0, generation=0, genome=genome)
+    e0 = mother.energy
+
+    cost = mother.apply_plasticity_maintenance_cost(0.01)
+
+    assert abs(cost - 0.004) < 1e-9, f"Expected maintenance cost 0.004, got {cost}"
+    assert abs(mother.energy - (e0 - cost)) < 1e-9
+    assert abs(mother.lifetime_learning_cost - cost) < 1e-9
+    assert abs(mother.lifetime_maintenance_cost - cost) < 1e-9
+    _log(
+        "test_plasticity_maintenance_cost_accumulates_even_without_update",
+        f"cost={cost:.6f};energy={mother.energy:.6f}",
+    )
+
+
 if __name__ == "__main__":
     test_linear_energy_depletion()
     test_update_state_rate_independence()
@@ -753,6 +818,9 @@ if __name__ == "__main__":
     test_blocked_visible_food_uses_detour_instead_of_stalling()
     test_forage_explore_avoids_immediate_backtrack_when_possible()
     test_blocked_visible_food_avoids_immediate_backtrack_when_detouring()
+    test_expressed_vector_initializes_from_genome_and_sums_to_one()
+    test_domain_plastic_update_changes_selected_axis_and_preserves_simplex()
+    test_plasticity_maintenance_cost_accumulates_even_without_update()
 
     out_dir = os.path.join(PROJECT_ROOT, "outputs", "phase1_mechanics_tests", TAG)
     os.makedirs(out_dir, exist_ok=True)
