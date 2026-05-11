@@ -14,7 +14,11 @@ from logging_system.records import ChoiceRecord, CareRecord, DeathRecord, BirthR
 class Simulation:
     def __init__(self, config: Config):
         self.config = config
-        self.world = GridWorld(config.width, config.height)
+        self.world = GridWorld(
+            config.width,
+            config.height,
+            circle_world=config.circle_world,
+        )
         self.lineage = LineageManager()
         self.logger = Logger()
         self.tick = 0
@@ -32,8 +36,7 @@ class Simulation:
     def initialize(self, genomes: list[Genome] | None = None) -> None:
         # Spawn initial mothers with children
         for i in range(self.config.init_mothers):
-            x = random.randint(0, self.config.width - 1)
-            y = random.randint(0, self.config.height - 1)
+            x, y = self._random_free_pos()
 
             genome = genomes[i % len(genomes)].copy() if genomes else Genome(
                 care_weight=self.config.care_weight,
@@ -93,8 +96,7 @@ class Simulation:
     
     def _spawn_food(self, count: int) -> None:
         for _ in range(count):
-            x = random.randint(0, self.config.width - 1)
-            y = random.randint(0, self.config.height - 1)
+            x, y = self._random_world_pos()
             self.world.place_food(x, y)
             
     def _spawn_food_entropy(self) -> None:
@@ -131,7 +133,96 @@ class Simulation:
             y = random.randint(0, self.config.height - 1)
             if self.world.is_free((x, y)):
                 return x, y
+        for x in range(self.config.width):
+            for y in range(self.config.height):
+                if self.world.is_free((x, y)):
+                    return x, y
         return 0, 0
+
+    def _random_world_pos(self) -> tuple[int, int]:
+        for _ in range(100):
+            x = random.randint(0, self.config.width - 1)
+            y = random.randint(0, self.config.height - 1)
+            if self.world.in_bounds(x, y):
+                return x, y
+        for x in range(self.config.width):
+            for y in range(self.config.height):
+                if self.world.in_bounds(x, y):
+                    return x, y
+        return 0, 0
+
+    def _apply_move_cost(self, mother: MotherAgent) -> None:
+        mother.add_move_cost(self.config.move_cost)
+        mother.energy -= self.config.move_cost
+        mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+
+    def _move_mother(self, mother: MotherAgent, new_pos: tuple[int, int], action: str) -> bool:
+        old_pos = mother.pos
+        if not self.world.update_position(mother, new_pos):
+            return False
+        mother.last_pos = old_pos
+        mother.last_action = action
+        self._apply_move_cost(mother)
+        return True
+
+    def _avoid_immediate_backtrack(
+        self,
+        mother: MotherAgent,
+        candidates: list[tuple[int, int]],
+    ) -> list[tuple[int, int]]:
+        """Prefer any alternative over an instant A↔B reversal when possible."""
+        if mother.last_pos is None or len(candidates) <= 1:
+            return candidates
+        filtered = [pos for pos in candidates if pos != mother.last_pos]
+        return filtered if filtered else candidates
+
+    def _move_toward_with_detour(
+        self,
+        mother: MotherAgent,
+        target_pos: tuple[int, int],
+        primary_action: str,
+        detour_action: str,
+        failed_action: str,
+    ) -> bool:
+        """Try pathfinder step first, then a stochastic detour if temporarily blocked.
+
+        When multiple moves are plausible, avoid an immediate reversal to the
+        mother's previous cell. That reduces visible left-right ping-pong while
+        preserving stochasticity among the remaining candidates.
+        """
+        new_pos = self.world.get_step_toward(mother.pos, target_pos)
+        neighbors = self.world.get_neighbors(mother.x, mother.y)
+        avoid_primary_backtrack = (
+            mother.last_pos is not None
+            and new_pos == mother.last_pos
+            and len(neighbors) > 1
+        )
+
+        if not avoid_primary_backtrack and self._move_mother(mother, new_pos, primary_action):
+            return True
+
+        if not neighbors:
+            mother.last_action = failed_action
+            return False
+
+        candidates = self._avoid_immediate_backtrack(mother, neighbors)
+        current_dist = self.world.get_distance(mother.pos, target_pos)
+        improving = [
+            pos for pos in candidates
+            if self.world.get_distance(pos, target_pos) < current_dist
+        ]
+        candidates = improving if improving else candidates
+        best_dist = min(self.world.get_distance(pos, target_pos) for pos in candidates)
+        best = [pos for pos in candidates if self.world.get_distance(pos, target_pos) == best_dist]
+        detour = random.choice(best)
+        if self._move_mother(mother, detour, detour_action):
+            return True
+
+        if avoid_primary_backtrack and self._move_mother(mother, new_pos, primary_action):
+            return True
+
+        mother.last_action = failed_action
+        return False
     
     def initialize_with_genomes(self, genomes: list[Genome]) -> None:
         self.initialize(genomes)
@@ -261,8 +352,20 @@ class Simulation:
                     care_child = self._choose_care_target(
                         mother, visible_children, include_commitment=False
                     )
+                    # If the mother is already on the child's cell but has no food, an
+                    # explicit CARE action is infeasible. Suppress the care cue for this
+                    # tick so SELF/FORAGE can resolve stochastically while proximity-based
+                    # warmth still works through the child update path.
+                    if (
+                        care_child is not None
+                        and mother.held_food <= 0
+                        and mother.pos == care_child.pos
+                    ):
+                        care_child = None
+                    care_available = care_child is not None
                 else:
                     care_child = None
+                    care_available = False
                 _heard_care_distress = None
                 if care_child and self.config.cry_decay_radius > 0:
                     _d = self.world.get_distance(mother.pos, care_child.pos)
@@ -275,7 +378,7 @@ class Simulation:
                     child=care_child,
                     nearest_food=nearest_food,
                     distance_to_food=dist_to_food,
-                    care_enabled=self.config.care_enabled,
+                    care_enabled=care_available,
                     heard_care_distress=_heard_care_distress,
                 )
                 mother.last_motivation = chosen
@@ -310,6 +413,10 @@ class Simulation:
                     domain = "forage"  # provision before caring; break current commitment
                     mother.commit_ticks = 0
                     mother.target_child_id = None
+
+            # Keep the viewer ring aligned with the actual domain that will execute,
+            # not only the pre-override softmax winner.
+            mother.last_motivation = domain.upper()
 
             # Log choice if distressed child exists
             if any(c.distress >= 0.3 for c in visible_children):  # distress_threshold
@@ -486,12 +593,13 @@ class Simulation:
                 else:
                     # Move toward child (when dist > 0). Children are non-blocking so
                     # the mother moves onto their cell when dist becomes 1→0.
-                    new_pos = self.world.get_step_toward(mother.pos, target.pos)
-                    if self.world.update_position(mother, new_pos):
-                        mother.last_action = "CARE_MOVE"
-                        mother.add_move_cost(self.config.move_cost)
-                        mother.energy -= self.config.move_cost
-                        mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+                    self._move_toward_with_detour(
+                        mother,
+                        target.pos,
+                        primary_action="CARE_MOVE",
+                        detour_action="CARE_DETOUR",
+                        failed_action="FAILED_CARE_PATH",
+                    )
         
         elif domain == "forage":
             # FORAGE = food procurement only (pick or navigate). Eating is handled in SELF
@@ -516,14 +624,29 @@ class Simulation:
                     mother.pos, self.config.food_perception_radius
                 )
                 if nearest:
-                    new_pos = self.world.get_step_toward(mother.pos, nearest)
-                    if self.world.update_position(mother, new_pos):
-                        mother.last_action = "FORAGE_MOVE"
-                        mother.add_move_cost(self.config.move_cost)
-                        mother.energy -= self.config.move_cost
-                        mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
+                    self._move_toward_with_detour(
+                        mother,
+                        nearest,
+                        primary_action="FORAGE_MOVE",
+                        detour_action="FORAGE_DETOUR",
+                        failed_action="FAILED_FORAGE_PATH",
+                    )
                 else:
-                    mother.last_action = "FAILED_FORAGE"
+                    # No visible food: wander stochastically instead of freezing in place.
+                    # This keeps search behavior emergent and seed-sensitive while reducing
+                    # same-cell starvation stalls near children.
+                    neighbors = self._avoid_immediate_backtrack(
+                        mother,
+                        self.world.get_neighbors(mother.x, mother.y),
+                    )
+                    if neighbors:
+                        new_pos = random.choice(neighbors)
+                        if self._move_mother(mother, new_pos, "FORAGE_EXPLORE"):
+                            pass
+                        else:
+                            mother.last_action = "FAILED_FORAGE"
+                    else:
+                        mother.last_action = "FAILED_FORAGE"
 
         elif domain == "self":
             # SELF = self-maintenance. Eat held food first (self_cue fires when energy is
@@ -585,6 +708,8 @@ class Simulation:
                 birth_mother = self._get_mother_by_id(child.mother_id)
                 if birth_mother:
                     birth_mother.own_child_id = None
+                    birth_mother.target_child_id = None
+                    birth_mother.commit_ticks = 0
                     birth_mother.matured_children += 1
 
                 pos = child.pos  # save before removal
@@ -596,13 +721,19 @@ class Simulation:
                 self._child_by_id.pop(child.id, None)
                 self.world.remove_entity(child.id)
 
-                # Then place new mother at same position
+                # Then place new mother. If the birth mother is currently standing on the
+                # child's cell, that tile is already occupied, so pick a nearby free cell
+                # instead of stacking two blocking mothers on one position.
+                new_pos = pos if self.world.is_free(pos) else self._birth_pos(*pos)
                 new_mother = MotherAgent(
-                    pos[0], pos[1],
+                    new_pos[0], new_pos[1],
                     lineage_id=child.lineage_id,
                     generation=child.generation,
                     genome=genome
                 )
+                # A matured child becomes a new mother, but should not be able to
+                # reproduce again in the same tick it enters the adult pool.
+                new_mother.cooldown = self.config.reproduction_cooldown
                 self.mothers.append(new_mother)
                 self._mother_by_id[new_mother.id] = new_mother
                 self.world.place_entity(new_mother)

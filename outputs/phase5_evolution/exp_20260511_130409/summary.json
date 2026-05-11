@@ -1,0 +1,37 @@
+{
+  "n_seeds": 1,
+  "final_stats": [
+    {
+      "tick": 4999,
+      "n_mothers": 10,
+      "n_children": 5,
+      "mean_genome_care": 0.340482674368367,
+      "std_genome_care": 0.008313490090046408,
+      "mean_expressed_care": 0.34391984635582906,
+      "std_expressed_care": 0.009095006017919266,
+      "mean_learning_rate": 0.05037834603901201,
+      "std_learning_rate": 0.006833723413327903,
+      "mean_plasticity": 0.5,
+      "std_plasticity": 0.0,
+      "innateness_index": 0.5,
+      "genome_behavior_distance": 0.003437171987462012,
+      "mean_mother_energy": 0.7694085301486523,
+      "mean_child_energy": 0.8228571428571432,
+      "mean_generation": 13.5,
+      "c_matr_cum": 0.65
+    }
+  ],
+  "params": {
+    "mutation_enabled": true,
+    "plasticity_enabled": true,
+    "mutation_rate": 0.05,
+    "mutation_sigma": 0.02,
+    "learning_rate": 0.05,
+    "plasticity_coefficient": 0.5,
+    "phenotype_retention": 0.15,
+    "max_ticks": 5000,
+    "relax_ecology": true,
+    "cell_size": 15,
+    "circle_world": true
+  }
+}

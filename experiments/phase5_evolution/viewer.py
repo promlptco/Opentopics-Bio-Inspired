@@ -50,6 +50,7 @@ class Phase5GridViewer:
         fps: int = 10,
         vis_every: int = 1,
         condition_label: str = "",
+        circle_world: bool = False,
         theme: RendererTheme = DARK_THEME, #DARK_THEME, LIGHT_THEME
     ) -> None:
         """Initialize the pygame window.
@@ -62,6 +63,7 @@ class Phase5GridViewer:
             vis_every: Render one frame every N ticks. Use 1 for full fidelity,
                 10+ for fast preview of long runs.
             condition_label: Short label shown in HUD line 1, e.g. "mut=ON plast=OFF".
+            circle_world: Whether the arena is restricted to an inscribed circle.
             theme: RendererTheme colour scheme; defaults to LIGHT_THEME.
         """
         self._gw = grid_width
@@ -70,6 +72,7 @@ class Phase5GridViewer:
         self._fps = fps
         self._vis_every = vis_every
         self._label = condition_label
+        self._circle_world = circle_world
         self._theme = theme
         self._open = True
 
@@ -101,7 +104,8 @@ class Phase5GridViewer:
             sim: Running Simulation instance (reads .world, .mothers, .children).
             tick: Current tick number.
             snapshot: Optional metrics dict from EvolutionRunner._sample()
-                (keys: mean_genome_care, c_matr_cum, mean_generation).
+                (keys: mean_genome_care, c_matr_cum, mean_generation,
+                highest_generation).
 
         Returns:
             True to continue; False if the user closed the window or pressed Esc.
@@ -145,12 +149,21 @@ class Phase5GridViewer:
 
         self._screen.fill(t.bg_color)
         self._draw_grid(t, cs)
+        self._draw_world_mask(t, cs)
         self._draw_food(sim.world, t, cs)
         self._draw_links(sim.mothers, sim.children, t, cs)
         self._draw_children(sim.children, t, cs)
         self._draw_mothers(sim.mothers, t, cs)
         self._draw_hud(sim.mothers, sim.children, tick, snapshot, t, cs)
         pygame.display.flip()
+
+    def _cell_in_world(self, x: int, y: int) -> bool:
+        if not self._circle_world:
+            return True
+        dx = (x + 0.5) - (self._gw / 2.0)
+        dy = (y + 0.5) - (self._gh / 2.0)
+        radius = min(self._gw, self._gh) / 2.0
+        return dx * dx + dy * dy <= radius * radius
 
     def _draw_grid(self, t: RendererTheme, cs: int) -> None:
         for x in range(self._gw + 1):
@@ -163,6 +176,22 @@ class Phase5GridViewer:
                 self._screen, t.grid_color,
                 (0, y * cs), (self._gw * cs, y * cs),
             )
+
+    def _draw_world_mask(self, t: RendererTheme, cs: int) -> None:
+        if not self._circle_world:
+            return
+        for x in range(self._gw):
+            for y in range(self._gh):
+                if self._cell_in_world(x, y):
+                    continue
+                pygame.draw.rect(
+                    self._screen,
+                    t.bg_color,
+                    (x * cs + 1, y * cs + 1, cs - 1, cs - 1),
+                )
+        center = (self._gw * cs // 2, self._gh * cs // 2)
+        radius = int(min(self._gw, self._gh) * cs / 2.0)
+        pygame.draw.circle(self._screen, pygame.Color(255, 255, 255, 80), center, radius, width=3)
 
     def _draw_food(self, world, t: RendererTheme, cs: int) -> None:
         for fx, fy in world.food_positions:
@@ -192,7 +221,7 @@ class Phase5GridViewer:
                 continue
             cx = child.x * cs + cs // 2
             cy = child.y * cs + cs // 2
-            r = max(3, cs // 4)
+            r = max(6, cs // 6)
             body = lerp_color(1.0 - child.distress, t.child_color_low, t.child_color_high)
             diamond = [
                 (cx, cy - r),
@@ -235,7 +264,7 @@ class Phase5GridViewer:
         """Draw two-line Phase 5 HUD below the grid.
 
         Line 1: Tick, alive mothers, alive children, condition label.
-        Line 2: genome_care vs 1/3 baseline, c_matr_cum, mean generation.
+        Line 2: genome_care vs 1/3 baseline, c_matr_cum, mean/highest generation.
         Legend row: motivation ring colour key.
 
         Args:
@@ -264,9 +293,10 @@ class Phase5GridViewer:
         genome_care = snapshot.get("mean_genome_care", 0.0)
         c_matr      = snapshot.get("c_matr_cum",       0.0)
         mean_gen    = snapshot.get("mean_generation",   0.0)
+        high_gen    = snapshot.get("highest_generation", 0)
         line2 = (
             f"genome_care: {genome_care:.3f}  [baseline 0.333]  |  "
-            f"c_matr_cum: {c_matr:.3f}  |  gen: {mean_gen:.1f}"
+            f"c_matr_cum: {c_matr:.3f}  |  gen: {mean_gen:.1f}  |  high_gen: {int(high_gen)}"
         )
 
         self._screen.blit(

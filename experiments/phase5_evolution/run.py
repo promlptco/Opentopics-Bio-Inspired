@@ -48,12 +48,15 @@ class RunParams:
         vis_every: Render one frame every N ticks (1 = every tick; 10+ = fast
             preview for long runs). Ignored when headless=True.
         cell_size: Pixels per grid cell for the live Phase 5 viewer.
+        circle_world: If True, use an inscribed circular arena instead of the
+            full square grid.
     """
 
     mutation_enabled: bool = True
+
     plasticity_enabled: bool = True
-    learning_rate: float = 0.05
-    plasticity_coefficient: float = 0.5
+    learning_rate: float = 5.0
+    plasticity_coefficient: float = 1.0
     phenotype_retention: float = 0.15
     mutation_rate: float = 0.05
     mutation_sigma: float = 0.02
@@ -66,6 +69,7 @@ class RunParams:
     headless: bool = False
     vis_every: int = 1
     cell_size: int = 15
+    circle_world: bool = False
 
 
 # ===========================================================================
@@ -198,6 +202,7 @@ class EvolutionRunner:
             max_ticks=p.max_ticks,
             relax_ecology=p.relax_ecology,
             ecology_relaxation_factor=p.ecology_relaxation_factor,
+            circle_world=p.circle_world,
         )
 
         sim = Simulation(cfg)
@@ -229,6 +234,7 @@ class EvolutionRunner:
                 "max_ticks": p.max_ticks,
                 "relax_ecology": p.relax_ecology,
                 "cell_size": p.cell_size,
+                "circle_world": p.circle_world,
             },
         }
 
@@ -266,6 +272,7 @@ class EvolutionRunner:
             max_ticks=p.max_ticks,
             relax_ecology=p.relax_ecology,
             ecology_relaxation_factor=p.ecology_relaxation_factor,
+            circle_world=p.circle_world,
         )
 
         sim = Simulation(cfg)
@@ -281,6 +288,7 @@ class EvolutionRunner:
             cell_size=p.cell_size,
             vis_every=p.vis_every,
             condition_label=condition,
+            circle_world=p.circle_world,
         )
 
         snapshots: list[dict] = []
@@ -319,6 +327,7 @@ class EvolutionRunner:
                 "max_ticks":              p.max_ticks,
                 "relax_ecology":          p.relax_ecology,
                 "cell_size":              p.cell_size,
+                "circle_world":           p.circle_world,
             },
         }
 
@@ -338,9 +347,9 @@ class EvolutionRunner:
         p = self._params
         return [
             Genome(
-                care_weight= 1.75 / 3,
-                forage_weight=0.75 / 3,
-                self_weight=0.5 / 3,
+                care_weight=1 / 3,
+                forage_weight=1 / 3,
+                self_weight=1 / 3,
                 learning_rate=p.learning_rate,
                 plasticity_coefficient=p.plasticity_coefficient,
             )
@@ -369,9 +378,11 @@ class EvolutionRunner:
 
         mean_pc   = float(np.mean(plasticity_coeffs)) if plasticity_coeffs else 0.0
         distances = [abs(e - g) for e, g in zip(expressed_care, genome_care)]
+        highest_generation = int(max(generations)) if generations else 0
 
         total_matured = sum(m.matured_children for m in mothers)
         total_born    = sum(m.total_children   for m in mothers)
+        child_survival_rate = total_matured / total_born if total_born > 0 else 0.0
 
         return {
             "tick":                   tick,
@@ -390,7 +401,9 @@ class EvolutionRunner:
             "mean_mother_energy":     float(np.mean(mother_energies))   if mother_energies   else 0.0,
             "mean_child_energy":      float(np.mean([c.energy for c in children])) if children else 0.0,
             "mean_generation":        float(np.mean(generations))       if generations       else 0.0,
-            "c_matr_cum":             total_matured / total_born        if total_born > 0    else 0.0,
+            "highest_generation":     highest_generation,
+            "child_survival_rate":    child_survival_rate,
+            "c_matr_cum":             child_survival_rate,
         }
 
     # ------------------------------------------------------------------
@@ -492,6 +505,14 @@ def main() -> None:
         default=15,
         help="Pixels per grid cell in the live Phase 5 viewer.",
     )
+    parser.add_argument(
+        "--circle-world",
+        "--circle_world",
+        dest="circle_world",
+        action="store_true",
+        default=False,
+        help="Use an inscribed circular arena instead of the full square grid.",
+    )
 
     args = parser.parse_args()
 
@@ -512,6 +533,7 @@ def main() -> None:
         headless=args.headless,
         vis_every=args.vis_every,
         cell_size=args.cell_size,
+        circle_world=args.circle_world,
     )
 
     output_dir = (

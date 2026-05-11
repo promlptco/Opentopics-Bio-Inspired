@@ -1,7 +1,7 @@
 {
   "BEST_CALIBRATED": {
     "infant_starvation_multiplier": 1.0,
-    "init_food": 600,
+    "init_food": 300,
     "eat_gain": 0.7,
     "move_cost": 0.005,
     "rest_recovery": 0.005,

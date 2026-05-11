@@ -5,6 +5,9 @@ class Config:
     # World — 50×50 gives proper spatial separation (Change A)
     width: int = 50
     height: int = 50
+    # circle_world: if True, only cells inside the inscribed circle are valid.
+    # Useful for Phase 5 arena experiments while preserving the same square buffer size.
+    circle_world: bool = False
 
     # Population
     init_mothers: int = 12

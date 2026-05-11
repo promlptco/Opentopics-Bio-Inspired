@@ -64,7 +64,8 @@ class Phase5ConfigFactory:
         mutation_sigma: float = 0.02,
         max_ticks: int = 40_000,
         relax_ecology: bool = False,
-        ecology_relaxation_factor: float = 5.0, # 1.15
+        ecology_relaxation_factor: float = 1.2, # 1.15
+        circle_world: bool = False,
     ) -> Config:
         """Build a Phase 5 Config with Phase 4b ecology and run parameters.
 
@@ -81,6 +82,7 @@ class Phase5ConfigFactory:
             max_ticks: Total simulation duration in ticks.
             relax_ecology: If True, inflate init_food for pilot runs.
             ecology_relaxation_factor: Multiplier on init_food when relax=True.
+            circle_world: If True, restrict the arena to an inscribed circle.
 
         Returns:
             Fully configured Config ready for Simulation.
@@ -96,11 +98,12 @@ class Phase5ConfigFactory:
             # World
             width=50, # 50
             height=50, # 50
+            circle_world=circle_world,
 
             # Population — neutral genome start (care=forage=self=1/3)
             init_mothers=15, # 15
             init_food=init_food,
-            max_population=300,
+            max_population=140,
 
             # Perception
             perception_radius=15,
@@ -115,9 +118,9 @@ class Phase5ConfigFactory:
             rest_recovery=0.5,
 
             # Reproduction — Phase 4b validated thresholds
-            reproduction_threshold=0.70, # 0.85
-            reproduction_cost=0.25,
-            reproduction_cooldown=80,
+            reproduction_threshold=0.85, # 0.85
+            reproduction_cost=0.20,
+            reproduction_cooldown=120,
 
             # Child
             maturity_age=80, # 200
@@ -128,7 +131,7 @@ class Phase5ConfigFactory:
             ),
 
             # Mother lifetime
-            mother_max_age=200, # 400
+            mother_max_age=1000, # 400
 
             # Fatigue
             fatigue_rate=0.01,
@@ -165,7 +168,7 @@ class Phase5ConfigFactory:
             food_entropy_alpha=0.01,
             food_entropy_beta=0.01,
             food_entropy_gamma=0.01,
-            food_patch_prior=0.2,
+            food_patch_prior=0.45,
             cry_decay_radius=10.0, # 0.0 disables cry-based patch learning
             temperature_period=200,
             temperature_sensitivity=0.0,

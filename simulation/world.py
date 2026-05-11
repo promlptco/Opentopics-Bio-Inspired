@@ -7,16 +7,25 @@ if TYPE_CHECKING:
 
 
 class GridWorld:
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, circle_world: bool = False):
         self.width = width
         self.height = height
+        self.circle_world = circle_world
         self.food_positions: set[tuple[int, int]] = set()
         self.entities: dict[int, Entity] = {}
+        self.blocking_entities: set[int] = set()
         self.occupied: set[tuple[int, int]] = set()
         self.food_patch_probs: dict[tuple[int, int], float] = {}  # entropy model
     
     def in_bounds(self, x: int, y: int) -> bool:
-        return 0 <= x < self.width and 0 <= y < self.height
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
+        if not self.circle_world:
+            return True
+        dx = (x + 0.5) - (self.width / 2.0)
+        dy = (y + 0.5) - (self.height / 2.0)
+        radius = min(self.width, self.height) / 2.0
+        return dx * dx + dy * dy <= radius * radius
     
     def is_free(self, pos: tuple[int, int]) -> bool:
         return pos not in self.occupied and self.in_bounds(*pos)
@@ -24,23 +33,30 @@ class GridWorld:
     def place_entity(self, entity: Entity, blocking: bool = True) -> None:
         self.entities[entity.id] = entity
         if blocking:
+            self.blocking_entities.add(entity.id)
             self.occupied.add(entity.pos)
+        else:
+            self.blocking_entities.discard(entity.id)
     
     def remove_entity(self, entity_id: int) -> None:
         if entity_id in self.entities:
             entity = self.entities[entity_id]
-            self.occupied.discard(entity.pos)
+            if entity_id in self.blocking_entities:
+                self.occupied.discard(entity.pos)
+                self.blocking_entities.discard(entity_id)
             del self.entities[entity_id]
     
     def update_position(self, entity: Entity, new_pos: tuple[int, int]) -> bool:
         """Move entity if new_pos is free. Return success."""
         if new_pos == entity.pos:
             return False
-        if not self.is_free(new_pos):
+        if entity.id in self.blocking_entities and not self.is_free(new_pos):
             return False
-        self.occupied.discard(entity.pos)
+        if entity.id in self.blocking_entities:
+            self.occupied.discard(entity.pos)
         entity.move_to(*new_pos)
-        self.occupied.add(new_pos)
+        if entity.id in self.blocking_entities:
+            self.occupied.add(new_pos)
         return True
     
     def place_food(self, x: int, y: int) -> None:
@@ -73,7 +89,8 @@ class GridWorld:
     def init_patch_probs(self, prior: float) -> None:
         for x in range(self.width):
             for y in range(self.height):
-                self.food_patch_probs[(x, y)] = prior
+                if self.in_bounds(x, y):
+                    self.food_patch_probs[(x, y)] = prior
 
     def deplete_patch(self, x: int, y: int, beta: float) -> None:
         p = self.food_patch_probs.get((x, y), 0.5)

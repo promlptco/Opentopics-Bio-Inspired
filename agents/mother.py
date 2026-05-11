@@ -62,6 +62,7 @@ class MotherAgent(Agent):
         self.commit_ticks: int = 0
 
         self.pending_move_cost: float = 0.0
+        self.last_pos: tuple[int, int] | None = None
         self.last_motivation: str = "FORAGE"
         self.last_action: str = "NONE"
         self.last_learning_delta: float = 0.0
@@ -173,16 +174,25 @@ class MotherAgent(Agent):
         if perception_radius <= 0:
             perception_radius = 1.0
         if nearest_food is None or distance_to_food is None:
-            return 0.0
+            # Empty-handed mothers retain a small exploratory forage drive even when
+            # no food is currently visible. Carrying food still suppresses FORAGE.
+            return 0.0 if self.held_food >= 1 else BASE_FORAGE_CUE
         return float(max(0.0, min(1.0, 1.0 - distance_to_food / perception_radius)))
 
     def compute_self_cue(self) -> float:
         """Neutral SELF cue bounded [0, 1] (Change B).
 
-        self_cue = 1 - energy (energy deficit).
-        No energy = maximum self-urgency; full energy = no urgency.
+        SELF maps to two different maintenance actions:
+          - EAT when the mother is already carrying food
+          - REST when she is not
+
+        Hunger should only drive SELF when eating is actually feasible. Otherwise
+        SELF should reflect fatigue, since REST only reduces fatigue and does not
+        restore energy.
         """
-        return float(max(0.0, 1.0 - self.energy))
+        if self.held_food > 0:
+            return float(max(0.0, 1.0 - self.energy))
+        return float(max(0.0, min(1.0, self.fatigue)))
 
     def compute_care_cue(self, child: ChildAgent | None, heard_distress: float | None = None) -> float:
         """Neutral CARE cue = child.distress, bounded [0, 1] (Change B).

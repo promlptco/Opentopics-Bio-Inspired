@@ -50,7 +50,7 @@ def lerp_color(t: float, low: tuple, high: tuple) -> tuple:
 
 LIGHT_THEME = RendererTheme(
     bg_color=(245, 245, 245),
-    grid_color=(200, 200, 200),
+    grid_color=(200, 200, 200), # (255, 230, 80) White
     hud_text_color=(50, 50, 50),
     food_color=(100, 180, 100),
     mother_color_low=(180, 80, 80),
