@@ -23,13 +23,30 @@ class EvolutionPlotter:
     def __init__(self, input_dir: Path | str) -> None:
         self._input_dir = Path(input_dir)
 
-    def plot(self, output_file: Path | str | None = None) -> None:
-        """Produce and save the Phase 5 dashboard figure."""
+    def plot(
+        self,
+        output_file: Path | str | None = None,
+        checkpoint: int | None = None,
+    ) -> None:
+        """Produce and save the Phase 5 dashboard figure.
+
+        If checkpoint is provided, only rows at ticks divisible by that value
+        are plotted. This is useful both for coarse-grained plotting of old
+        runs and for matching the snapshot cadence used during a run.
+        """
         csv_path = self._input_dir / "snapshots.csv"
         if not csv_path.exists():
             raise FileNotFoundError(f"snapshots.csv not found at {csv_path}")
 
         df = self._prepare_dataframe(pd.read_csv(csv_path))
+        if checkpoint is not None:
+            if checkpoint <= 0:
+                raise ValueError("checkpoint must be a positive integer")
+            df = df[df["tick"] % checkpoint == 0].copy()
+            if df.empty:
+                raise ValueError(
+                    f"No snapshot rows matched checkpoint={checkpoint} in {csv_path}"
+                )
         seeds = sorted(df["seed"].unique())
         colors = plt.cm.tab20(range(len(seeds)))
 
@@ -314,15 +331,23 @@ def main() -> None:
         default=None,
         help="Output PNG path (default: <run-dir>/phase5_evolution_analysis.png)",
     )
+    parser.add_argument(
+        "--checkpoint",
+        type=int,
+        default=None,
+        help="Only plot rows at ticks divisible by this checkpoint.",
+    )
 
     args = parser.parse_args()
 
     run_dir = args.run_dir_flag or args.run_dir
     if not run_dir:
         parser.error("provide the run directory as a positional path or via --output-dir")
+    if args.checkpoint is not None and args.checkpoint <= 0:
+        parser.error("--checkpoint must be a positive integer")
 
     plotter = EvolutionPlotter(run_dir)
-    plotter.plot(args.output_file)
+    plotter.plot(args.output_file, checkpoint=args.checkpoint)
 
 
 if __name__ == "__main__":

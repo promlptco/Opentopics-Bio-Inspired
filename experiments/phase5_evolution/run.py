@@ -43,6 +43,7 @@ class RunParams:
         workers: Number of parallel worker processes.
         relax_ecology: If True, inflate food for pilot runs.
         ecology_relaxation_factor: Multiplier on init_food when relax=True.
+        checkpoint: Snapshot interval in ticks for writing Phase 5 metrics.
         headless: If False (default), open a live pygame grid window. Forces
             seeds=1 and runs in the main process. Set True for multi-seed runs.
         vis_every: Render one frame every N ticks (1 = every tick; 10+ = fast
@@ -66,6 +67,7 @@ class RunParams:
     workers: int = 4
     relax_ecology: bool = False
     ecology_relaxation_factor: float = 1.15
+    checkpoint: int = 10
     headless: bool = False
     vis_every: int = 1
     cell_size: int = 15
@@ -212,7 +214,7 @@ class EvolutionRunner:
         for tick in range(p.max_ticks):
             sim.step()
 
-            if tick % 10 == 0:
+            if self._should_sample_tick(tick):
                 snapshots.append(self._sample(sim, tick))
 
             if not sim.mothers:
@@ -233,6 +235,7 @@ class EvolutionRunner:
                 "phenotype_retention": p.phenotype_retention,
                 "max_ticks": p.max_ticks,
                 "relax_ecology": p.relax_ecology,
+                "checkpoint": p.checkpoint,
                 "cell_size": p.cell_size,
                 "circle_world": p.circle_world,
             },
@@ -299,7 +302,7 @@ class EvolutionRunner:
             for tick in range(p.max_ticks):
                 sim.step()
 
-                if tick % 10 == 0:
+                if self._should_sample_tick(tick):
                     last_snapshot = self._sample(sim, tick)
                     snapshots.append(last_snapshot)
 
@@ -326,10 +329,16 @@ class EvolutionRunner:
                 "phenotype_retention":    p.phenotype_retention,
                 "max_ticks":              p.max_ticks,
                 "relax_ecology":          p.relax_ecology,
+                "checkpoint":             p.checkpoint,
                 "cell_size":              p.cell_size,
                 "circle_world":           p.circle_world,
             },
         }
+
+    def _should_sample_tick(self, tick: int) -> bool:
+        """Return True when the current tick should be persisted as a snapshot."""
+        checkpoint = max(1, int(self._params.checkpoint))
+        return tick % checkpoint == 0
 
     def _initial_genomes(self, n: int) -> list[Genome]:
         """Build the starting population with neutral motivation weights.
@@ -477,6 +486,12 @@ def main() -> None:
     parser.add_argument("--mutation-rate",             type=float, default=0.05)
     parser.add_argument("--mutation-sigma",            type=float, default=0.02)
     parser.add_argument("--max-ticks",                 type=int,   default=40_000)
+    parser.add_argument(
+        "--checkpoint",
+        type=int,
+        default=10,
+        help="Snapshot interval in ticks for snapshots.csv (default: 10).",
+    )
     parser.add_argument("--seeds",                     type=int,   default=10)
     parser.add_argument("--seed-start",                type=int,   default=42)
     parser.add_argument("--workers",                   type=int,   default=4)
@@ -515,6 +530,8 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    if args.checkpoint <= 0:
+        parser.error("--checkpoint must be a positive integer")
 
     params = RunParams(
         mutation_enabled=args.mutation_enabled,
@@ -525,6 +542,7 @@ def main() -> None:
         mutation_rate=args.mutation_rate,
         mutation_sigma=args.mutation_sigma,
         max_ticks=args.max_ticks,
+        checkpoint=args.checkpoint,
         seeds=args.seeds,
         seed_start=args.seed_start,
         workers=args.workers,
