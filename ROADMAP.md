@@ -24,6 +24,8 @@ persistence. If a stable caregiving strategy appears, we interpret it as a
 
 **Implicit fitness (locked):**
 No explicit reward function is optimized. Ecological pressure is the only selector.
+Within-lifetime plasticity is driven by **endogenous homeostatic signals**
+(drive reduction / local state improvement), not an externally authored reward.
 Primary Phase 5 interpretation will use **cohort-level lineage viability**:
 
 - child survival / maturation viability
@@ -39,6 +41,8 @@ not the final inferential fitness statistic.
 - **Global search** = inherited genome mutation + selection across generations
 - **Local search** = within-life adjustment of the expressed motivation vector
   (`care`, `forage`, `self`)
+- **Plasticity signal** = endogenous homeostatic / drive-reduction signal
+  (own hunger relief, fatigue relief, own-child distress reduction)
 - **Learning cost** = energetic burden of plastic updates plus plasticity maintenance
 - **Not in scope** = local search over all genes, or direct inheritance of learned phenotype
 - `phenotype_retention` remains reserved / inactive for the current non-Lamarckian interpretation

@@ -257,21 +257,26 @@ class Simulation:
         mother.energy -= self.config.move_cost
         mother.fatigue = min(1.0, mother.fatigue + self.config.fatigue_rate)
 
-    def _apply_domain_learning(
+    def _apply_homeostatic_learning_signal(
         self,
         mother: MotherAgent,
         domain: str,
-        reward: float,
+        signal: float,
         *,
         is_own_child: bool | None = None,
     ) -> None:
-        if not self.config.plasticity_enabled or reward == 0.0:
+        """Apply an endogenous homeostatic learning signal to one domain.
+
+        This is intentionally framed as local state-improvement plasticity, not
+        optimization of an externally authored reward function.
+        """
+        if not self.config.plasticity_enabled or signal == 0.0:
             return
         if domain == "CARE" and self.config.plasticity_kin_conditional and not is_own_child:
             return
         mother.plastic_update_domain(
             domain=domain,
-            reward=reward,
+            signal=signal,
             plastic_gain=self.config.plastic_gain,
             energy_cost=self.config.plasticity_energy_cost,
             noise_sigma=self.config.plasticity_noise_sigma,
@@ -684,10 +689,10 @@ class Simulation:
                         # motivation block can switch to FORAGE next tick.
                         mother.commit_ticks = 0
                         mother.target_child_id = None
-                        self._apply_domain_learning(
+                        self._apply_homeostatic_learning_signal(
                             mother,
                             "CARE",
-                            reward=-self.config.feed_cost,
+                            signal=-self.config.feed_cost,
                             is_own_child=(target.mother_id == mother.id),
                         )
                     else:
@@ -714,10 +719,10 @@ class Simulation:
                                     1.0,
                                     mother.energy + mother.genome.care_recovery * benefit,
                                 )
-                            self._apply_domain_learning(
+                            self._apply_homeostatic_learning_signal(
                                 mother,
                                 "CARE",
-                                reward=benefit,
+                                signal=benefit,
                                 is_own_child=is_own,
                             )
                             # Change D: outcome-based commitment — release only when child sated.
@@ -725,10 +730,10 @@ class Simulation:
                                 mother.commit_ticks = 0  # child sated; release commitment
                             # else: keep commitment; tick_commit() decrements naturally
                         else:
-                            self._apply_domain_learning(
+                            self._apply_homeostatic_learning_signal(
                                 mother,
                                 "CARE",
-                                reward=-self.config.feed_cost,
+                                signal=-self.config.feed_cost,
                                 is_own_child=is_own,
                             )
                 else:
@@ -742,15 +747,15 @@ class Simulation:
                         failed_action="FAILED_CARE_PATH",
                     )
                     if mother.last_action == "FAILED_CARE_PATH":
-                        self._apply_domain_learning(
+                        self._apply_homeostatic_learning_signal(
                             mother,
                             "CARE",
-                            reward=-self.config.move_cost,
+                            signal=-self.config.move_cost,
                             is_own_child=(target.mother_id == mother.id),
                         )
             else:
                 mother.last_action = "FAILED_CARE_TARGET"
-                self._apply_domain_learning(mother, "CARE", reward=-self.config.move_cost, is_own_child=False)
+                self._apply_homeostatic_learning_signal(mother, "CARE", signal=-self.config.move_cost, is_own_child=False)
         
         elif domain == "forage":
             # FORAGE = food procurement only (pick or navigate). Eating is handled in SELF
@@ -766,10 +771,10 @@ class Simulation:
             elif mother.pos in self.world.food_positions:
                 if mother.pick_food(self.world):
                     mother.last_action = "PICK"
-                    self._apply_domain_learning(
+                    self._apply_homeostatic_learning_signal(
                         mother,
                         "FORAGE",
-                        reward=self.config.eat_gain,
+                        signal=self.config.eat_gain,
                     )
                     if self.config.food_entropy_alpha > 0:
                         self.world.deplete_patch(*mother.pos, self.config.food_entropy_beta)
@@ -788,10 +793,10 @@ class Simulation:
                         failed_action="FAILED_FORAGE_PATH",
                     )
                     if mother.last_action == "FAILED_FORAGE_PATH":
-                        self._apply_domain_learning(
+                        self._apply_homeostatic_learning_signal(
                             mother,
                             "FORAGE",
-                            reward=-self.config.move_cost,
+                            signal=-self.config.move_cost,
                         )
                 else:
                     # No visible food: wander stochastically instead of freezing in place.
@@ -807,17 +812,17 @@ class Simulation:
                             pass
                         else:
                             mother.last_action = "FAILED_FORAGE"
-                            self._apply_domain_learning(
+                            self._apply_homeostatic_learning_signal(
                                 mother,
                                 "FORAGE",
-                                reward=-self.config.move_cost,
+                                signal=-self.config.move_cost,
                             )
                     else:
                         mother.last_action = "FAILED_FORAGE"
-                        self._apply_domain_learning(
+                        self._apply_homeostatic_learning_signal(
                             mother,
                             "FORAGE",
-                            reward=-self.config.move_cost,
+                            signal=-self.config.move_cost,
                         )
 
         elif domain == "self":
@@ -828,19 +833,19 @@ class Simulation:
                 pre_energy = mother.energy
                 mother.eat(self.config.eat_gain)
                 mother.last_action = "EAT"
-                self._apply_domain_learning(
+                self._apply_homeostatic_learning_signal(
                     mother,
                     "SELF",
-                    reward=max(0.0, mother.energy - pre_energy),
+                    signal=max(0.0, mother.energy - pre_energy),
                 )
             else:
                 pre_fatigue = mother.fatigue
                 mother.rest(self.config.rest_recovery)
                 mother.last_action = "REST"
-                self._apply_domain_learning(
+                self._apply_homeostatic_learning_signal(
                     mother,
                     "SELF",
-                    reward=max(0.0, pre_fatigue - mother.fatigue),
+                    signal=max(0.0, pre_fatigue - mother.fatigue),
                 )
     
     def _nearest_food(self, pos: tuple[int, int]) -> tuple[int, int] | None:

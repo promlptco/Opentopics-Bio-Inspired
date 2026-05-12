@@ -428,21 +428,27 @@ class MotherAgent(Agent):
     def plastic_update_domain(
         self,
         domain: str,
-        reward: float,
+        signal: float,
         plastic_gain: float,
         energy_cost: float = 0.0,
         noise_sigma: float = 0.0,
         metabolic_alpha: float | None = None,
     ) -> None:
+        """Update one expressed motivation axis from an endogenous homeostatic signal.
+
+        The signal is not an external task reward. It is meant to represent a
+        local, biologically grounded change in state such as reduced own hunger,
+        reduced fatigue, or reduced own-child distress.
+        """
         domain = domain.upper()
         if domain not in {"CARE", "FORAGE", "SELF"}:
             raise ValueError(f"Unknown plasticity domain: {domain}")
 
         if noise_sigma > 0.0:
-            reward = reward * max(0.0, 1.0 + random.gauss(0, noise_sigma))
+            signal = signal * max(0.0, 1.0 + random.gauss(0, noise_sigma))
         sensitivity = max(0.0, self.genome.update_sensitivity)
         coefficient = max(0.0, self.genome.plasticity_coefficient)
-        delta = self.genome.learning_rate * coefficient * sensitivity * reward * plastic_gain
+        delta = self.genome.learning_rate * coefficient * sensitivity * signal * plastic_gain
 
         if domain == "CARE":
             self.expressed_care_weight = max(0.0, self.expressed_care_weight + delta)
@@ -461,7 +467,7 @@ class MotherAgent(Agent):
 
     def plastic_update(
         self,
-        reward: float,
+        signal: float,
         plastic_gain: float,
         energy_cost: float = 0.0,
         noise_sigma: float = 0.0,
@@ -470,7 +476,7 @@ class MotherAgent(Agent):
         """Backward-compatible alias for care-domain learning."""
         self.plastic_update_domain(
             domain="CARE",
-            reward=reward,
+            signal=signal,
             plastic_gain=plastic_gain,
             energy_cost=energy_cost,
             noise_sigma=noise_sigma,
@@ -485,7 +491,7 @@ class MotherAgent(Agent):
         child_matured: bool = False,
         mother_died: bool = False,
     ) -> float:
-        """Compute a sparse ecological modulation signal for plasticity updates.
+        """Compute a sparse endogenous homeostatic signal for plasticity updates.
 
         Only one event fires per tick (priority order: child_matured >
         feed_success > child_nearby > critical_hunger > mother_died).
@@ -499,7 +505,8 @@ class MotherAgent(Agent):
             mother_died: Mother death signal (handled at simulation level).
 
         Returns:
-            Scalar reward/penalty in [-5.0, 5.0]; 0.0 means no event fired.
+            Scalar endogenous homeostatic signal in [-5.0, 5.0];
+            0.0 means no event fired.
         """
         if child_matured:
             return 5.0
