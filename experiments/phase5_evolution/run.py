@@ -417,7 +417,7 @@ class EvolutionRunner:
             "mean_generation":        float(np.mean(generations))       if generations       else 0.0,
             "highest_generation":     highest_generation,
             "child_survival_rate":    child_survival_rate,
-            "c_matr_cum":             child_survival_rate,
+            "population_size":        len(mothers) + len(children),
         }
 
     def _build_params_record(self, cfg) -> dict:

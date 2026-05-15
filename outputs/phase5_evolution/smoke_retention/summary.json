@@ -1,0 +1,58 @@
+{
+  "n_seeds": 1,
+  "seeds": [
+    42
+  ],
+  "actual_final_ticks": [
+    499
+  ],
+  "final_stats": [
+    {
+      "tick": 499,
+      "n_mothers": 80,
+      "n_children": 21,
+      "mean_genome_care": 0.33338206091305517,
+      "std_genome_care": 0.004420605897384395,
+      "mean_genome_forage": 0.3335035624228504,
+      "std_genome_forage": 0.002586555708569958,
+      "mean_genome_self": 0.33311437666409455,
+      "std_genome_self": 0.002801077987723432,
+      "mean_expressed_care": 0.30320984752936786,
+      "std_expressed_care": 0.017293816924206958,
+      "mean_expressed_forage": 0.3715078102640792,
+      "std_expressed_forage": 0.021763632161130714,
+      "mean_expressed_self": 0.32528234220655305,
+      "std_expressed_self": 0.0058221898351830705,
+      "mean_learning_rate": 0.050351363743932356,
+      "std_learning_rate": 0.0031229892672666507,
+      "mean_plasticity": 0.5002545899979565,
+      "std_plasticity": 0.0029243977609755166,
+      "innateness_index": 0.49974541000204353,
+      "genome_behavior_distance": 0.03801840680645833,
+      "mean_learning_cost": 0.1263246112419488,
+      "mean_mother_energy": 0.8133248530755809,
+      "mean_child_energy": 0.6151927437641722,
+      "mean_generation": 1.2875,
+      "highest_generation": 3,
+      "child_survival_rate": 0.5179856115107914,
+      "c_matr_cum": 0.5179856115107914
+    }
+  ],
+  "params": {
+    "mutation_enabled": true,
+    "plasticity_enabled": true,
+    "mutation_rate": 0.05,
+    "mutation_sigma": 0.02,
+    "learning_rate": 0.05,
+    "plasticity_coefficient": 0.5,
+    "phenotype_retention": 0.15,
+    "plasticity_local_search": "motivation_vector",
+    "max_ticks": 500,
+    "relax_ecology": false,
+    "checkpoint": 10,
+    "cell_size": 15,
+    "circle_world": false,
+    "maturity_age": 80,
+    "mother_max_age": 1000
+  }
+}

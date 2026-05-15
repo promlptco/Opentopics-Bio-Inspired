@@ -1,0 +1,82 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ------------------------------------------------------------
+% Algorithm style helpers
+% ------------------------------------------------------------
+\algrenewcommand\algorithmicindent{1.2em}
+\algrenewcommand\algorithmicfunction{\textbf{Function}}
+\newcommand{\algcmt}[1]{%
+  \Statex \hspace*{1em}\texttt{/* #1 */}%
+}
+
+\begin{document}
+
+% =============================================================
+% ALGORITHM 1 — Asynchronous Evolutionary with Plasticity Cost
+% =============================================================
+\begin{algorithm}[H]
+\caption{Asynchronous Evolutionary with Plasticity Cost}
+\begin{algorithmic}[1]
+
+\Function{UpdateAgent}{agent}
+
+    \State $agent.age \gets agent.age + 1$
+    \State $agent.energy \gets agent.energy - HungerRate - agent.fatigue \times FatigueRate$ % FIX 1: fatigue drain included
+    \State $agent.PerceiveWorld()$
+    \State $agent.SelectMotivation()$
+
+    \State $cost\_p \gets \beta \times agent.plasticity\_coefficient$
+
+    \If{$cost\_p > 0$}
+        \State $agent.energy \gets agent.energy - cost\_p$
+        \State $agent.lifetime\_plasticity\_cost \gets agent.lifetime\_plasticity\_cost + cost\_p$
+    \EndIf
+
+    \Statex
+    \State $agent.ExecuteAction()$
+
+    \Statex
+    \If{$agent.energy \leq 0$
+        \textbf{ or } $agent.age > MaxLifespan$}
+        \State $World.Remove(agent)$
+        \State \Return
+    \EndIf
+
+    \Statex
+    \State $p \gets \left(1 + \exp\!\left(-\,\dfrac{agent.energy - E_{rep}}{0.05}\right)\right)^{-1}$ % FIX 2: sigmoid gate
+    \If{$\mathrm{Uniform}(0,1) < p
+        \land OwnChildId = \varnothing
+        \land agent.cooldown = 0$}
+        \State $offspring \gets Reproduce(agent)$
+        \State $World.Add(offspring)$
+    \EndIf
+
+\EndFunction
+
+\Statex
+
+\Function{Reproduce}{parent}
+
+    \State $parent.energy \gets parent.energy - ReproductionCost$
+    \State $offspring \gets Clone(parent)$
+    \algcmt{Inherit current epigenetic state}
+    \State $offspring.expressed\_weights \gets parent.expressed\_weights$
+    \algcmt{Reset lifetime plasticity cost to prevent inherited debt}
+    \State $offspring.lifetime\_plasticity\_cost \gets 0$
+    \algcmt{Apply Genetic Variation}
+    \State $offspring.genome \gets Mutate(parent.genome)$
+    \State \Return $offspring$
+
+\Statex \textbf{End Function}
+
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

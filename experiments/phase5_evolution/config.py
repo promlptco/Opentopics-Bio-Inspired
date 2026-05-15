@@ -24,6 +24,9 @@ class Phase5ConfigFactory:
         "init_food": 600,
         "eat_gain": 0.70,
         "move_cost": 0.005,
+        "rest_recovery": 0.005,
+        "perception_radius": 8,
+        "food_perception_radius": 8,
         "infant_starvation_multiplier": 1.0,
     }
 
@@ -105,9 +108,9 @@ class Phase5ConfigFactory:
             init_food=init_food,
             max_population=140,
 
-            # Perception
-            perception_radius=15,
-            food_perception_radius=15,
+            # Perception — Phase 4b BEST_CALIBRATED value
+            perception_radius=int(eco.get("perception_radius", 8)),
+            food_perception_radius=int(eco.get("food_perception_radius", 8)),
 
             # Energy — Phase 4b BEST_CALIBRATED values
             initial_energy=1.0,
@@ -115,7 +118,7 @@ class Phase5ConfigFactory:
             move_cost=eco.get("move_cost", fb["move_cost"]),
             feed_cost=0.01,
             eat_gain=eco.get("eat_gain", fb["eat_gain"]),
-            rest_recovery=0.5,
+            rest_recovery=eco.get("rest_recovery", 0.005),
 
             # Reproduction — Phase 4b validated thresholds
             reproduction_threshold=0.85, # 0.85

@@ -13,6 +13,12 @@ class ChildAgent(Agent):
         self.separation: float = 0.0
         self.distress: float = 0.0
         self.matured: bool = False  # set True by _check_maturation before die(); distinguishes maturation from starvation in death log
+
+        # Epigenetic retention: birth-mother's expressed weights at moment of reproduction.
+        # Used in _check_maturation() to initialise the new mother's expressed phenotype.
+        self.birth_mother_expressed_care: float | None = None
+        self.birth_mother_expressed_forage: float | None = None
+        self.birth_mother_expressed_self: float | None = None
     
     def update_hunger(self, hunger_rate: float) -> None:
         # Deplete energy (same mechanic as mother.update_state).

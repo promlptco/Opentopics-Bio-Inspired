@@ -426,49 +426,60 @@ def plot_starvation_individual(
                   edgecolor="#CCCCCC", alpha=0.92),
     )
 
-    # ── Right: Child hunger ───────────────────────────────────────
+    # ── Right: Child energy ───────────────────────────────────────
     ax = axes[1]
 
     child_hunger_rate = child_hunger_rate if child_hunger_rate is not None else (
         config.hunger_rate * config.infant_starvation_multiplier
     )
 
-    tick_c = np.arange(config.maturity_age + 1)
-    hunger_curve = np.clip(tick_c * child_hunger_rate, 0.0, 1.0)
-    child_arr = np.tile(hunger_curve, (len(child_final_hungers), 1))
+    child_arr = np.array(child_energy_history)  # shape (N, ticks+1) — actual tracked energy
+    tick_c = np.arange(child_arr.shape[1])
 
     for row in child_arr:
         ax.plot(tick_c, row, color=COLORS["child_trace"], alpha=0.20, linewidth=1.2)
 
-    mean_h = child_arr.mean(axis=0)
-    std_h = child_arr.std(axis=0)
-    ax.plot(tick_c, mean_h, color=COLORS["mean"], linewidth=2.5,
-            label="Mean hunger", zorder=5)
-    ax.fill_between(tick_c, mean_h - std_h, mean_h + std_h,
+    mean_e_c = child_arr.mean(axis=0)
+    std_e_c = child_arr.std(axis=0)
+    ax.plot(tick_c, mean_e_c, color=COLORS["mean"], linewidth=2.5,
+            label="Mean energy", zorder=5)
+    ax.fill_between(tick_c, mean_e_c - std_e_c, mean_e_c + std_e_c,
                     color=COLORS["mean"], alpha=0.18, label="+-1 std")
 
-    ax.axvline(config.maturity_age, color=COLORS["maturity"], linestyle=":",
-               linewidth=1.3, label=f"Maturity age (t={config.maturity_age})", zorder=6)
+    child_death_ticks = []
+    for row in child_arr:
+        zeros = np.where(row == 0.0)[0]
+        child_death_ticks.append(int(zeros[0]) if len(zeros) > 0 else len(row) - 1)
 
-    ax.axhline(CRITICAL_HUNGER, color=COLORS["critical"], linestyle="--", linewidth=1.3,
-               label=f"Critical hunger ({CRITICAL_HUNGER:.1f})", zorder=6)
+    for dt in child_death_ticks:
+        ax.axvline(dt, color=COLORS["child_trace"], linestyle=":", alpha=0.45, linewidth=1.0)
 
-    ax.set_xlim(0, config.maturity_age + 5)
+    mean_child_death = float(np.mean(child_death_ticks))
+    ax.axvline(mean_child_death, color=COLORS["death"], linestyle="--", linewidth=1.6,
+               label=f"Mean death @ t={mean_child_death:.0f}", zorder=6)
+
+    critical_energy_c = 1.0 - CRITICAL_HUNGER
+    ax.axhline(critical_energy_c, color=COLORS["critical"], linestyle="--", linewidth=1.3,
+               label=f"Critical energy ({critical_energy_c:.1f})", zorder=6)
+
+    x_max_c = max(child_death_ticks) + 20
+    ax.set_xlim(0, x_max_c)
     ax.set_ylim(-0.05, 1.05)
     ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Hunger", fontsize=10, color="#444444")
-    ax.set_title("Child — Hunger Without Food", fontsize=11, color="#1A1A1A")
+    ax.set_ylabel("Energy", fontsize=10, color="#444444")
+    ax.set_title("Child — Energy Without Food  (hunger = 1 − energy)", fontsize=11, color="#1A1A1A")
     ax.legend(fontsize=8.5, loc="upper right", facecolor="#FFFFFF",
               edgecolor="#CCCCCC", framealpha=0.95)
 
-    mean_fh = float(np.mean(child_final_hungers))
+    final_energy_c = float(np.mean([row[-1] for row in child_energy_history]))
     ax.text(
         0.03, 0.50,
-        f"N={len(child_final_hungers)} children\n"
-        f"hunger_rate/tick: {child_hunger_rate:.4f} "
+        f"N={len(child_energy_history)} children\n"
+        f"energy_cost/tick: {child_hunger_rate:.4f} "
         f"(x{config.infant_starvation_multiplier:.1f})\n"
-        f"Final hunger: {mean_fh:.3f}\n"
-        f"Critical hunger: {CRITICAL_HUNGER:.1f}\n"
+        f"Mean death: t={mean_child_death:.0f}\n"
+        f"Final energy: {final_energy_c:.3f}\n"
+        f"Critical energy: {critical_energy_c:.1f}\n"
         f"Maturity age: {config.maturity_age}",
         transform=ax.transAxes, fontsize=8.0, verticalalignment="top",
         color="#1A1A1A",

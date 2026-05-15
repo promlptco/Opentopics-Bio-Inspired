@@ -41,7 +41,7 @@ This proposal defines the implementation of **Phase 5 Block 2** — a continuous
 
 ## 2. Core Algorithms
 
-### Algorithm 1: Asynchronous Agent Update with Plasticity Cost (Per Tick)
+### Algorithm 1: Asynchronous Agent Update with Reward-Modulated Hebbian Plasticity (Per Tick)
 
 ```
 Function UpdateAgent(agent, dt):
@@ -50,20 +50,36 @@ Function UpdateAgent(agent, dt):
     agent.age ← agent.age + dt
     agent.energy ← agent.energy - metabolism_base
     
-    /* Perceive and compute brain state */
-    agent.FeedInputs()              // sensory inputs: children, food, energy
-    agent.TickBrain(dt)             // softmax motivations + choose_action()
+    /* Perceive world (sensory inputs: children, food, energy) */
+    agent.FeedInputs()
     
-    /* Reward-modulated Hebbian learning + immediate energy deduction */
+    /* Compute brain state: softmax over expressed motivation weights */
+    agent.TickBrain(dt)
+    
+    /* Reward-modulated Hebbian plasticity update */
     if agent.plasticity_enabled then
         modulation_signal ← agent.compute_modulation_signal()
-        cost_p ← agent.compute_plasticity_cost(modulation_signal)
-        if cost_p > 0 then
+        // Note: signal reflects events from PREVIOUS tick (one-tick feedback delay)
+        
+        if modulation_signal ≠ 0 then
+            /* Compute and apply Hebbian weight update per domain */
+            for each domain ∈ {care, forage, self} do
+                Δ ← learning_rate × plasticity_coefficient
+                    × update_sensitivity × modulation_signal × plastic_gain
+                expressed_domain ← expressed_domain + Δ
+            
+            /* Renormalize: expressed motivation weights must sum to 1.0 */
+            _renormalize_expressed_weights(agent)
+            
+            /* Deduct learning energy cost */
+            cost_p ← agent.compute_plasticity_cost(modulation_signal)
             agent.energy ← agent.energy - cost_p
             agent.lifetime_learning_cost ← agent.lifetime_learning_cost + cost_p
-            agent.apply_expression_noise()  // molecular noise during learning
+            
+            /* Molecular noise during active learning */
+            agent.apply_expression_noise()
     
-    /* Execute action (deduct action-specific cost) */
+    /* Choose and execute action based on current expressed weights */
     action ← agent.choose_action()
     action_cost ← config.get_action_cost(action)
     agent.energy ← agent.energy - action_cost
@@ -73,46 +89,121 @@ Function UpdateAgent(agent, dt):
 ```
 
 **Key Timing**:
-1. Plasticity cost computed **fresh this frame** (not accumulated forward)
-2. Deducted **immediately** after computation
-3. Expression noise applied **only during learning** (modulation_signal ≠ 0)
-4. Action cost deducted **after** learning cost
-5. Reproduction checked **by Simulation**, not in UpdateAgent()
+1. Modulation signal reflects **previous-tick** events (one-tick feedback delay)
+2. Hebbian delta computed and **applied immediately** (expressed weights updated this tick)
+3. Expression noise applied **only when** `modulation_signal ≠ 0` (not every tick)
+4. Plasticity cost deducted **after** weight update, gated by same `signal ≠ 0` condition
+5. Action choice uses **updated** expressed weights from this tick's learning
+6. Reproduction checked **by Simulation**, not in UpdateAgent()
 
 ---
 
-### Algorithm 2: Value Mutation (Parametric + Epigenetic, No Structural Changes)
+### Algorithm 2: Reproduce(parent)
 
 ```
-Function MutateDNA(child_dna, μ):
+Function Reproduce(parent):
     
-    /* Parametric Mutation: Numerical gene changes */
-    for each gene ∈ {care_weight, forage_weight, self_weight, 
-                     learning_rate, plasticity_coefficient} do
+    /* One-child-per-lifetime constraint */
+    if parent.has_reproduced then
+        return None
+    
+    /* Minimum energy gate */
+    if parent.energy < config.repro_threshold then
+        return None
+    
+    /* Deduct reproduction cost (separate from threshold) */
+    parent.energy ← parent.energy - config.repro_cost
+    parent.has_reproduced ← True
+    
+    /* Clone parent genome (pre-mutation snapshot) */
+    offspring_genome ← parent.genome.copy()
+    
+    /* Create offspring with inherited genome */
+    offspring ← MotherAgent(config, genome=offspring_genome)
+    offspring.generation ← parent.generation + 1
+    
+    /* Partial phenotype inheritance (Baldwinian: retention × parent's learning) */
+    retention ← config.phenotype_retention  // 0.15
+    offspring.expressed_care   ← offspring_genome.care_weight
+                                 + retention × (parent.expressed_care   - offspring_genome.care_weight)
+    offspring.expressed_forage ← offspring_genome.forage_weight
+                                 + retention × (parent.expressed_forage - offspring_genome.forage_weight)
+    offspring.expressed_self   ← offspring_genome.self_weight
+                                 + retention × (parent.expressed_self   - offspring_genome.self_weight)
+    
+    /* Clamp inherited expressed weights to [0.0, 1.0], then renormalize */
+    for each expressed ∈ {expressed_care, expressed_forage, expressed_self} do
+        expressed ← clamp(expressed, 0.0, 1.0)
+    _renormalize_expressed_weights(offspring)
+    
+    /* Reset lifetime cost tracking */
+    offspring.lifetime_learning_cost ← 0.0
+    offspring.has_reproduced ← False
+    
+    /* Apply mutation to offspring genome AFTER phenotype inheritance */
+    // Intentional Baldwinian ordering: expressed weights derived from
+    // pre-mutation genome, then genome mutates independently
+    if config.mutation_enabled then
+        offspring.genome ← MutateDNA(offspring_genome,
+                                      config.mutation_rate,
+                                      config.mutation_sigma)
+    
+    /* Place offspring at adjacent grid cell to parent */
+    offspring.position ← parent.position + random_adjacent_offset()
+    
+    return offspring
+```
+
+**Key Properties**:
+
+1. One child per mother lifetime (`has_reproduced` flag prevents second offspring)
+2. `repro_threshold` = minimum energy gate (check only); `repro_cost` = energy deducted (separate value)
+3. Phenotype inheritance anchors to **pre-mutation** genome (Baldwinian: scaffold then mutate)
+4. `offspring.generation ← parent.generation + 1` (cohort lineage counter)
+5. Offspring placed adjacent to parent on grid
+
+---
+
+### Algorithm 3: MutateDNA(genome, μ, σ)
+
+```
+Function MutateDNA(genome, μ, σ):
+    
+    /* Motivation weight mutation with per-gene clamping BEFORE renormalization */
+    for each gene ∈ {care_weight, forage_weight, self_weight} do
         if rand() < μ then
-            gene ← gene + N(0, mutation_sigma)
-    
-    /* Clamp to valid ranges */
-    learning_rate ← clamp(learning_rate, 0.0, 0.2)
-    plasticity_coefficient ← clamp(plasticity_coefficient, 0.0, 1.0)
+            gene ← clamp(gene + N(0, σ), 0.0, 1.0)
     
     /* Renormalize motivation weights: sum = 1.0 */
     total ← care_weight + forage_weight + self_weight
-    care_weight ← care_weight / total
-    forage_weight ← forage_weight / total
-    self_weight ← self_weight / total
+    if total ≤ 0 then
+        /* Degenerate guard: reset to neutral if all weights clamp to zero */
+        care_weight ← forage_weight ← self_weight ← 1/3
+    else
+        care_weight   ← care_weight / total
+        forage_weight ← forage_weight / total
+        self_weight   ← self_weight / total
+    
+    /* Learning parameter mutation (independent of motivation budget) */
+    if rand() < μ then
+        learning_rate ← clamp(learning_rate + N(0, σ), 0.0, 1.0)
+    if rand() < μ then
+        plasticity_coefficient ← clamp(plasticity_coefficient + N(0, σ), 0.0, 1.0)
     
     /* NO Structural Mutation in Block 2 */
     /* (No add/remove nodes, no connection toggles, no topology changes) */
     
-    return child_dna
+    return genome
 ```
 
 **Key Principles**:
+
+- Per-gene clamp to [0.0, 1.0] **before** renormalization (prevents invalid division if Gaussian draws go negative)
+- Degenerate guard: if total ≤ 0, reset to equal thirds (avoids divide-by-zero)
+- `learning_rate` clamped to [0.0, 1.0] (actual runs used 0.5 in Block 2, 0.25 in Block 2b)
+- `mutation_sigma` (σ) passed explicitly in signature — not hardcoded
 - Value mutation only: changes gene values, not network structure
-- Parametric mutation: weights, learning rates
-- Epigenetic drift: inherited phenotype can mutate separately (see reproduction)
-- Renormalization: preserves motivational budget constraint (sum=1)
+- Renormalization preserves motivational budget constraint (sum = 1)
 - No topology changes: focus on value evolution first
 
 ---
@@ -222,14 +313,16 @@ class Genome:
     plasticity_coefficient: float = 0.5
     
     def mutate(self, mutation_rate: float, mutation_sigma: float) -> 'Genome':
-        """Apply value mutation (parametric) per Algorithm 2.
+        """Apply value mutation (parametric) per Algorithm 3: MutateDNA.
         
         Returns: Mutated copy of genome.
         """
-        # For each gene: mutate with probability mutation_rate
-        # Clamp learning_rate ∈ [0.0, 0.2]
+        # For each motivation gene: mutate with probability mutation_rate,
+        #   clamp each to [0.0, 1.0] BEFORE renormalization
+        # Degenerate guard: if total ≤ 0, reset to equal thirds
+        # Renormalize motivation weights (sum = 1.0)
+        # Clamp learning_rate ∈ [0.0, 1.0]
         # Clamp plasticity_coefficient ∈ [0.0, 1.0]
-        # Renormalize weights (sum = 1.0)
     
     def copy(self) -> 'Genome':
         """Return exact deep copy."""
@@ -286,65 +379,81 @@ def compute_plasticity_cost(self, modulation_signal: float) -> float:
     # See Section 3 "Plasticity Cost"
 ```
 
-**Modify method: step()**:
+**Modify method: step()** (see Algorithm 1):
 ```python
 def step(self):
-    """Per-tick update following Algorithm 1."""
+    """Per-tick update — see Algorithm 1 for full spec."""
     # 1. self.age += 1
     # 2. self.energy -= metabolism_base
-    # 3. perceive_world()
-    # 4. choose_motivation() + TickBrain()
-    # 5. signal = compute_modulation_signal()
-    # 6. cost_p = compute_plasticity_cost(signal)
-    #    if cost_p > 0:
-    #        energy -= cost_p
-    #        lifetime_learning_cost += cost_p
-    #        apply_expression_noise()
-    # 7. action = choose_action()
-    # 8. energy -= action_cost
-    # 9. execute_action()
+    # 3. self.FeedInputs()               # perceive world
+    # 4. self.TickBrain(dt)              # softmax over expressed weights
+    # 5. if plasticity_enabled:
+    #        signal = compute_modulation_signal()  # reflects previous tick
+    #        if signal != 0:
+    #            # Hebbian weight update
+    #            for domain in {care, forage, self}:
+    #                delta = lr * pc * sensitivity * signal * plastic_gain
+    #                expressed_domain += delta
+    #            _renormalize_expressed_weights()
+    #            # Energy cost + noise
+    #            cost_p = compute_plasticity_cost(signal)
+    #            self.energy -= cost_p
+    #            self.lifetime_learning_cost += cost_p
+    #            self._apply_expression_noise()
+    # 6. action = choose_action()        # uses updated expressed weights
+    # 7. self.energy -= action_cost
+    # 8. execute_action()
     # (Natural selection + reproduction handled by Simulation)
 ```
 
-**Add method: Reproduction with Partial Phenotype Inheritance**:
+**Add method: Reproduction with Partial Phenotype Inheritance** (see Algorithm 2):
 ```python
 def reproduce(self):
-    """Asexual reproduction with mutation and partial epigenetic inheritance.
+    """Asexual reproduction — see Algorithm 2: Reproduce(parent) for full spec."""
+    # 0. One-child-per-lifetime guard
+    if self.has_reproduced:
+        return None
     
-    Offspring genome: copy parent's genome (will be mutated)
-    Offspring phenotype: partial inheritance (retention=0.15)
-    """
+    # 1. Minimum energy gate
     if self.energy < self.config.repro_threshold:
         return None
     
-    # 1. Deduct reproduction cost (equals threshold)
-    self.energy -= self.config.repro_threshold
+    # 2. Deduct reproduction cost (separate from threshold)
+    self.energy -= self.config.repro_cost
+    self.has_reproduced = True
     
-    # 2. Clone genome
+    # 3. Clone genome (pre-mutation snapshot)
     offspring_genome = self.genome.copy()
     
-    # 3. Partial phenotype inheritance
-    retention = self.config.phenotype_retention  # 0.15
+    # 4. Create offspring; increment generation counter
     offspring = MotherAgent(config=self.config, genome=offspring_genome)
-    offspring.expressed_care = (offspring_genome.care_weight + 
-                                retention * (self.expressed_care - offspring_genome.care_weight))
-    # ... same for forage, self ...
+    offspring.generation = self.generation + 1
     
-    # 4. Clamp and renormalize expressed values
-    offspring.expressed_care = np.clip(offspring.expressed_care, 0.0, 1.0)
-    # ... clamp others ...
-    # Renormalize sum = 1.0
+    # 5. Partial phenotype inheritance (retention=0.15, Baldwinian)
+    retention = self.config.phenotype_retention
+    offspring.expressed_care_weight = (
+        offspring_genome.care_weight
+        + retention * (self.expressed_care_weight - offspring_genome.care_weight))
+    offspring.expressed_forage_weight = (
+        offspring_genome.forage_weight
+        + retention * (self.expressed_forage_weight - offspring_genome.forage_weight))
+    offspring.expressed_self_weight = (
+        offspring_genome.self_weight
+        + retention * (self.expressed_self_weight - offspring_genome.self_weight))
     
-    # 5. Reset cost (offspring starts clean)
-    offspring.lifetime_learning_cost = 0
+    # 6. Clamp to [0, 1] then renormalize
+    offspring._renormalize_expressed_weights()
     
-    # 6. Apply mutation if enabled
+    # 7. Reset lifetime cost tracking
+    offspring.lifetime_learning_cost = 0.0
+    offspring.has_reproduced = False
+    
+    # 8. Apply mutation AFTER phenotype inheritance (intentional Baldwinian ordering)
     if self.config.mutation_enabled:
-        offspring.genome = offspring.genome.mutate(
+        offspring.genome = offspring_genome.mutate(
             self.config.mutation_rate,
             self.config.mutation_sigma
         )
-        # Renormalize genome weights
     
     return offspring
 ```
@@ -723,7 +832,7 @@ python -m experiments.phase5_evolution.run \
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2026-05-10  
+**Document Version**: 1.1  
+**Last Updated**: 2026-05-12  
 **Branch**: V3  
-**Status**: Proposal (awaiting approval)
+**Status**: Revised (algorithms corrected)

@@ -722,7 +722,7 @@ class Simulation:
                             self._apply_homeostatic_learning_signal(
                                 mother,
                                 "CARE",
-                                signal=benefit,
+                                signal=mother.compute_modulation_signal(feed_success=True),
                                 is_own_child=is_own,
                             )
                             # Change D: outcome-based commitment — release only when child sated.
@@ -900,6 +900,12 @@ class Simulation:
                     birth_mother.target_child_id = None
                     birth_mother.commit_ticks = 0
                     birth_mother.matured_children += 1
+                    self._apply_homeostatic_learning_signal(
+                        birth_mother,
+                        "CARE",
+                        signal=birth_mother.compute_modulation_signal(child_matured=True),
+                        is_own_child=True,
+                    )
 
                 pos = child.pos  # save before removal
 
@@ -921,6 +927,18 @@ class Simulation:
                     generation=child.generation,
                     genome=genome
                 )
+                # Epigenetic retention: offset expressed weights toward birth-mother's
+                # learned phenotype. MotherAgent.__init__ already set expressed = genome,
+                # so we only override when retention > 0 and data is available.
+                retention = self.config.phenotype_retention
+                m_care   = child.birth_mother_expressed_care
+                m_forage = child.birth_mother_expressed_forage
+                m_self   = child.birth_mother_expressed_self
+                if retention > 0 and m_care is not None and m_forage is not None and m_self is not None:
+                    new_mother.expressed_care_weight   = genome.care_weight   + retention * (m_care   - genome.care_weight)
+                    new_mother.expressed_forage_weight = genome.forage_weight + retention * (m_forage - genome.forage_weight)
+                    new_mother.expressed_self_weight   = genome.self_weight   + retention * (m_self   - genome.self_weight)
+                    new_mother._renormalize_expressed_weights()
                 new_mother.birth_tick = self.tick
                 # A matured child becomes a new mother, but should not be able to
                 # reproduce again in the same tick it enters the adult pool.
@@ -950,6 +968,10 @@ class Simulation:
                 sigma=self.config.mutation_sigma,
                 lock_learning_rate=self.config.lock_learning_rate,
             ) if self.config.mutation_enabled else mother.genome.copy()
+            # Epigenetic retention: snapshot mother's expressed phenotype at birth.
+            child.birth_mother_expressed_care   = mother.expressed_care_weight
+            child.birth_mother_expressed_forage = mother.expressed_forage_weight
+            child.birth_mother_expressed_self   = mother.expressed_self_weight
             self.children.append(child)
             self._child_by_id[child.id] = child
             self.world.place_entity(child, blocking=False)  # Change C: non-blocking child
