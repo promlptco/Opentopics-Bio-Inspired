@@ -64,7 +64,8 @@ def load_ecology() -> dict:
     return _FALLBACK.copy()
 
 
-def make_config(alpha: float, eco: dict, max_ticks: int) -> Config:
+def make_config(alpha: float, eco: dict, max_ticks: int,
+                prior: float | None = None) -> Config:
     cfg = Config()
     cfg.width = 50
     cfg.height = 50
@@ -83,7 +84,11 @@ def make_config(alpha: float, eco: dict, max_ticks: int) -> Config:
     cfg.food_entropy_alpha = alpha
     cfg.food_entropy_beta = 0.01
     cfg.food_entropy_gamma = 0.01
-    cfg.food_patch_prior = cfg.init_food / (cfg.width * cfg.height)
+    if prior is not None:
+        cfg.init_food = max(1, int(prior * cfg.width * cfg.height))
+        cfg.food_patch_prior = prior
+    else:
+        cfg.food_patch_prior = cfg.init_food / (cfg.width * cfg.height)
     cfg.care_weight = 0.0
     cfg.forage_weight = 1.0
     cfg.self_weight = 1.0
@@ -96,7 +101,7 @@ def make_config(alpha: float, eco: dict, max_ticks: int) -> Config:
 
 
 def _worker(args: tuple) -> dict:
-    alpha, seed, max_ticks, eco = args
+    alpha, seed, max_ticks, eco, prior = args
     import sys as _sys
     from pathlib import Path as _Path
     _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -109,7 +114,7 @@ def _worker(args: tuple) -> dict:
     from experiments.phase2_food_comparison.diagnostic_run import make_config
     from experiments.phase2_survival_minimal.new_run import SurvivalSimulation
 
-    cfg = make_config(alpha, eco, max_ticks)
+    cfg = make_config(alpha, eco, max_ticks, prior)
     sim = SurvivalSimulation(cfg)
     result = sim.run()
     result["base_seed"] = seed
@@ -170,23 +175,26 @@ def _generate_plots(label: str, desc: str, results: list[dict], eco: dict,
 
 
 def run(seeds: int = 5, max_ticks: int = 2000, workers: int = 1,
-        output_dir: Path | None = None) -> Path:
+        output_dir: Path | None = None,
+        prior: float | None = None) -> Path:
     eco = load_ecology()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out = output_dir or (PROJECT_ROOT / "outputs" / "phase2_food_shannon_diagnostic" / f"exp_{ts}")
     out.mkdir(parents=True, exist_ok=True)
 
+    eff_prior = prior if prior is not None else eco.get("init_food", 300) / 2500
     print("[phase2_food_shannon_diagnostic]")
-    print("  ecology: init_food=%d  eat_gain=%.2f  move_cost=%.4f" % (
-        eco.get("init_food", 300), eco.get("eat_gain", 0.7), eco.get("move_cost", 0.005)))
-    print("  seeds=%d  ticks=%d  workers=%d" % (seeds, max_ticks, workers))
+    print("  ecology: eat_gain=%.2f  move_cost=%.4f" % (
+        eco.get("eat_gain", 0.7), eco.get("move_cost", 0.005)))
+    print("  prior=%.2f (food_equiv=%d)  seeds=%d  ticks=%d  workers=%d" % (
+        eff_prior, int(eff_prior * 2500), seeds, max_ticks, workers))
     print("  output: %s" % out)
 
     seed_list = list(range(42, 42 + seeds))
 
     for alpha, label, desc in ALPHA_LEVELS:
         print("\n  [%s] %s" % (label, desc))
-        jobs = [(alpha, s, max_ticks, eco) for s in seed_list]
+        jobs = [(alpha, s, max_ticks, eco, prior) for s in seed_list]
         results: list[dict] = []
 
         if workers <= 1:
@@ -227,6 +235,9 @@ def main() -> None:
     parser.add_argument("--ticks", type=int, default=2000)
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--output-dir", type=str, default=None)
+    parser.add_argument("--prior", type=float, default=None,
+                        help="Override food_patch_prior (and init_food). "
+                             "Default: init_food/(W*H). Best from sweep: 0.37")
     args = parser.parse_args()
 
     run(
@@ -234,6 +245,7 @@ def main() -> None:
         max_ticks=args.ticks,
         workers=max(1, args.workers),
         output_dir=Path(args.output_dir) if args.output_dir else None,
+        prior=args.prior,
     )
 
 
