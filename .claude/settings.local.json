@@ -50,7 +50,14 @@
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Recurse -Directory\\).FullName)",
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\experiments\" -Recurse -File | Where-Object {$_.Extension -match '\\\\.\\(json|csv|png\\)$'}\\).FullName)",
       "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Recurse -File | Where-Object {$_.Extension -match '\\\\.\\(json|csv|png\\)$'}\\).FullName)",
-      "PowerShell(Get-Content \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase4_weight_sweep\\\\sweep_20260508_215018\\\\sweep_summary.csv\" -First 5)"
+      "PowerShell(Get-Content \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase4_weight_sweep\\\\sweep_20260508_215018\\\\sweep_summary.csv\" -First 5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\" -Directory | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase5_evolution\" -Directory | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\User\\\\Desktop\\\\FIBO_Study\\\\3Y_2\\\\FRA361_OPENTOPICS\\\\Opentopics-Bio-Inspired\\\\outputs\\\\phase_eco_explore\" -Directory | ForEach-Object { $_.Name })",
+      "Bash(awk -F, 'NR==1{for\\(i=1;i<=NF;i++\\) col[$i]=i} NR>1 && $col[\"n_mothers\"]>0 {print $col[\"tick\"],$col[\"seed\"],$col[\"n_mothers\"],$col[\"mean_genome_care\"],$col[\"highest_generation\"],$col[\"child_survival_rate\"]}' c:/Users/User/Desktop/FIBO_Study/3Y_2/FRA361_OPENTOPICS/Opentopics-Bio-Inspired/outputs/phase5_evolution/__TRACKED_VAR__/snapshots.csv)",
+      "Bash(awk -F, ' *)"
     ],
     "additionalDirectories": [
       "\\tmp"

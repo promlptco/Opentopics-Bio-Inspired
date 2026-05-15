@@ -1,0 +1,72 @@
+{
+  "ecology": {
+    "init_food": 300,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005,
+    "infant_starvation_multiplier": 1.0
+  },
+  "run_params": {
+    "seeds": 10,
+    "max_ticks": 2000
+  },
+  "genome": {
+    "care_weight": 1.0,
+    "forage_weight": 1.0,
+    "self_weight": 1.0
+  },
+  "conditions": {
+    "F0": {
+      "alpha": 0.0,
+      "desc": "Uniform 1:1 (alpha=0)",
+      "tail_mean_energy": NaN,
+      "tail_mean_pop": NaN,
+      "child_maturation_rate_mean": 0.28666666666666674,
+      "child_maturation_rate_sd": 0.10770329614269009,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.2823809523809524,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F1": {
+      "alpha": 0.01,
+      "desc": "Shannon alpha=0.01",
+      "tail_mean_energy": NaN,
+      "tail_mean_pop": NaN,
+      "child_maturation_rate_mean": 0.49333333333333335,
+      "child_maturation_rate_sd": 0.13727506854649335,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.28617385746244806,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F2": {
+      "alpha": 0.05,
+      "desc": "Shannon alpha=0.05",
+      "tail_mean_energy": NaN,
+      "tail_mean_pop": NaN,
+      "child_maturation_rate_mean": 0.9400000000000001,
+      "child_maturation_rate_sd": 0.06289320754704401,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.3384761904761905,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F3": {
+      "alpha": 0.1,
+      "desc": "Shannon alpha=0.10",
+      "tail_mean_energy": NaN,
+      "tail_mean_pop": NaN,
+      "child_maturation_rate_mean": 0.96,
+      "child_maturation_rate_sd": 0.05333333333333332,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.330952380952381,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    }
+  }
+}

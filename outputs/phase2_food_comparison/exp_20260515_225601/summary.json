@@ -1,0 +1,50 @@
+{
+  "ecology": {
+    "init_food": 300,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005
+  },
+  "run_params": {
+    "seeds": 10,
+    "max_ticks": 3000
+  },
+  "conditions": {
+    "F0": {
+      "alpha": 0.0,
+      "desc": "Uniform 1:1 (alpha=0)",
+      "tail_mean_energy": 0.52859878209093,
+      "tail_mean_pop": 12.02,
+      "final_pop_mean": 11.7,
+      "final_pop_sd": 0.9,
+      "n_seeds": 10
+    },
+    "F1": {
+      "alpha": 0.01,
+      "desc": "Shannon alpha=0.01",
+      "tail_mean_energy": 0.38944664811982904,
+      "tail_mean_pop": 9.121500000000001,
+      "final_pop_mean": 8.8,
+      "final_pop_sd": 1.6613247725836149,
+      "n_seeds": 10
+    },
+    "F2": {
+      "alpha": 0.05,
+      "desc": "Shannon alpha=0.05",
+      "tail_mean_energy": 0.32373383374306175,
+      "tail_mean_pop": 7.657499999999999,
+      "final_pop_mean": 7.6,
+      "final_pop_sd": 2.0099751242241783,
+      "n_seeds": 10
+    },
+    "F3": {
+      "alpha": 0.1,
+      "desc": "Shannon alpha=0.10",
+      "tail_mean_energy": 0.296565200205653,
+      "tail_mean_pop": 7.054500000000001,
+      "final_pop_mean": 6.8,
+      "final_pop_sd": 1.9899748742132397,
+      "n_seeds": 10
+    }
+  }
+}

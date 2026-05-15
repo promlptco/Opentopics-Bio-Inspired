@@ -1,0 +1,50 @@
+{
+  "ecology": {
+    "init_food": 300,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005
+  },
+  "run_params": {
+    "seeds": 2,
+    "max_ticks": 200
+  },
+  "conditions": {
+    "F0": {
+      "alpha": 0.0,
+      "desc": "Uniform 1:1 (alpha=0)",
+      "tail_mean_energy": 0.7227961634137625,
+      "tail_mean_pop": 15.0,
+      "final_pop_mean": 15.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 2
+    },
+    "F1": {
+      "alpha": 0.01,
+      "desc": "Shannon alpha=0.01",
+      "tail_mean_energy": 0.7204888421570369,
+      "tail_mean_pop": 15.0,
+      "final_pop_mean": 15.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 2
+    },
+    "F2": {
+      "alpha": 0.05,
+      "desc": "Shannon alpha=0.05",
+      "tail_mean_energy": 0.6987494687549837,
+      "tail_mean_pop": 15.0,
+      "final_pop_mean": 15.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 2
+    },
+    "F3": {
+      "alpha": 0.1,
+      "desc": "Shannon alpha=0.10",
+      "tail_mean_energy": 0.7063550219658764,
+      "tail_mean_pop": 15.0,
+      "final_pop_mean": 15.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 2
+    }
+  }
+}

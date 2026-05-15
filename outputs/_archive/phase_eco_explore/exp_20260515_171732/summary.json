@@ -1,0 +1,133 @@
+{
+  "best_viable_ecology": null,
+  "thresholds": {
+    "svr_min": 0.6,
+    "g_depth_min": 10.0,
+    "psc_max": 0.5
+  },
+  "grid": {
+    "relax_factors": [
+      1.0,
+      1.5,
+      2.0,
+      3.0
+    ],
+    "ism_values": [
+      1.0,
+      0.7,
+      0.5
+    ],
+    "seeds_per_cell": 5,
+    "max_ticks": 6000
+  },
+  "cells": [
+    {
+      "relax_factor": 1.0,
+      "ism": 0.5,
+      "svr": 0.8,
+      "g_depth": 19.6,
+      "psc": 0.541,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 1.0,
+      "ism": 0.7,
+      "svr": 0.4,
+      "g_depth": 14.2,
+      "psc": 0.562,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 1.0,
+      "ism": 1.0,
+      "svr": 0.0,
+      "g_depth": 0.0,
+      "psc": 0.656,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 1.5,
+      "ism": 0.5,
+      "svr": 0.8,
+      "g_depth": 17.8,
+      "psc": 0.576,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 1.5,
+      "ism": 0.7,
+      "svr": 0.0,
+      "g_depth": 0.0,
+      "psc": 0.586,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 1.5,
+      "ism": 1.0,
+      "svr": 0.0,
+      "g_depth": 5.0,
+      "psc": 0.678,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 2.0,
+      "ism": 0.5,
+      "svr": 0.4,
+      "g_depth": 18.0,
+      "psc": 0.458,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 2.0,
+      "ism": 0.7,
+      "svr": 0.4,
+      "g_depth": 13.8,
+      "psc": 0.706,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 2.0,
+      "ism": 1.0,
+      "svr": 0.0,
+      "g_depth": 0.0,
+      "psc": 0.605,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 3.0,
+      "ism": 0.5,
+      "svr": 0.8,
+      "g_depth": 23.2,
+      "psc": 0.58,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 3.0,
+      "ism": 0.7,
+      "svr": 0.2,
+      "g_depth": 9.4,
+      "psc": 0.587,
+      "passes": false,
+      "n_seeds": 5
+    },
+    {
+      "relax_factor": 3.0,
+      "ism": 1.0,
+      "svr": 0.0,
+      "g_depth": 0.0,
+      "psc": 0.631,
+      "passes": false,
+      "n_seeds": 5
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "ecology": {
+    "init_food": 300,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005,
+    "infant_starvation_multiplier": 1.0,
+    "care_weight": 0.5,
+    "forage_weight": 2.0,
+    "self_weight": 1.0
+  },
+  "run_params": {
+    "seeds": 2,
+    "max_ticks": 150
+  },
+  "lock_rule": {
+    "svr_min": 0.6,
+    "psc_max": 0.5,
+    "criterion": "highest CMR with SVR >= svr_min AND PSC < psc_max"
+  },
+  "cry_decay_radius": {
+    "selected_value": 10.0,
+    "selected_label": "C3",
+    "selected_desc": "Strong decay (r=10)",
+    "svr_mean": 1.2,
+    "cmr_mean": 0.23333333333333334,
+    "psc_mean": 0.1031887283264196
+  },
+  "temperature_sensitivity": {
+    "selected_value": 0.0,
+    "selected_label": "T0",
+    "selected_desc": "No temperature",
+    "svr_mean": 1.1666666666666665,
+    "cmr_mean": 0.16666666666666669,
+    "psc_mean": 0.07694090860648528
+  },
+  "locked_settings": {
+    "cry_decay_radius": 10.0,
+    "temperature_sensitivity": 0.0
+  }
+}
