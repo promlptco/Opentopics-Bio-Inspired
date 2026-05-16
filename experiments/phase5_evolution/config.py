@@ -200,7 +200,7 @@ class Phase5ConfigFactory:
 
             # Thermoregulation — disabled
             warmth_radius=3,
-            warmth_factor=1.0, # must be 0.0 to disable thermoregulation
+            warmth_factor=0.0,  # 0.0 = thermoregulation disabled
 
             # Ecological mechanisms — Phase 4c locked settings
             food_entropy_alpha=0.01,

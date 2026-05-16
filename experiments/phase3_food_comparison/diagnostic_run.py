@@ -120,7 +120,7 @@ def make_config(alpha: float, eco: dict, max_ticks: int,
     cfg.init_plasticity_coefficient = 1.0
     cfg.phenotype_retention = 0.15
     cfg.softmax_tau = 0.1
-    cfg.cry_decay_radius = 0.0
+    cfg.cry_decay_radius = 8.0  # Phase3+: distance-attenuated cry (= perception_radius)
     cfg.temperature_sensitivity = 0.0
     cfg.warmth_factor = 0.0
     cfg.warmth_radius = 3

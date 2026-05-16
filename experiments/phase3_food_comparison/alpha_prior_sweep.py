@@ -48,7 +48,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import Config
 
-ALPHA_VALUES: list[float] = [0.00, 0.05, 0.10, 0.20, 0.50]
+# Alpha rescaled for fixed-p=0.5 formula: rate = alpha*log(2) per empty cell per tick.
+# At 2500 cells and ~5-10 picks/tick, equilibrium food density ≈ init_food when alpha≈0.003-0.010.
+ALPHA_VALUES: list[float] = [0.000, 0.003, 0.005, 0.010, 0.020]
 PRIOR_VALUES: list[float] = [0.12, 0.24, 0.37, 0.50, 0.75]
 
 _ECOLOGY_PATH = (
@@ -120,7 +122,7 @@ def make_config(alpha: float, prior: float, eco: dict, max_ticks: int) -> Config
     cfg.reproduction_cooldown = 120
 
     cfg.softmax_tau = 0.1
-    cfg.cry_decay_radius = 0.0
+    cfg.cry_decay_radius = 8.0  # Phase3+: distance-attenuated cry (= perception_radius)
     cfg.temperature_sensitivity = 0.0
     cfg.warmth_factor = 0.0
     cfg.warmth_radius = 3
@@ -209,12 +211,12 @@ def plot_heatmap(
     ax.set_ylabel("Patch prior  (food density target)", fontsize=11)
     ax.set_title(title, fontsize=13, fontweight="bold")
 
-    # highlight entropy-maximum prior row
-    entropy_max_idx = min(range(len(prior_vals)),
-                          key=lambda i: abs(prior_vals[i] - 1.0 / np.e))
+    # highlight balanced food density row (prior=0.37 ≈ init_food=925)
+    balanced_idx = min(range(len(prior_vals)),
+                       key=lambda i: abs(prior_vals[i] - 0.37))
     for col in range(len(alpha_vals)):
         ax.add_patch(plt.Rectangle(
-            (col - 0.5, entropy_max_idx - 0.5), 1, 1,
+            (col - 0.5, balanced_idx - 0.5), 1, 1,
             fill=False, edgecolor="red", linewidth=1.5, linestyle="--"
         ))
 
@@ -231,7 +233,7 @@ def plot_heatmap(
 
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(cbar_label, fontsize=10)
-    ax.text(0.98, 0.02, "red dashed = entropy max (prior≈0.37)",
+    ax.text(0.98, 0.02, "red dashed = balanced density (prior≈0.37, init_food≈925)",
             transform=ax.transAxes, ha="right", va="bottom",
             fontsize=7, color="red", style="italic")
 

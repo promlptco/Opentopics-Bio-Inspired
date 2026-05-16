@@ -731,8 +731,669 @@ class CohortStatisticsPlotter:
         return True
 
 
+# ---------------------------------------------------------------------------
+# Cross-condition comparison plotter  (--mode compare)
+# ---------------------------------------------------------------------------
+
+_CONDITION_COLORS: dict[str, str] = {
+    "mut+/plast+": "#1f77b4",
+    "mut+/plast−": "#ff7f0e",
+    "mut−/plast+": "#2ca02c",
+    "mut−/plast−": "#d62728",
+}
+_CONDITION_ORDER: list[str] = [
+    "mut+/plast+",
+    "mut+/plast−",
+    "mut−/plast+",
+    "mut−/plast−",
+]
+_DIR_SUFFIX_TO_LABEL: dict[str, str] = {
+    "mut_on_plast_on":  "mut+/plast+",
+    "mut_on_plast_off": "mut+/plast−",
+    "mut_off_plast_on": "mut−/plast+",
+    "mut_off_plast_off":"mut−/plast−",
+}
+
+
+class Block2EvoPlotter:
+    """Cross-condition comparison plotter for Phase 5 Block 2 evolution.
+
+    Auto-discovers all subdirectories under *block_dir* whose names start with
+    *block_prefix*, loads their lifecycle and snapshot CSVs, and produces seven
+    statistical comparison figures.
+
+    Usage::
+
+        python -m experiments.phase5_evolution.plot \\
+            --mode compare \\
+            --block-dir outputs/phase5_evolution/ \\
+            --block-prefix block2_main \\
+            --plots-dir outputs/phase5_evolution/block2_extended/
+    """
+
+    CONDITION_COLORS = _CONDITION_COLORS
+    CONDITION_ORDER  = _CONDITION_ORDER
+
+    def __init__(self, block_dir: Path | str, block_prefix: str = "block2_main") -> None:
+        self._block_dir    = Path(block_dir)
+        self._block_prefix = block_prefix
+        self._life, self._snap = self._load_all_conditions()
+        self._cohort = self._build_cohort_frame()
+
+    # ------------------------------------------------------------------
+    # Data loading
+    # ------------------------------------------------------------------
+
+    def _discover_dirs(self) -> list[Path]:
+        dirs = sorted(
+            d for d in self._block_dir.iterdir()
+            if d.is_dir() and d.name.startswith(self._block_prefix)
+        )
+        if not dirs:
+            raise FileNotFoundError(
+                f"No subdirs matching '{self._block_prefix}*' under {self._block_dir}"
+            )
+        return dirs
+
+    def _dir_to_label(self, dirname: str) -> str:
+        suffix = dirname[len(self._block_prefix):].lstrip("_")
+        return _DIR_SUFFIX_TO_LABEL.get(suffix, suffix)
+
+    def _load_all_conditions(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        life_frames: list[pd.DataFrame] = []
+        snap_frames: list[pd.DataFrame] = []
+        for d in self._discover_dirs():
+            label = self._dir_to_label(d.name)
+            lp = d / "mother_lifecycle.csv"
+            sp = d / "snapshots.csv"
+            if lp.exists():
+                df = pd.read_csv(lp)
+                df["condition"] = label
+                life_frames.append(df)
+                print(f"[compare] Loaded {d.name}/mother_lifecycle.csv ({len(df)} rows) -> '{label}'")
+            if sp.exists():
+                df = pd.read_csv(sp)
+                df["condition"] = label
+                snap_frames.append(df)
+        life = pd.concat(life_frames, ignore_index=True) if life_frames else pd.DataFrame()
+        snap = pd.concat(snap_frames, ignore_index=True) if snap_frames else pd.DataFrame()
+        return life, snap
+
+    def _build_cohort_frame(self) -> pd.DataFrame:
+        """One row per (condition, seed, generation) with per-group aggregates."""
+        df = self._life
+        if df.empty:
+            return pd.DataFrame()
+        rows: list[dict] = []
+        for (cond, seed, gen), grp in df.groupby(
+            ["condition", "seed", "generation"], sort=True
+        ):
+            gc = float(grp["final_genome_care"].mean())
+            gf = float(grp["final_genome_forage"].mean())
+            gs = float(grp["final_genome_self"].mean())
+            ec = float(grp["final_expressed_care"].mean())   if "final_expressed_care"   in grp.columns else np.nan
+            ef = float(grp["final_expressed_forage"].mean()) if "final_expressed_forage" in grp.columns else np.nan
+            es = float(grp["final_expressed_self"].mean())   if "final_expressed_self"   in grp.columns else np.nan
+            tot  = float(grp["total_children"].sum())   if "total_children"   in grp.columns else 0.0
+            matd = float(grp["matured_children"].sum()) if "matured_children" in grp.columns else 0.0
+            cmr  = matd / tot if tot > 0.0 else np.nan
+            if all(
+                c in grp.columns
+                for c in ["final_expressed_care", "final_expressed_forage", "final_expressed_self"]
+            ):
+                drift = float(
+                    0.5
+                    * (
+                        (grp["final_expressed_care"]   - grp["final_genome_care"]).abs()
+                        + (grp["final_expressed_forage"] - grp["final_genome_forage"]).abs()
+                        + (grp["final_expressed_self"]   - grp["final_genome_self"]).abs()
+                    ).mean()
+                )
+            else:
+                drift = np.nan
+            rows.append(
+                {
+                    "condition":        cond,
+                    "seed":             int(seed),
+                    "generation":       int(gen),
+                    "genome_care":      gc,
+                    "genome_forage":    gf,
+                    "genome_self":      gs,
+                    "expressed_care":   ec,
+                    "expressed_forage": ef,
+                    "expressed_self":   es,
+                    "cohort_size":      len(grp),
+                    "cmr":              cmr,
+                    "plasticity_drift": drift,
+                }
+            )
+        return pd.DataFrame(rows)
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    def plot_all(self, output_dir: Path | str) -> None:
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        self.plot_genome_simplex(out)
+        self.plot_distribution_shift(out)
+        self.plot_population_fitness(out)
+        self.plot_cmr_propagation(out)
+        self.plot_population_over_time(out)
+        self.plot_ternary_trajectory(out)
+        self.plot_expressed_vs_genome_gap(out)
+        print(f"[compare] All 7 figures saved to {out}")
+
+    # ------------------------------------------------------------------
+    # Fig 1 — All 3 genome weights by generation (mean ± SEM)
+    # ------------------------------------------------------------------
+
+    def plot_genome_simplex(self, output_dir: Path) -> None:
+        """Line + SEM band for all 3 genome weights, all 4 conditions."""
+        cohort = self._cohort
+        genes  = ["genome_care",   "genome_forage",   "genome_self"]
+        titles = ["Care Genome Weight", "Forage Genome Weight", "Self Genome Weight"]
+
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        for ax, gene, title in zip(axes, genes, titles):
+            for cond in self.CONDITION_ORDER:
+                sub   = cohort[cohort["condition"] == cond]
+                color = self.CONDITION_COLORS[cond]
+                if sub.empty:
+                    continue
+                agg = (
+                    sub.groupby("generation")[gene]
+                    .agg(mean_val="mean", std_val="std", n="count")
+                    .reset_index()
+                    .sort_values("generation")
+                )
+                agg["sem"] = agg["std_val"] / np.sqrt(agg["n"].clip(lower=1))
+                ax.fill_between(
+                    agg["generation"],
+                    (agg["mean_val"] - agg["sem"]).clip(0.0, 1.0),
+                    (agg["mean_val"] + agg["sem"]).clip(0.0, 1.0),
+                    alpha=0.15, color=color,
+                )
+                ax.plot(
+                    agg["generation"], agg["mean_val"],
+                    color=color, linewidth=2.0, label=cond,
+                )
+            ax.axhline(
+                1 / 3, color="red", linestyle="--", linewidth=1.5,
+                alpha=0.8, label="neutral 1/3",
+            )
+            ax.set_title(title, fontsize=12, fontweight="bold")
+            ax.set_xlabel("Generation")
+            ax.set_ylabel("Mean Genome Weight")
+            ax.set_ylim(0.25, 0.50)
+            SnapshotDashboardPlotter._style_axes(ax)
+        axes[0].legend(loc="upper left", fontsize=8, framealpha=0.9)
+        plt.suptitle(
+            "All 3 Genome Weights by Generation — 4-Condition Comparison\n"
+            "(shaded = ±1 SEM across seeds · simplex constraint: care + forage + self = 1)",
+            fontsize=12, fontweight="bold",
+        )
+        plt.tight_layout()
+        out = output_dir / "genome_all3_by_generation.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 2 — Genome distribution shift: early vs late (violin)
+    # ------------------------------------------------------------------
+
+    def plot_distribution_shift(self, output_dir: Path) -> None:
+        """Violin plots comparing genome weight distributions early vs late."""
+        try:
+            from scipy.stats import mannwhitneyu as _mwu
+            _has_scipy = True
+        except ImportError:
+            _has_scipy = False
+
+        mut_on_conds = [c for c in self.CONDITION_ORDER if "mut+" in c]
+        genes  = ["genome_care", "genome_forage", "genome_self"]
+        g_lbls = ["Genome Care",  "Genome Forage",  "Genome Self"]
+        cohort = self._cohort
+        rng    = np.random.default_rng(42)
+
+        fig, axes = plt.subplots(len(genes), len(mut_on_conds), figsize=(10, 12), squeeze=False)
+        for ri, (gene, glbl) in enumerate(zip(genes, g_lbls)):
+            for ci, cond in enumerate(mut_on_conds):
+                ax    = axes[ri][ci]
+                sub   = cohort[cohort["condition"] == cond]
+                early = sub[sub["generation"] <= 5][gene].dropna().values
+                late  = sub[sub["generation"] >= 40][gene].dropna().values
+                color = self.CONDITION_COLORS[cond]
+
+                parts = ax.violinplot(
+                    [early, late], positions=[0, 1],
+                    showmedians=True, showextrema=True,
+                )
+                for body in parts["bodies"]:
+                    body.set_facecolor(color)
+                    body.set_alpha(0.55)
+                for key in ("cmedians", "cmins", "cmaxes", "cbars"):
+                    parts[key].set_color(color)
+                    parts[key].set_linewidth(1.5)
+
+                for pos, vals in [(0, early), (1, late)]:
+                    jitter = rng.uniform(-0.06, 0.06, size=len(vals))
+                    ax.scatter(pos + jitter, vals, alpha=0.35, s=12, color=color, zorder=3)
+
+                if _has_scipy and len(early) >= 2 and len(late) >= 2:
+                    _, pval = _mwu(early, late, alternative="two-sided")
+                    ptxt = f"MW p={pval:.3f}" if pval >= 0.001 else "MW p<0.001"
+                else:
+                    ptxt = f"n_early={len(early)}, n_late={len(late)}"
+
+                ax.axhline(1 / 3, color="red", linestyle="--", linewidth=1.0, alpha=0.7)
+                ax.set_xticks([0, 1])
+                ax.set_xticklabels(["Early\n(gen 0–5)", "Late\n(gen 40+)"], fontsize=8)
+                ax.set_ylim(0.22, 0.58)
+                ax.set_ylabel("Weight" if ci == 0 else "")
+                ax.set_title(f"{glbl}\n{cond}\n{ptxt}", fontsize=8, fontweight="bold")
+                ax.grid(True, alpha=0.3, axis="y", linestyle="--")
+                SnapshotDashboardPlotter._style_axes(ax)
+
+        plt.suptitle(
+            "Genome Distribution Shift — Early (gen 0–5) vs Late (gen 40+)\n"
+            "(mut+ conditions only · Mann-Whitney U two-sided)",
+            fontsize=12, fontweight="bold",
+        )
+        plt.tight_layout()
+        out = output_dir / "genome_distribution_shift.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 3 — Population as fitness proxy (cohort-size boxplot)
+    # ------------------------------------------------------------------
+
+    def plot_population_fitness(self, output_dir: Path) -> None:
+        """Boxplot of cohort size (mothers per generation per seed) by gen window."""
+        cohort = self._cohort.copy()
+        bins   = [0,  10,    20,    30,    40,   200]
+        blbls  = ["0–9", "10–19", "20–29", "30–39", "40+"]
+        cohort["gen_bin"] = pd.cut(
+            cohort["generation"], bins=bins, labels=blbls, right=False
+        )
+        n_c   = len(self.CONDITION_ORDER)
+        xpos  = np.arange(len(blbls), dtype=float)
+        width = 0.18
+        offs  = np.linspace(-(n_c - 1) / 2, (n_c - 1) / 2, n_c) * width
+
+        fig, ax = plt.subplots(figsize=(14, 6))
+        for i, cond in enumerate(self.CONDITION_ORDER):
+            color = self.CONDITION_COLORS[cond]
+            sub   = cohort[cohort["condition"] == cond]
+            bdata = [
+                sub[sub["gen_bin"] == lb]["cohort_size"].dropna().values
+                for lb in blbls
+            ]
+            ax.boxplot(
+                bdata,
+                positions=xpos + offs[i],
+                widths=width * 0.85,
+                patch_artist=True,
+                medianprops=dict(color="black", linewidth=1.5),
+                boxprops=dict(facecolor=color, alpha=0.70),
+                whiskerprops=dict(linewidth=1.0),
+                capprops=dict(linewidth=1.0),
+                flierprops=dict(marker=".", markersize=3, alpha=0.4, color=color),
+            )
+            ax.plot([], [], color=color, linewidth=7, alpha=0.7, label=cond)
+            for j, vals in enumerate(bdata):
+                if len(vals) > 0:
+                    ax.text(
+                        xpos[j] + offs[i], float(np.nanmax(vals)) + 0.3,
+                        f"n={len(vals)}", ha="center", va="bottom",
+                        fontsize=5, color="gray",
+                    )
+        ax.set_xticks(xpos)
+        ax.set_xticklabels(blbls, fontsize=10)
+        ax.set_xlabel("Generation Window", fontsize=11)
+        ax.set_ylabel("Cohort Size (mothers per generation per seed)", fontsize=11)
+        ax.set_title(
+            "Population as Fitness Proxy — Cohort Size by Generation Window\n"
+            "(larger cohorts in late generations = more gene copies surviving)",
+            fontsize=12, fontweight="bold",
+        )
+        ax.legend(fontsize=9, loc="upper right")
+        ax.grid(True, alpha=0.3, axis="y", linestyle="--")
+        SnapshotDashboardPlotter._style_axes(ax)
+        plt.tight_layout()
+        out = output_dir / "cohort_population_fitness.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 4 — CMR as gene propagation rate (bootstrap CI)
+    # ------------------------------------------------------------------
+
+    def plot_cmr_propagation(self, output_dir: Path) -> None:
+        """CMR by generation with 95% bootstrap CI across seeds."""
+        cohort = self._cohort.dropna(subset=["cmr"])
+        rng    = np.random.default_rng(0)
+        n_boot = 1000
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for cond in self.CONDITION_ORDER:
+            sub   = cohort[cohort["condition"] == cond]
+            color = self.CONDITION_COLORS[cond]
+            if sub.empty:
+                continue
+            gens_sorted = sorted(sub["generation"].unique())
+            means, lo, hi = [], [], []
+            for g in gens_sorted:
+                vals = sub[sub["generation"] == g]["cmr"].values
+                means.append(float(vals.mean()))
+                if len(vals) >= 2:
+                    boots = [
+                        rng.choice(vals, size=len(vals), replace=True).mean()
+                        for _ in range(n_boot)
+                    ]
+                    lo.append(float(np.percentile(boots, 2.5)))
+                    hi.append(float(np.percentile(boots, 97.5)))
+                else:
+                    lo.append(float(vals[0]))
+                    hi.append(float(vals[0]))
+            g_arr = np.array(gens_sorted, dtype=float)
+            m_arr = np.array(means)
+            l_arr = np.array(lo)
+            h_arr = np.array(hi)
+            valid = ~np.isnan(m_arr) & ~np.isnan(l_arr)
+            ax.fill_between(
+                g_arr[valid], l_arr[valid], h_arr[valid], alpha=0.15, color=color
+            )
+            ax.plot(g_arr, m_arr, color=color, linewidth=2.2, label=cond)
+
+        ax.axhline(
+            1 / 3, color="gray", linestyle=":", linewidth=1.0, alpha=0.6,
+            label="neutral 1/3",
+        )
+        ax.set_xlabel("Generation", fontsize=11)
+        ax.set_ylabel("Child Maturation Rate (CMR)", fontsize=11)
+        ax.set_ylim(0.0, 1.05)
+        ax.set_title(
+            "Gene Propagation Rate (CMR) by Generation — 95% Bootstrap CI\n"
+            "(fraction of gene copies successfully entering next generation)",
+            fontsize=12, fontweight="bold",
+        )
+        ax.legend(fontsize=9)
+        SnapshotDashboardPlotter._style_axes(ax)
+        plt.tight_layout()
+        out = output_dir / "cmr_gene_propagation.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 5 — Live population over simulation time (snapshot boxplot)
+    # ------------------------------------------------------------------
+
+    def plot_population_over_time(self, output_dir: Path) -> None:
+        """Boxplot of n_mothers per tick window, all conditions."""
+        snap = self._snap.copy()
+        if snap.empty or "n_mothers" not in snap.columns:
+            print("[compare] Skipping population_over_time: no snapshot data.")
+            return
+        bins  = [0, 5_000, 10_000, 15_000, 20_000, 100_000]
+        blbls = ["0–5k", "5–10k", "10–15k", "15–20k", "20k+"]
+        snap["tick_bin"] = pd.cut(snap["tick"], bins=bins, labels=blbls, right=False)
+
+        n_c   = len(self.CONDITION_ORDER)
+        xpos  = np.arange(len(blbls), dtype=float)
+        width = 0.18
+        offs  = np.linspace(-(n_c - 1) / 2, (n_c - 1) / 2, n_c) * width
+
+        fig, ax = plt.subplots(figsize=(14, 6))
+        for i, cond in enumerate(self.CONDITION_ORDER):
+            color = self.CONDITION_COLORS[cond]
+            sub   = snap[snap["condition"] == cond]
+            bdata = [
+                sub[sub["tick_bin"] == lb]["n_mothers"].dropna().values
+                for lb in blbls
+            ]
+            ax.boxplot(
+                bdata,
+                positions=xpos + offs[i],
+                widths=width * 0.85,
+                patch_artist=True,
+                medianprops=dict(color="black", linewidth=1.5),
+                boxprops=dict(facecolor=color, alpha=0.70),
+                whiskerprops=dict(linewidth=1.0),
+                capprops=dict(linewidth=1.0),
+                flierprops=dict(marker=".", markersize=3, alpha=0.4, color=color),
+            )
+            ax.plot([], [], color=color, linewidth=7, alpha=0.7, label=cond)
+            for j, (lb, vals) in enumerate(zip(blbls, bdata)):
+                n_s = int(sub[sub["tick_bin"] == lb]["seed"].nunique()) if len(vals) > 0 else 0
+                if n_s > 0:
+                    ax.text(
+                        xpos[j] + offs[i], float(np.nanmax(vals)) + 0.3,
+                        f"s={n_s}", ha="center", va="bottom",
+                        fontsize=5, color="gray",
+                    )
+        ax.set_xticks(xpos)
+        ax.set_xticklabels(blbls, fontsize=10)
+        ax.set_xlabel("Simulation Tick Window", fontsize=11)
+        ax.set_ylabel("Number of Live Mothers", fontsize=11)
+        ax.set_title(
+            "Live Population Over Time — Cross-Condition Comparison\n"
+            "(s = seeds still alive in that tick range)",
+            fontsize=12, fontweight="bold",
+        )
+        ax.legend(fontsize=9, loc="upper right")
+        ax.grid(True, alpha=0.3, axis="y", linestyle="--")
+        SnapshotDashboardPlotter._style_axes(ax)
+        plt.tight_layout()
+        out = output_dir / "population_over_time.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 6 — Genome simplex trajectory (ternary, manual barycentric)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _to_cartesian(
+        care: np.ndarray,
+        forage: np.ndarray,
+        self_: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Barycentric → 2-D. Vertices: CARE=top, FORAGE=bottom-left, SELF=bottom-right."""
+        x = 0.5 * care + self_
+        y = (np.sqrt(3) / 2) * care
+        return x, y
+
+    def plot_ternary_trajectory(self, output_dir: Path) -> None:
+        """2×2 ternary scatter showing evolutionary drift in genome space."""
+        cohort = self._cohort
+        sqrt3  = np.sqrt(3)
+        v_care   = np.array([0.5, sqrt3 / 2])
+        v_forage = np.array([0.0, 0.0])
+        v_self   = np.array([1.0, 0.0])
+        cx, cy = self._to_cartesian(
+            np.array([1 / 3]), np.array([1 / 3]), np.array([1 / 3])
+        )
+
+        fig, axes = plt.subplots(2, 2, figsize=(12, 11))
+        for idx, cond in enumerate(self.CONDITION_ORDER):
+            ax    = axes.flat[idx]
+            color = self.CONDITION_COLORS[cond]
+
+            # Triangle border
+            ax.add_patch(
+                plt.Polygon(
+                    [v_forage, v_self, v_care],
+                    fill=False, edgecolor="gray", linewidth=1.5, zorder=1,
+                )
+            )
+
+            # Dashed grid at 1/3 and 2/3
+            for frac in (1 / 3, 2 / 3):
+                r = 1.0 - frac
+                pts = [
+                    self._to_cartesian(
+                        np.array([frac]), np.array([r / 2]), np.array([r / 2])
+                    ),
+                    self._to_cartesian(
+                        np.array([r / 2]), np.array([frac]), np.array([r / 2])
+                    ),
+                    self._to_cartesian(
+                        np.array([r / 2]), np.array([r / 2]), np.array([frac])
+                    ),
+                ]
+                for a_i, b_i in [(0, 1), (1, 2), (0, 2)]:
+                    ax.plot(
+                        [pts[a_i][0][0], pts[b_i][0][0]],
+                        [pts[a_i][1][0], pts[b_i][1][0]],
+                        color="lightgray", linewidth=0.6, linestyle="--", zorder=1,
+                    )
+
+            # Vertex labels
+            ax.text(v_care[0],        v_care[1]   + 0.04, "CARE",
+                    ha="center", va="bottom", fontsize=10, fontweight="bold")
+            ax.text(v_forage[0] - 0.05, v_forage[1] - 0.04, "FORAGE",
+                    ha="right",  va="top",    fontsize=10, fontweight="bold")
+            ax.text(v_self[0]   + 0.05, v_self[1]   - 0.04, "SELF",
+                    ha="left",   va="top",    fontsize=10, fontweight="bold")
+
+            # Neutral centre
+            ax.scatter(cx, cy, color="red", s=70, marker="x", linewidths=2.5, zorder=5)
+
+            sub = cohort[cohort["condition"] == cond].sort_values("generation")
+            if not sub.empty:
+                traj = (
+                    sub.groupby("generation")[
+                        ["genome_care", "genome_forage", "genome_self"]
+                    ]
+                    .mean()
+                    .reset_index()
+                    .sort_values("generation")
+                )
+                xs, ys = self._to_cartesian(
+                    traj["genome_care"].values,
+                    traj["genome_forage"].values,
+                    traj["genome_self"].values,
+                )
+                sc = ax.scatter(
+                    xs, ys, c=traj["generation"].values,
+                    cmap="viridis", s=35, zorder=4, alpha=0.85,
+                )
+                ax.plot(xs, ys, color="gray", linewidth=0.7, alpha=0.5, zorder=3)
+                if len(xs) >= 2:
+                    ax.annotate(
+                        "", xy=(xs[-1], ys[-1]), xytext=(xs[-2], ys[-2]),
+                        arrowprops=dict(arrowstyle="->", color=color, lw=2.0),
+                        zorder=6,
+                    )
+                plt.colorbar(sc, ax=ax, shrink=0.65, label="Generation", pad=0.01)
+
+            ax.set_xlim(-0.12, 1.12)
+            ax.set_ylim(-0.12, sqrt3 / 2 + 0.12)
+            ax.set_aspect("equal")
+            ax.axis("off")
+            ax.set_title(cond, fontsize=11, fontweight="bold", color=color)
+
+        plt.suptitle(
+            "Genome Simplex Trajectory — Evolutionary Direction in Gene Space\n"
+            "(red × = neutral 1/3 centre · arrow = direction of final drift · colour = generation)",
+            fontsize=12, fontweight="bold",
+        )
+        plt.tight_layout()
+        out = output_dir / "simplex_trajectory.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+    # ------------------------------------------------------------------
+    # Fig 7 — Expressed vs genome care gap (plasticity signal)
+    # ------------------------------------------------------------------
+
+    def plot_expressed_vs_genome_gap(self, output_dir: Path) -> None:
+        """Boxplot of (expressed_care − genome_care) by gen window, plast+ only."""
+        try:
+            from scipy.stats import wilcoxon as _wilcoxon
+            _has_scipy = True
+        except ImportError:
+            _has_scipy = False
+
+        plast_conds = [c for c in self.CONDITION_ORDER if "plast+" in c]
+        cohort      = self._cohort.copy()
+        cohort["gap"] = cohort["expressed_care"] - cohort["genome_care"]
+        cohort = cohort[cohort["condition"].isin(plast_conds)].dropna(subset=["gap"])
+
+        bins  = [0,  10,    20,    30,    40,   200]
+        blbls = ["0–9", "10–19", "20–29", "30–39", "40+"]
+        cohort["gen_bin"] = pd.cut(
+            cohort["generation"], bins=bins, labels=blbls, right=False
+        )
+
+        fig, axes = plt.subplots(1, len(plast_conds), figsize=(12, 5), sharey=True)
+        if len(plast_conds) == 1:
+            axes = [axes]
+
+        for ax, cond in zip(axes, plast_conds):
+            color = self.CONDITION_COLORS[cond]
+            sub   = cohort[cohort["condition"] == cond]
+            bdata = [
+                sub[sub["gen_bin"] == lb]["gap"].dropna().values
+                for lb in blbls
+            ]
+            ax.boxplot(
+                bdata,
+                patch_artist=True,
+                medianprops=dict(color="black", linewidth=2.0),
+                boxprops=dict(facecolor=color, alpha=0.65),
+                whiskerprops=dict(linewidth=1.0),
+                capprops=dict(linewidth=1.0),
+                flierprops=dict(marker=".", markersize=4, alpha=0.5, color=color),
+            )
+            for j, vals in enumerate(bdata):
+                if _has_scipy and len(vals) >= 4:
+                    try:
+                        _, pval = _wilcoxon(vals)
+                        ptxt = f"p={pval:.3f}" if pval >= 0.001 else "p<0.001"
+                        ax.text(
+                            j + 1, float(np.nanmax(vals)) + 0.003,
+                            ptxt, ha="center", va="bottom", fontsize=7,
+                        )
+                    except Exception:
+                        pass
+            ax.axhline(
+                0, color="red", linestyle="--", linewidth=1.5, alpha=0.8, label="zero gap"
+            )
+            ax.set_xticks(range(1, len(blbls) + 1))
+            ax.set_xticklabels(blbls, fontsize=9)
+            ax.set_xlabel("Generation Window", fontsize=10)
+            ax.set_title(cond, fontsize=11, fontweight="bold", color=color)
+            ax.grid(True, alpha=0.3, axis="y", linestyle="--")
+            SnapshotDashboardPlotter._style_axes(ax)
+
+        axes[0].set_ylabel("Expressed Care − Genome Care", fontsize=10)
+        axes[0].legend(fontsize=9)
+        plt.suptitle(
+            "Phenotypic Plasticity Gap: Expressed vs Genome Care\n"
+            "(plast+ conditions only · red line = no gap · Wilcoxon H₀: gap = 0)",
+            fontsize=12, fontweight="bold",
+        )
+        plt.tight_layout()
+        out = output_dir / "expressed_vs_genome_gap.png"
+        plt.savefig(out, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"[compare] Saved: {out.name}")
+
+
 def main() -> None:
     """CLI entry point for Phase 5 plot generation."""
+    import sys
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(
         description="Phase 5: exploratory dashboard and lifecycle cohort plots"
     )
@@ -765,9 +1426,24 @@ def main() -> None:
     )
     parser.add_argument(
         "--mode",
-        choices=("dashboard", "cohort", "all"),
+        choices=("dashboard", "cohort", "all", "compare"),
         default="all",
-        help="What to generate: the exploratory dashboard, lifecycle cohort plots, or both.",
+        help=(
+            "What to generate: dashboard, cohort plots, both (all), "
+            "or cross-condition comparison (compare)."
+        ),
+    )
+    parser.add_argument(
+        "--block-dir",
+        type=str,
+        default=None,
+        help="[compare mode] Parent directory containing condition subdirs (e.g. outputs/phase5_evolution/).",
+    )
+    parser.add_argument(
+        "--block-prefix",
+        type=str,
+        default="block2_main",
+        help="[compare mode] Subdir name prefix to auto-discover conditions (default: block2_main).",
     )
     parser.add_argument(
         "--checkpoint",
@@ -795,6 +1471,20 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # compare mode: multi-condition cross-run analysis
+    # ------------------------------------------------------------------
+    if args.mode == "compare":
+        if not args.block_dir:
+            parser.error("--mode compare requires --block-dir")
+        plotter = Block2EvoPlotter(
+            block_dir=args.block_dir,
+            block_prefix=args.block_prefix,
+        )
+        out_dir = args.plots_dir or str(Path(args.block_dir) / "block2_extended")
+        plotter.plot_all(out_dir)
+        return
 
     run_dir = args.run_dir_flag or args.run_dir
     if not run_dir:

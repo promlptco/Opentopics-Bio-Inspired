@@ -201,10 +201,12 @@ class Simulation:
         return self.mother_lifecycle_rows, self.child_lifecycle_rows
             
     def _spawn_food_entropy(self) -> None:
-        alpha = self.config.food_entropy_alpha
-        for pos, p in self.world.food_patch_probs.items():
+        # Fixed: use constant spawn rate at p=0.5 (Shannon entropy maximum).
+        # Old formula -alpha*p*log(p) was one-term-only and peaked at p=1/e≈0.37.
+        # New: rate = alpha * log(2) — uniform, deterministic, no depletion paradox.
+        rate = self.config.food_entropy_alpha * math.log(2)
+        for pos in self.world.food_patch_probs:
             if pos not in self.world.food_positions:
-                rate = -alpha * p * math.log(max(p, 1e-10))
                 if random.random() < rate:
                     self.world.place_food(*pos)
 
@@ -381,10 +383,9 @@ class Simulation:
                 if to_add > 0:
                     self._spawn_food(to_add)
 
-        # 1c. Shannon entropy food spawn and patch recovery
+        # 1c. Shannon entropy food spawn (constant rate at p=0.5; no per-patch tracking)
         if self.config.food_entropy_alpha > 0:
             self._spawn_food_entropy()
-            self.world.recover_patches(self.config.food_entropy_gamma, self.config.food_patch_prior)
 
         # Per-tick temperature stress — children only, cold and warm have different effects
         # T(t) = sin(2pi*t/period): +1 = peak warm, -1 = peak cold
@@ -776,9 +777,7 @@ class Simulation:
                         "FORAGE",
                         signal=self.config.eat_gain,
                     )
-                    if self.config.food_entropy_alpha > 0:
-                        self.world.deplete_patch(*mother.pos, self.config.food_entropy_beta)
-                    elif self.config.food_replace_on_pick:
+                    if self.config.food_entropy_alpha == 0 and self.config.food_replace_on_pick:
                         self._spawn_food(1)
             else:
                 nearest = self._nearest_food_in_radius(

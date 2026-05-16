@@ -1,0 +1,24 @@
+Seed 42: extinction at tick 5670
+Seed 46: extinction at tick 9691
+Seed 43: extinction at tick 15410
+Seed 44: extinction at tick 10720
+Seed 47: extinction at tick 6382
+Seed 50: extinction at tick 9840
+Seed 48: extinction at tick 14828
+Seed 49: extinction at tick 9905
+Seed 45: extinction at tick 13594
+[ok] Seed 47 complete
+[ok] Seed 49 complete
+[ok] Seed 42 complete
+[ok] Seed 46 complete
+[ok] Seed 44 complete
+[ok] Seed 50 complete
+[ok] Seed 45 complete
+[fail] Seed 51 failed: 
+[ok] Seed 48 complete
+[ok] Seed 43 complete
+Wrote snapshots to outputs\phase5_evolution\block2_main_mut_on_plast_off\snapshots.csv
+Wrote lifecycle rows to outputs\phase5_evolution\block2_main_mut_on_plast_off\mother_lifecycle.csv
+Wrote lifecycle rows to outputs\phase5_evolution\block2_main_mut_on_plast_off\child_lifecycle.csv
+Wrote summary to outputs\phase5_evolution\block2_main_mut_on_plast_off\summary.json
+[ok] Sweep complete: 9 seeds

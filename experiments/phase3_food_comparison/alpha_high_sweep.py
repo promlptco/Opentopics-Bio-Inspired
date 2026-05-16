@@ -26,11 +26,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Alpha rescaled for fixed-p=0.5 formula. Old values (0.10-1.00) created ~250-2500 food/tick.
 ALPHA_LEVELS: list[tuple[float, str, str]] = [
-    (0.10, "A10",  "Shannon alpha=0.10 (baseline)"),
-    (0.20, "A20",  "Shannon alpha=0.20"),
-    (0.50, "A50",  "Shannon alpha=0.50"),
-    (1.00, "A100", "Shannon alpha=1.00 (strong dispersal)"),
+    (0.005, "A05",  "Shannon alpha=0.005"),
+    (0.010, "A10",  "Shannon alpha=0.010"),
+    (0.020, "A20",  "Shannon alpha=0.020"),
+    (0.050, "A50",  "Shannon alpha=0.050 (strong dispersal)"),
 ]
 
 
