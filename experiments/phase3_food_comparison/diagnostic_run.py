@@ -71,7 +71,8 @@ def load_ecology() -> dict:
 
 
 def make_config(alpha: float, eco: dict, max_ticks: int,
-                prior: float | None = None) -> Config:
+                prior: float | None = None,
+                perception: int | None = None) -> Config:
     cfg = Config()
     cfg.width = 50
     cfg.height = 50
@@ -82,8 +83,8 @@ def make_config(alpha: float, eco: dict, max_ticks: int,
     cfg.eat_gain = eco.get("eat_gain", 0.70)
     cfg.move_cost = eco.get("move_cost", 0.005)
     cfg.rest_recovery = eco.get("rest_recovery", 0.005)
-    cfg.perception_radius = int(eco.get("perception_radius", 8))
-    cfg.food_perception_radius = int(eco.get("food_perception_radius", 8))
+    cfg.perception_radius = perception if perception is not None else int(eco.get("perception_radius", 8))
+    cfg.food_perception_radius = perception if perception is not None else int(eco.get("food_perception_radius", 8))
     cfg.hunger_rate = 1.0 / 35.0
     cfg.fatigue_rate = 0.01
     cfg.feed_cost = 0.01
@@ -133,7 +134,7 @@ def make_config(alpha: float, eco: dict, max_ticks: int,
 
 
 def _worker_fixed(args: tuple) -> dict:
-    alpha, seed, max_ticks, eco, prior = args
+    alpha, seed, max_ticks, eco, prior, perception = args
     import sys as _sys
     from pathlib import Path as _Path
     _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -146,7 +147,7 @@ def _worker_fixed(args: tuple) -> dict:
     from experiments.phase3_food_comparison.diagnostic_run import make_config
     from experiments.phase3_survival_full.run import Phase3Simulation
 
-    cfg = make_config(alpha, eco, max_ticks, prior)
+    cfg = make_config(alpha, eco, max_ticks, prior, perception)
     cfg.seed = seed  # Simulation.__init__ re-seeds from cfg.seed — must set per worker
     sim = Phase3Simulation(cfg)
     result = sim.run()
@@ -217,18 +218,20 @@ def _generate_plots(label: str, results: list[dict], eco: dict,
 
 def run(seeds: int = 5, max_ticks: int = 2000, workers: int = 1,
         output_dir: Path | None = None,
-        prior: float | None = None) -> Path:
+        prior: float | None = None,
+        perception: int | None = None) -> Path:
     eco = load_ecology()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out = output_dir or (PROJECT_ROOT / "outputs" / "phase3_food_shannon_diagnostic" / f"exp_{ts}")
     out.mkdir(parents=True, exist_ok=True)
 
     eff_prior = prior if prior is not None else eco.get("init_food", 300) / 2500
+    eff_percept = perception if perception is not None else int(eco.get("perception_radius", 8))
     print("[phase3_food_shannon_diagnostic]")
     print("  ecology: eat_gain=%.2f  ISM=%.1f" % (
         eco.get("eat_gain", 0.7), eco.get("infant_starvation_multiplier", 1.0)))
-    print("  prior=%.2f (food_equiv=%d)  weights: care=1.0  forage=1.0  self=1.0 (unbiased)" % (
-        eff_prior, int(eff_prior * 2500)))
+    print("  prior=%.2f (food_equiv=%d)  perception=%d  weights: care=1.0  forage=1.0  self=1.0 (unbiased)" % (
+        eff_prior, int(eff_prior * 2500), eff_percept))
     print("  seeds=%d  ticks=%d  workers=%d" % (seeds, max_ticks, workers))
     print("  output: %s" % out)
 
@@ -236,7 +239,7 @@ def run(seeds: int = 5, max_ticks: int = 2000, workers: int = 1,
 
     for alpha, label, desc in ALPHA_LEVELS:
         print("\n  [%s] %s" % (label, desc))
-        jobs = [(alpha, s, max_ticks, eco, prior) for s in seed_list]
+        jobs = [(alpha, s, max_ticks, eco, prior, perception) for s in seed_list]
         results: list[dict] = []
 
         if workers <= 1:
@@ -262,6 +265,7 @@ def run(seeds: int = 5, max_ticks: int = 2000, workers: int = 1,
                         job = futures[future]
                         print("    [FAIL] seed=%d: %s" % (job[1], exc))
 
+
         if not results:
             print("    WARNING: no results for %s" % label)
             continue
@@ -284,6 +288,9 @@ def main() -> None:
     parser.add_argument("--prior", type=float, default=None,
                         help="Override food_patch_prior (and init_food). "
                              "Default: init_food/(W*H). Best from sweep: 0.37")
+    parser.add_argument("--perception", type=int, default=None,
+                        help="Override perception_radius (and food_perception_radius). "
+                             "Default: from ecology (8). Try 15, 25, 50 for dispersal test.")
     args = parser.parse_args()
 
     run(
@@ -292,6 +299,7 @@ def main() -> None:
         workers=max(1, args.workers),
         output_dir=Path(args.output_dir) if args.output_dir else None,
         prior=args.prior,
+        perception=args.perception,
     )
 
 

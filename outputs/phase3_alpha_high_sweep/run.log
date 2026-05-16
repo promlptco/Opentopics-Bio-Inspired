@@ -1,0 +1,70 @@
+C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\experiments\phase2_survival_minimal\new_plot.py:1364: RuntimeWarning: Mean of empty slice
+  mean_y = np.nanmean(matrix, axis=0)
+C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_nanfunctions_impl.py:2019: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+[phase3_alpha_high_sweep]
+  prior=0.37 (food_equiv=925)  perception=8
+  seeds=5  ticks=2000  workers=4
+  output: C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508
+
+  [A10] Shannon alpha=0.10 (baseline)
+    seed=44  final_pop=0  cmr=0.933  care_pct=0.326
+    seed=42  final_pop=0  cmr=1.000  care_pct=0.319
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.330
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.321
+    seed=46  final_pop=0  cmr=0.933  care_pct=0.323
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\validation_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\motivation_selection_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\stacked_action_failed_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\rate_sum_check_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\food_consumption_rate_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\spatial_heatmap_population_A10.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10\homeostatic_balance_A10.png
+    Plots saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A10
+
+  [A20] Shannon alpha=0.20
+    seed=44  final_pop=0  cmr=0.933  care_pct=0.309
+    seed=42  final_pop=0  cmr=1.000  care_pct=0.326
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.318
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.318
+    seed=46  final_pop=0  cmr=0.933  care_pct=0.328
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\validation_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\motivation_selection_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\stacked_action_failed_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\rate_sum_check_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\food_consumption_rate_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\spatial_heatmap_population_A20.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20\homeostatic_balance_A20.png
+    Plots saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A20
+
+  [A50] Shannon alpha=0.50
+    seed=42  final_pop=0  cmr=1.000  care_pct=0.316
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.304
+    seed=44  final_pop=0  cmr=1.000  care_pct=0.323
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.304
+    seed=46  final_pop=0  cmr=1.000  care_pct=0.307
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\validation_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\motivation_selection_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\stacked_action_failed_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\rate_sum_check_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\food_consumption_rate_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\spatial_heatmap_population_A50.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50\homeostatic_balance_A50.png
+    Plots saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A50
+
+  [A100] Shannon alpha=1.00 (strong dispersal)
+    seed=42  final_pop=0  cmr=1.000  care_pct=0.291
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.287
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.281
+    seed=44  final_pop=0  cmr=1.000  care_pct=0.308
+    seed=46  final_pop=0  cmr=1.000  care_pct=0.294
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\validation_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\motivation_selection_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\stacked_action_failed_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\rate_sum_check_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\food_consumption_rate_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\spatial_heatmap_population_A100.png
+Saved plot -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100\homeostatic_balance_A100.png
+    Plots saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508\A100
+
+[ok] Phase 3 high-alpha sweep complete -- C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase3_alpha_high_sweep\exp_20260516_094508

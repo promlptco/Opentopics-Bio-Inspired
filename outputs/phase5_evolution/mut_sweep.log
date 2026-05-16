@@ -1,0 +1,80 @@
+[phase5_mutation_sweep]
+  seeds=5  ticks=20000  workers=8  relax_ecology=True
+  mutation_rate values: [0.05, 0.1, 0.3, 0.5]
+  mutation_sigma values: [0.01, 0.02, 0.05, 0.1]
+  tau values: [0.05, 0.1, 0.2, 0.5]
+  output: C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245
+
+[mutation_rate] running 20 jobs with workers=8...
+  seed=42  mutation_rate=0.10  EXTINCT@3585
+  seed=43  mutation_rate=0.05  EXTINCT@3032
+  seed=42  mutation_rate=0.05  EXTINCT@4005
+  seed=44  mutation_rate=0.10  EXTINCT@3636
+  seed=43  mutation_rate=0.10  EXTINCT@3408
+  seed=46  mutation_rate=0.05  EXTINCT@4147
+  seed=44  mutation_rate=0.05  EXTINCT@3898
+  seed=45  mutation_rate=0.05  EXTINCT@7139
+  seed=44  mutation_rate=0.30  EXTINCT@2834
+  seed=46  mutation_rate=0.10  EXTINCT@3327
+  seed=43  mutation_rate=0.30  EXTINCT@3482
+  seed=45  mutation_rate=0.10  EXTINCT@4052
+  seed=42  mutation_rate=0.30  EXTINCT@4416
+  seed=45  mutation_rate=0.30  EXTINCT@3723
+  seed=46  mutation_rate=0.30  EXTINCT@5321
+  seed=42  mutation_rate=0.50  EXTINCT@2768
+  seed=43  mutation_rate=0.50  EXTINCT@3311
+  seed=46  mutation_rate=0.50  EXTINCT@3722
+  seed=45  mutation_rate=0.50  EXTINCT@3983
+  seed=44  mutation_rate=0.50  EXTINCT@5746
+Snapshots -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\rate_sweep\snapshots_mutation_rate.csv
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\comparison_mutation_rate.png
+
+[mutation_sigma] running 20 jobs with workers=8...
+  seed=42  mutation_sigma=0.02  EXTINCT@2768
+  seed=43  mutation_sigma=0.02  EXTINCT@3311
+  seed=43  mutation_sigma=0.01  EXTINCT@4375
+  seed=42  mutation_sigma=0.01  EXTINCT@2812
+  seed=46  mutation_sigma=0.01  EXTINCT@4389
+  seed=44  mutation_sigma=0.01  EXTINCT@2821
+  seed=45  mutation_sigma=0.01  EXTINCT@4671
+  seed=44  mutation_sigma=0.02  EXTINCT@5746
+  seed=46  mutation_sigma=0.02  EXTINCT@3722
+  seed=45  mutation_sigma=0.02  EXTINCT@3983
+  seed=42  mutation_sigma=0.05  EXTINCT@4591
+  seed=45  mutation_sigma=0.05  EXTINCT@3262
+  seed=43  mutation_sigma=0.05  EXTINCT@4573
+  seed=46  mutation_sigma=0.05  EXTINCT@7320
+  seed=42  mutation_sigma=0.10  EXTINCT@3768
+  seed=44  mutation_sigma=0.05  EXTINCT@6359
+  seed=43  mutation_sigma=0.10  EXTINCT@4951
+  seed=46  mutation_sigma=0.10  EXTINCT@4129
+  seed=44  mutation_sigma=0.10  EXTINCT@9159
+  seed=45  mutation_sigma=0.10  EXTINCT@5928
+Snapshots -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\sigma_sweep\snapshots_mutation_sigma.csv
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\comparison_mutation_sigma.png
+
+[tau] running 20 jobs with workers=8...
+  seed=45  tau=0.05  EXTINCT@1204
+  seed=43  tau=0.05  EXTINCT@2672
+  seed=42  tau=0.10  EXTINCT@2768
+  seed=43  tau=0.10  EXTINCT@3311
+  seed=44  tau=0.05  EXTINCT@3645
+  seed=46  tau=0.05  EXTINCT@3725
+  seed=42  tau=0.05  EXTINCT@4084
+  seed=44  tau=0.10  EXTINCT@5746
+  seed=45  tau=0.10  EXTINCT@3983
+  seed=42  tau=0.20  EXTINCT@2155
+  seed=46  tau=0.10  EXTINCT@3722
+  seed=43  tau=0.20  EXTINCT@3067
+  seed=44  tau=0.20  EXTINCT@5166
+  seed=46  tau=0.20  EXTINCT@3462
+  seed=45  tau=0.20  EXTINCT@4899
+  seed=42  tau=0.50  EXTINCT@3887
+  seed=44  tau=0.50  EXTINCT@4852
+  seed=46  tau=0.50  EXTINCT@4184
+  seed=45  tau=0.50  EXTINCT@6215
+  seed=43  tau=0.50  EXTINCT@8675
+Snapshots -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\tau_sweep\snapshots_tau.csv
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245\comparison_tau.png
+
+[ok] Mutation sweep complete -- C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\phase5_evolution\mut_sweep_20260516_095245

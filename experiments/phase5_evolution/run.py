@@ -72,6 +72,7 @@ class RunParams:
     vis_every: int = 1
     cell_size: int = 15
     circle_world: bool = False
+    mother_max_age: int | None = None  # None = use Phase5ConfigFactory default (400)
 
 
 # ===========================================================================
@@ -208,6 +209,8 @@ class EvolutionRunner:
             ecology_relaxation_factor=p.ecology_relaxation_factor,
             circle_world=p.circle_world,
         )
+        if p.mother_max_age is not None:
+            cfg.mother_max_age = p.mother_max_age
 
         sim = Simulation(cfg)
         sim.initialize(genomes=self._initial_genomes(cfg.init_mothers))
@@ -572,6 +575,13 @@ def main() -> None:
         default=False,
         help="Use an inscribed circular arena instead of the full square grid.",
     )
+    parser.add_argument(
+        "--mother-max-age",
+        type=int,
+        default=None,
+        help="Override mother_max_age (default: Phase5ConfigFactory value=400). "
+             "Use 1000 for multi-generational Block 2 runs.",
+    )
 
     args = parser.parse_args()
     if args.checkpoint <= 0:
@@ -596,6 +606,7 @@ def main() -> None:
         vis_every=args.vis_every,
         cell_size=args.cell_size,
         circle_world=args.circle_world,
+        mother_max_age=args.mother_max_age,
     )
 
     output_dir = (

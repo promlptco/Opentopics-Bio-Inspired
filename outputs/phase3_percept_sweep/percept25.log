@@ -1,0 +1,75 @@
+C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\experiments\phase2_survival_minimal\new_plot.py:1364: RuntimeWarning: Mean of empty slice
+  mean_y = np.nanmean(matrix, axis=0)
+C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_nanfunctions_impl.py:2019: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+[phase3_food_shannon_diagnostic]
+  ecology: eat_gain=0.70  ISM=1.0
+  prior=0.37 (food_equiv=925)  perception=25  weights: care=1.0  forage=1.0  self=1.0 (unbiased)
+  seeds=5  ticks=2000  workers=4
+  output: outputs\phase3_percept_sweep\percept25
+
+  [F0] Uniform 1:1 (alpha=0)
+    seed=44  final_pop=0  cmr=0.667  care_pct=0.325
+    seed=45  final_pop=0  cmr=0.733  care_pct=0.328
+    seed=42  final_pop=0  cmr=0.867  care_pct=0.344
+    seed=43  final_pop=0  cmr=0.933  care_pct=0.360
+    seed=46  final_pop=0  cmr=0.867  care_pct=0.353
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\validation_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\motivation_selection_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\action_selection_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\stacked_action_failed_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\rate_sum_check_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\food_consumption_rate_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\spatial_heatmap_population_F0.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F0\homeostatic_balance_F0.png
+    Plots saved -> outputs\phase3_percept_sweep\percept25\F0
+
+  [F1] Shannon alpha=0.01
+    seed=43  final_pop=0  cmr=0.800  care_pct=0.340
+    seed=44  final_pop=0  cmr=0.800  care_pct=0.352
+    seed=45  final_pop=0  cmr=0.867  care_pct=0.330
+    seed=42  final_pop=0  cmr=0.933  care_pct=0.351
+    seed=46  final_pop=0  cmr=0.800  care_pct=0.344
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\validation_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\motivation_selection_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\action_selection_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\stacked_action_failed_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\rate_sum_check_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\food_consumption_rate_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\spatial_heatmap_population_F1.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F1\homeostatic_balance_F1.png
+    Plots saved -> outputs\phase3_percept_sweep\percept25\F1
+
+  [F2] Shannon alpha=0.05
+    seed=42  final_pop=0  cmr=0.933  care_pct=0.320
+    seed=44  final_pop=0  cmr=0.933  care_pct=0.335
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.349
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.329
+    seed=46  final_pop=0  cmr=0.933  care_pct=0.344
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\validation_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\motivation_selection_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\action_selection_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\stacked_action_failed_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\rate_sum_check_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\food_consumption_rate_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\spatial_heatmap_population_F2.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F2\homeostatic_balance_F2.png
+    Plots saved -> outputs\phase3_percept_sweep\percept25\F2
+
+  [F3] Shannon alpha=0.10
+    seed=42  final_pop=0  cmr=0.933  care_pct=0.332
+    seed=43  final_pop=0  cmr=1.000  care_pct=0.330
+    seed=44  final_pop=0  cmr=1.000  care_pct=0.329
+    seed=45  final_pop=0  cmr=1.000  care_pct=0.330
+    seed=46  final_pop=0  cmr=0.933  care_pct=0.328
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\validation_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\motivation_selection_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\action_selection_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\stacked_action_failed_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\rate_sum_check_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\food_consumption_rate_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\spatial_heatmap_population_F3.png
+Saved plot -> outputs\phase3_percept_sweep\percept25\F3\homeostatic_balance_F3.png
+    Plots saved -> outputs\phase3_percept_sweep\percept25\F3
+
+[ok] Phase 3 Shannon diagnostic complete — outputs\phase3_percept_sweep\percept25
