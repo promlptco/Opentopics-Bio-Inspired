@@ -141,9 +141,160 @@ Population-level persistence is a necessary gate (extinction = total fitness los
 
 ### 6. Implementation
 
-The simulation was built and calibrated in two stages: verifying that all computational mechanisms operate correctly (Phase 1), then establishing the ecological baseline that all subsequent experiments depend on (Phase 2).
+The simulation is built from six interlocking mechanisms, each corresponding to a distinct biological process. The following subsections describe the computational implementation of each.
 
-#### Mechanisms Unit Test (Phase 1)
+#### Motivation Selection
+
+At every tick, each agent selects an action by sampling from a probability distribution computed via Softmax over its current phenotype weights (*w*_s, *w*_f, *w*_c):
+
+```text
+P(action_i) = exp(w_i) / Σ_j exp(w_j)
+```
+
+The sampled action is one of {Self-preservation, Forage, Care}. Because weights are normalized to sum = 1 after every update, the distribution is always valid. Stochastic sampling ensures no single motivation fires unconditionally — an agent with high care weight will still sometimes forage, reflecting the probabilistic competition among real motivational drives.
+
+#### Self-Regulation Mechanism
+
+Phenotypic plasticity is implemented as reward-modulated homeostatic updating. After each action, the agent computes a reward signal (energy delta, child energy change) and updates the phenotype weight for the chosen action:
+
+```text
+w_i(t+1) = w_i(t) + η · (reward − running_mean_reward)
+weights   = normalize(weights)
+```
+
+where η is the genome-encoded learning rate. Two metabolic costs are deducted per tick for plastic agents: a **brain cost** (α = 0.01/tick, neural remodeling overhead) and a **physical cost** (energy of the executed action). This dual cost creates selection pressure against runaway plasticity — behavioral flexibility must earn itself energetically.
+
+#### Foraging Mechanism
+
+When Forage is selected, the agent uses octile-distance heuristic A\* pathfinding to locate the nearest food cell within its perception radius (8 cells). The agent steps one cell toward the target each tick, deducting `move_cost` from energy. Upon reaching a food cell, `eat_gain` is added to energy and the food cell is cleared. If no food is within perception range, the agent takes a random exploratory step. Food respawns stochastically each tick via Shannon entropy: each empty cell independently spawns food with probability α · ln(2) per tick, producing spatial heterogeneity that shifts continuously over time.
+
+#### Care Mechanism
+
+When Care is selected and a living child exists, the agent moves one step toward the child and transfers energy at a fixed care rate — child energy increases, mother energy decreases by the same amount plus `move_cost`. If the mother has no child (none born, or child already matured or died), the Care action is treated as idle: no energy transfers occur, but the brain plasticity cost still applies. This asymmetry — care is only energetically productive when a needy child is present — creates selection pressure for the care weight to track child state rather than firing unconditionally.
+
+#### Asynchronous Evolutionary Diagram
+
+Evolution proceeds with no generation boundaries. Each mother reproduces independently whenever energy > 0.85 and no current child exists. The child genome is computed as:
+
+```text
+genome_child  = genome_mother + N(0, σ=0.02)               ← mutation
+genome_child += 0.15 × (phenotype_mother − genome_mother)  ← Baldwin assimilation
+genome_child  = normalize(genome_child)                     ← renormalization
+```
+
+The 0.15 assimilation term is non-Lamarckian: the learned phenotype is not directly copied, but 15% of the gap between the mother's expressed phenotype and her genome bleeds into the child's starting genome. Over many generations this creates the statistical pressure toward genetic assimilation that the Baldwin Effect predicts.
+
+```text
+  [Mother alive]
+       │  energy > 0.85  AND  no current child
+       ▼
+  [Reproduction]
+  genome_child = genome_mother + mutation
+  genome_child += 0.15 × (phenotype_mother − genome_mother)
+  genome_child = normalize(genome_child)
+       │
+       ▼
+  [Juvenile: age 0 → maturity_age]
+  hunger × 2.33 (ISM), no self-action
+  survival depends on maternal care
+       │  age ≥ maturity_age
+       ▼
+  [Adult: age maturity_age → max_age]
+  full motivation selection each tick
+  can reproduce, can care, pays plasticity cost
+       │  energy ≤ 0  OR  age > max_age
+       ▼
+  [Death — genome persists only through children already born]
+```
+
+#### Lifecycle and Inheritance Stage Diagram
+
+Each agent passes through four lifecycle stages. Fitness selection operates through differential survival and reproduction rates at every stage.
+
+```text
+  ┌─────────────────────────────────────────────────────────────┐
+  │  BIRTH                                                      │
+  │  genome  = mother_genome + N(0, 0.02)    [mutation]        │
+  │  genome += 0.15 × (phenotype_m − genome_m) [Baldwin 15%]  │
+  │  genome  = normalize(genome)              [renormalize]     │
+  │  energy  = 0.5 (initial endowment)                         │
+  └──────────────────────┬──────────────────────────────────────┘
+                         │
+  ┌──────────────────────▼──────────────────────────────────────┐
+  │  JUVENILE  [0 → maturity_age ticks]                         │
+  │  hunger_rate × 2.33  (infant starvation multiplier)         │
+  │  no action selection — passive recipient of care            │
+  │  dies if energy ≤ 0 before maturity                         │
+  └──────────────────────┬──────────────────────────────────────┘
+                         │  age ≥ maturity_age
+  ┌──────────────────────▼──────────────────────────────────────┐
+  │  ADULT  [maturity_age → max_age ticks]                      │
+  │  Softmax motivation selection {Self, Forage, Care} per tick  │
+  │  reproduces when energy > 0.85 and no living child          │
+  │  plasticity brain cost α = 0.01 deducted every tick         │
+  └──────────────────────┬──────────────────────────────────────┘
+                         │  energy ≤ 0  OR  age > max_age
+  ┌──────────────────────▼──────────────────────────────────────┐
+  │  DEATH                                                      │
+  │  genome contribution = children already matured             │
+  │  no further selection impact after death                    │
+  └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Act III — Experiments and Analysis
+
+### 7. Experiment Design
+
+Five sequential experiment phases validate the system, calibrate the ecology, and test the Baldwin Effect hypothesis. Each phase builds directly on the confirmed output of the previous.
+
+```text
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │  PHASE 1 — Mechanisms Unit Test                                      │
+  │  Goal: verify all computational mechanisms before any ecological run  │
+  │  Design: 13 unit tests across 4 modules (mutation, inheritance,      │
+  │          reproduction, population stability)                          │
+  │  Gate: ALL 13 PASS required to proceed                               │
+  └─────────────────────────────┬────────────────────────────────────────┘
+                                │ ALL PASS
+  ┌─────────────────────────────▼────────────────────────────────────────┐
+  │  PHASE 2 — Self-Survival Baseline (mothers only, no children)        │
+  │  Goal: establish survival floor and select operational ecology        │
+  │  Design: 3 ecologies × 10 seeds × 3 repeats = 30 runs/ecology       │
+  │          + OVAT sweep: init_food, eat_gain, move_cost, α             │
+  │  Outcome: Balanced ecology selected as baseline                      │
+  └─────────────────────────────┬────────────────────────────────────────┘
+                                │ Balanced ecology confirmed
+  ┌─────────────────────────────▼────────────────────────────────────────┐
+  │  PHASE 3 — Food Mechanism Search (mothers + children)                │
+  │  Goal: identify food distribution that makes care pay off            │
+  │  Design: 4 food conditions (F0–F3) × 10 seeds                       │
+  │          F0: uniform | F1/F2/F3: Shannon entropy α = 0.01/0.05/0.10 │
+  │  Outcome: Shannon α = 0.01 selected as Phase 5 baseline             │
+  └─────────────────────────────┬────────────────────────────────────────┘
+                                │ Food mechanism confirmed
+  ┌─────────────────────────────▼────────────────────────────────────────┐
+  │  PHASE 4 — Full Ecology Baseline & Genome Weight Sweep               │
+  │  Goal: identify viable starting genome for evolutionary experiment   │
+  │  Design: grid search over (g_c × g_f × g_s) space × 10 seeds       │
+  │  Outcome: starting genome care:forage:self = 0.5:2.0:1.0            │
+  └─────────────────────────────┬────────────────────────────────────────┘
+                                │ Starting genome confirmed
+  ┌─────────────────────────────▼────────────────────────────────────────┐
+  │  PHASE 5 — Baldwin Effect Experiment                                  │
+  │  Goal: test whether plasticity + mutation extend lineage survival    │
+  │         and produce genome drift toward care                         │
+  │  Design: 2×2 factorial {mut_OFF, mut_ON} × {plast_OFF, plast_ON}   │
+  │          10 seeds × 40,000 max ticks per condition (40 total runs)  │
+  │  Measure: extinction tick, genome care drift, child maturation rate, │
+  │           innateness index, generational depth                       │
+  └──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Phase 1 — Mechanisms Unit Test
 
 Thirteen unit tests across four modules confirmed mechanical correctness before any ecological runs began.
 
@@ -154,15 +305,11 @@ Thirteen unit tests across four modules confirmed mechanical correctness before 
 | Reproduction | 4/4 PASS | Energy threshold gate (0.8) enforced; own-child block; cooldown countdown correct |
 | Population Stability | 4/4 PASS | No immediate extinction; no explosion; seed-determinism; no-food → extinction at t=200 |
 
-The last case — no food causes extinction by tick 200 — is important: it pre-validates the ecological setup. Food is not a tunable convenience; it is the irreducible energy source the system depends on. If food is absent, extinction follows deterministically. Any ecological calibration must therefore ensure food is present and accessible.
+The last case — no food causes extinction by tick 200 — pre-validates the ecological setup. Food is not a tunable convenience; it is the irreducible energy source the system depends on. Any ecological calibration must ensure food is present and accessible.
 
 ---
 
-*With correct machinery confirmed, the baseline question becomes concrete: can self-only agents actually survive in this world, and which environmental parameters govern stability?*
-
----
-
-#### Self-Survival Baseline (Phase 2)
+#### Phase 2 — Self-Survival Baseline
 
 The first full ecological runs placed mothers-only agents (care disabled, no children) across three ecological difficulty levels, establishing the survival floor of the system. Each condition was run for 1,000 ticks across 10 seeds × 3 repeats (30 runs per ecology).
 
@@ -176,9 +323,9 @@ The first full ecological runs placed mothers-only agents (care disabled, no chi
 | Balanced | 40 | 0.02 | 0.5 | 0.02 | 9.5 ± 2.5 | 0.47 | 1.9% |
 | Easy | 40 | 0.005 | 0.8 | 0.02 | 13.5 ± 0.9 | 0.65 | 2.7% |
 
-The **Harsh** ecology is harsh not from low food quantity but from high movement cost (0.05 energy/step): foraging becomes expensive, agents deplete energy rapidly, and population crashes to a median of 3–4. The **Easy** ecology lowers movement cost to 0.005 and raises eat_gain to 0.8, producing abundant near-cost-free foraging and a stable population of ~13.5. The **Balanced** ecology occupies the operational middle: moderate movement cost, moderate energy return, and a mild food patchiness term (α = 0.02) that begins to introduce spatial heterogeneity. Population stabilizes at ~9.5 with genuine but non-catastrophic foraging pressure.
+The **Harsh** ecology is harsh not from low food quantity but from high movement cost (0.05 energy/step): foraging becomes expensive, agents deplete energy rapidly, and population crashes to a median of 3–4. The **Easy** ecology lowers movement cost to 0.005 and raises eat_gain to 0.8, producing abundant near-cost-free foraging and a stable population of ~13.5. The **Balanced** ecology occupies the operational middle: moderate movement cost, moderate energy return, and a mild food patchiness term (α = 0.02). Population stabilizes at ~9.5 with genuine but non-catastrophic foraging pressure.
 
-The **Balanced** ecology was selected as the standard for all subsequent phases: population is meaningful, energy is moderate (agents are neither saturated nor chronically starved), and the failed forage rate indicates real resource pressure without dominance failure.
+The **Balanced** ecology was selected as the standard for all subsequent phases: population is meaningful, energy is moderate, and the failed forage rate indicates real resource pressure without dominance failure.
 
 #### OVAT Sensitivity Analysis
 
@@ -188,21 +335,15 @@ To confirm which parameters govern the survival baseline, a one-variable-at-a-ti
 
 *Figure 2b. OVAT parameter sensitivity for self-only population stability. Each panel sweeps one parameter across its feasible range; the line is the tail-window mean population (±1 SD shaded band). (a) Food abundance: threshold effect — only high init_food prevents extinction under harsh movement costs. (b) Eat gain: strongest sensitivity; below 0.2, population collapses. (c) Movement cost: monotonically decreasing effect; above 0.02, survival rate drops sharply. (d) Food patchiness (α): non-monotonic optimum near α = 0.01, where mild heterogeneity improves foraging efficiency.*
 
-The OVAT results confirm that **eat_gain** is the highest-sensitivity parameter (range: 0 to 14.2 across swept values), followed by **movement cost** (range: 0 to 8.1). Food patchiness shows a non-monotonic pattern: too little heterogeneity and agents over-compete for the same food-rich zones; too much and food is too sparse to sustain the population. The optimal α ≈ 0.01 was selected as the Phase 5 evolutionary baseline, providing mild heterogeneity without extinction pressure.
+The OVAT results confirm that **eat_gain** is the highest-sensitivity parameter (range: 0 to 14.2 across swept values), followed by **movement cost** (range: 0 to 8.1). Food patchiness shows a non-monotonic pattern: too little heterogeneity and agents over-compete for the same food-rich zones; too much and food is too sparse to sustain the population. The optimal α ≈ 0.01 was selected as the Phase 5 evolutionary baseline.
 
 ---
 
-## Act III — Experiments and Analysis
-
-### 7. Experiment Design
-
-Three sequential experiments test whether and how ecological conditions make care the fitness-dominant strategy, building from ecological selection pressure (Phase 3) through behavioral calibration (Phase 4) to the full evolutionary test (Phase 5).
-
-*With a self-survival floor established, the critical ecological question can be posed directly: which food distribution creates the conditions where care becomes a fitness advantage?*
+*With the system verified and the ecological baseline calibrated, the next question is which food distribution makes care the fitness-dominant strategy.*
 
 ---
 
-#### Food Mechanism Search (Phase 3)
+#### Phase 3 — Food Mechanism Search
 
 Food is not merely a resource in this simulation — it is the ecological pressure dial. The question is not just "how much food?" but "how is food distributed?" Real ecological systems do not distribute food uniformly. Savanna grasslands have patchy grass density driven by rainfall variance. Tropical forests have seasonal fruit clusters. Coral reefs show non-uniform prey distribution driven by current patterns and shelter structure.
 
@@ -247,7 +388,7 @@ This is analogous to natal philopatry: offspring born too far from the mother's 
 
 ---
 
-#### Full Ecology Baseline — Care Under Pressure (Phase 3 & 4)
+#### Phase 4 — Full Ecology Baseline & Genome Weight Sweep
 
 Phase 3 introduced the full system: mothers reproduce, children exist, and care is a real energetic commitment competing with foraging. The food mechanism results (Section 3) were produced here, demonstrating child maturation rising from 28.7% to 96.0% as food became patchier.
 
@@ -270,7 +411,7 @@ The optimal genome ratio (care:forage:self ≈ 0.5:2.0:1.0) establishes three ke
 
 ---
 
-#### The Baldwin Effect Experiment (Phase 5)
+#### Phase 5 — The Baldwin Effect Experiment
 
 Phase 5 ran 10 seeds × 40,000 maximum ticks under a 2×2 factorial design crossing mutation and plasticity:
 
