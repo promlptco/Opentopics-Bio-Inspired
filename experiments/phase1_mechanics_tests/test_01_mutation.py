@@ -12,11 +12,13 @@ sys.path.insert(0, PROJECT_ROOT)
 from evolution.genome import Genome
 import statistics
 import random
+import csv as _csv
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy import stats as scipy_stats
+from utils.plotting import apply_academic_style, style_axis
 
 MODULE_NUM = "01"
 DEFAULT_SEED = 42
@@ -263,30 +265,23 @@ def plot_mutation_histogram(out_dir: str, n_samples: int = 1000) -> str:
         sweep_samples[sig] = sw
 
     # ── Figure setup ──────────────────────────────────────────────────────
-    plt.style.use("default")
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9), facecolor="#FFFFFF")
-    fig.patch.set_facecolor("#FFFFFF")
+    apply_academic_style()
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
     fig.suptitle(
         f"Mutation Distribution — Phase 1 Test 01  "
         f"|  N={n_samples} samples, σ={CANONICAL_SIGMA}, parent={PARENT_VAL}",
-        fontsize=13, fontweight="bold", color="#1A1A1A", y=1.01,
+        fontweight="bold", y=1.01,
     )
 
     ax_list = axes.flatten()
     x_fine  = np.linspace(0.0, 1.0, 400)
 
     def _styled_ax(ax, title: str) -> None:
-        ax.set_facecolor("#FAFAFA")
-        ax.set_title(title, fontsize=10, fontweight="bold", color="#1A1A1A", pad=6)
-        ax.tick_params(colors="#333333", labelsize=8)
-        for spine in ax.spines.values():
-            spine.set_edgecolor("#CCCCCC")
-            spine.set_linewidth(0.8)
-        ax.set_xlabel("Mutated value", fontsize=8, color="#444444")
-        ax.set_ylabel("Count",         fontsize=8, color="#444444")
+        style_axis(ax)
+        ax.set_title(title, pad=6)
+        ax.set_xlabel("Mutated value")
+        ax.set_ylabel("Count")
         ax.set_xlim(0.0, 1.0)
-        ax.grid(axis="y", color="#E0E0E0", linewidth=0.6, linestyle="--")
-        ax.set_axisbelow(True)
 
     # ── Per-field subplots ────────────────────────────────────────────────
     for idx, field in enumerate(FIELDS):
@@ -315,14 +310,12 @@ def plot_mutation_histogram(out_dir: str, n_samples: int = 1000) -> str:
 
         ax.text(0.97, 0.95, f"μ = {fit_mean:.4f}\nσ = {fit_std:.4f}",
                 transform=ax.transAxes, fontsize=7.5,
-                verticalalignment="top", horizontalalignment="right", color="#1A1A1A",
-                bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFFFFF",
-                          edgecolor="#CCCCCC", alpha=0.95))
+                verticalalignment="top", horizontalalignment="right",
+                bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                          edgecolor="#CCCCCC", alpha=0.85))
 
         _styled_ax(ax, field.replace("_", " ").title())
-        ax.legend(fontsize=6.5, loc="upper left",
-                  facecolor="#FFFFFF", edgecolor="#CCCCCC",
-                  labelcolor="#333333", framealpha=0.95)
+        ax.legend(loc="upper left")
 
     # ── Sigma-sweep panel ─────────────────────────────────────────────────
     ax_sw = ax_list[5]
@@ -335,15 +328,139 @@ def plot_mutation_histogram(out_dir: str, n_samples: int = 1000) -> str:
             label=f"σ = {sig}  (std = {np.std(sweep_samples[sig], ddof=1):.3f})",
         )
 
-    ax_sw.set_xlabel("Mutated care_weight", fontsize=8, color="#444444")
-    ax_sw.legend(fontsize=7.5, loc="upper right",
-                 facecolor="#FFFFFF", edgecolor="#CCCCCC",
-                 labelcolor="#333333", framealpha=0.95)
+    ax_sw.set_xlabel("Mutated care_weight")
+    ax_sw.legend(loc="upper right")
 
     # ── Save ─────────────────────────────────────────────────────────────
     plt.tight_layout()
     save_path = os.path.join(out_dir, "mutation_histogram.png")
     fig.savefig(save_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+    return save_path
+
+
+def plot_mutation_rate_validation(
+    out_dir: str,
+    n_trials: int = 10000,
+    mutation_rate: float = 0.1,
+    sigma: float = CANONICAL_SIGMA,
+) -> str:
+    """Validate mutation rate: delta histograms + observed vs expected rate bar chart.
+
+    Directly replicates the per-gene selection logic of Genome._mutate_gene()
+    without calling genome.mutate(), so normalization of weight genes does not
+    contaminate the selection-rate measurement.  Records the raw Gaussian delta
+    only for genes that were selected (random.random() < mutation_rate).
+    """
+    _seed()
+
+    field_deltas: dict[str, list[float]] = {f: [] for f in FIELDS}
+    field_mutated: dict[str, int] = {f: 0 for f in FIELDS}
+
+    for _ in range(n_trials):
+        for f in FIELDS:
+            if random.random() < mutation_rate:
+                field_mutated[f] += 1
+                field_deltas[f].append(random.gauss(0, sigma))
+
+    csv_path = os.path.join(out_dir, f"mutation_rate_{mutation_rate}_log.csv")
+    with open(csv_path, "w", newline="", encoding="utf-8") as fh:
+        writer = _csv.DictWriter(fh, fieldnames=[
+            "field", "n_trials", "n_mutated", "observed_rate", "expected_rate",
+            "abs_error", "delta_mean", "delta_sd", "pass",
+        ])
+        writer.writeheader()
+        for f in FIELDS:
+            n_mut = field_mutated[f]
+            obs = n_mut / n_trials
+            d = field_deltas[f]
+            d_mean = statistics.mean(d) if d else 0.0
+            d_sd   = statistics.stdev(d) if len(d) > 1 else 0.0
+            writer.writerow({
+                "field": f, "n_trials": n_trials, "n_mutated": n_mut,
+                "observed_rate": round(obs, 4), "expected_rate": mutation_rate,
+                "abs_error": round(abs(obs - mutation_rate), 4),
+                "delta_mean": round(d_mean, 5), "delta_sd": round(d_sd, 5),
+                "pass": "PASS" if abs(obs - mutation_rate) <= 0.02 else "FAIL",
+            })
+
+    apply_academic_style()
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    fig.suptitle(
+        f"Mutation Rate Validation  |  rate={mutation_rate}  sigma={sigma}"
+        f"  N={n_trials:,} trials per field",
+        fontweight="bold", y=1.01,
+    )
+
+    x_ref  = np.linspace(-0.25, 0.25, 400)
+    ref_pdf = scipy_stats.norm.pdf(x_ref, 0, sigma)
+    ax_list = axes.flatten()
+
+    for idx, f in enumerate(FIELDS):
+        ax = ax_list[idx]
+        style_axis(ax)
+        deltas  = field_deltas[f]
+        n_mut   = field_mutated[f]
+        obs     = n_mut / n_trials
+        color   = _FIELD_COLORS[f]
+        pass_lbl = "PASS" if abs(obs - mutation_rate) <= 0.02 else "FAIL"
+
+        if deltas:
+            counts, bin_edges, _ = ax.hist(
+                deltas, bins=30, range=(-0.25, 0.25),
+                color=color, alpha=0.60, edgecolor="white", linewidth=0.4,
+                label="Observed deltas",
+            )
+            bw = bin_edges[1] - bin_edges[0]
+            ax.plot(x_ref, ref_pdf * len(deltas) * bw,
+                    color="#333333", linestyle="--", linewidth=1.5,
+                    label=f"N(0, {sigma})")
+
+        ax.text(
+            0.97, 0.95,
+            f"n_mutated = {n_mut:,}\n"
+            f"obs. rate = {obs:.4f}\n"
+            f"expected  = {mutation_rate:.2f}\n"
+            f"{pass_lbl}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=7.5,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                      edgecolor="#CCCCCC", alpha=0.85),
+        )
+        ax.set_title(f.replace("_", " ").title())
+        ax.set_xlabel("Mutation delta")
+        ax.set_ylabel("Count")
+        ax.set_xlim(-0.25, 0.25)
+        ax.legend(loc="upper left")
+
+    ax_bar = ax_list[5]
+    style_axis(ax_bar)
+    labels    = ["care", "forage", "self", "learning rate", "learning cost"]
+    obs_rates = [field_mutated[f] / n_trials for f in FIELDS]
+    colors    = [_FIELD_COLORS[f] for f in FIELDS]
+    x         = np.arange(len(FIELDS))
+
+    bars = ax_bar.bar(x, obs_rates, color=colors, alpha=0.75,
+                      edgecolor="white", width=0.55)
+    for bar, rate in zip(bars, obs_rates):
+        ax_bar.text(bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.001,
+                    f"{rate:.4f}", ha="center", va="bottom", fontsize=7.5)
+
+    ax_bar.axhline(mutation_rate, color="#333333", linestyle="--", linewidth=1.4,
+                   label=f"Expected = {mutation_rate}")
+    tol_lo, tol_hi = mutation_rate * 0.8, mutation_rate * 1.2
+    ax_bar.axhspan(tol_lo, tol_hi, color="#AAAAAA", alpha=0.12,
+                   label=f"Tolerance [{tol_lo:.2f}, {tol_hi:.2f}]")
+    ax_bar.set_title("Observed vs Expected Rate — All Fields")
+    ax_bar.set_xticks(x)
+    ax_bar.set_xticklabels(labels)
+    ax_bar.set_ylabel("Observed mutation rate")
+    ax_bar.set_ylim(0, mutation_rate * 1.6)
+    ax_bar.legend(loc="upper right")
+
+    plt.tight_layout()
+    save_path = os.path.join(out_dir, f"mutation_rate_{mutation_rate}_validation.png")
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return save_path
 
@@ -366,7 +483,9 @@ if __name__ == "__main__":
         writer.writeheader()
         writer.writerows(_results)
 
-    plot_path = plot_mutation_histogram(out_dir, n_samples=1000)
+    plot_path  = plot_mutation_histogram(out_dir, n_samples=1000)
+    valid_path = plot_mutation_rate_validation(out_dir, n_trials=10000, mutation_rate=0.1)
     print(f"\n=== All mutation tests PASSED ===")
-    print(f"Logs saved → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
-    print(f"Plot saved → {plot_path}")
+    print(f"Logs saved      → outputs/phase1_mechanics_tests/{TAG}/logs.csv")
+    print(f"Histogram plot  → {plot_path}")
+    print(f"Validation plot → {valid_path}")

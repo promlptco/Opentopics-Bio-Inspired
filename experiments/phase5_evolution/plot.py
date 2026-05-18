@@ -12,12 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-matplotlib.rcParams["font.family"] = "sans-serif"
-matplotlib.rcParams["axes.linewidth"] = 0.5
-matplotlib.rcParams["axes.spines.top"] = False
-matplotlib.rcParams["axes.spines.right"] = False
-matplotlib.rcParams["xtick.direction"] = "in"
-matplotlib.rcParams["ytick.direction"] = "in"
+from utils.plotting import apply_academic_style, style_axis as _style_axis_util
+
+apply_academic_style()
 
 CI_Z = 1.96
 
@@ -363,12 +360,7 @@ class SnapshotDashboardPlotter:
 
     @staticmethod
     def _style_axes(ax) -> None:
-        ax.set_facecolor("white")
-        ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-        ax.set_axisbelow(True)
-        ax.tick_params(labelsize=9)
-        for spine in ax.spines.values():
-            spine.set_linewidth(0.5)
+        _style_axis_util(ax)
 
 
 EvolutionPlotter = SnapshotDashboardPlotter

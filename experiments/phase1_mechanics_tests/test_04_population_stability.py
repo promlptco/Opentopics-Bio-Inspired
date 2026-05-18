@@ -28,6 +28,7 @@ from evolution.genome import Genome
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from utils.plotting import apply_academic_style, style_axis
 
 CRITICAL_HUNGER = 0.7
 
@@ -350,20 +351,15 @@ def plot_starvation_individual(
         "maturity":     "#555555",
     }
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6), facecolor="#FFFFFF")
+    apply_academic_style()
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(
         "Individual Agent Starvation — Phase 1 Test 04  |  No Food",
-        fontsize=13, fontweight="bold", color="#1A1A1A", y=1.01,
+        fontweight="bold", y=1.01,
     )
 
     for ax in axes:
-        ax.set_facecolor("#FAFAFA")
-        ax.grid(axis="both", color="#E0E0E0", linewidth=0.7, linestyle="--", alpha=0.9)
-        ax.set_axisbelow(True)
-        for spine in ax.spines.values():
-            spine.set_edgecolor("#CCCCCC")
-            spine.set_linewidth(0.9)
-        ax.tick_params(colors="#333333", labelsize=9)
+        style_axis(ax)
 
     # ── Left: Mother energy / stress ──────────────────────────────
     ax = axes[0]
@@ -402,11 +398,10 @@ def plot_starvation_individual(
     x_max = max(mother_death_ticks) + 20
     ax.set_xlim(0, x_max)
     ax.set_ylim(-0.05, 1.05)
-    ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Energy", fontsize=10, color="#444444")
-    ax.set_title("Mother — Energy Without Food  (stress = 1 − energy)", fontsize=11, color="#1A1A1A")
-    ax.legend(fontsize=8.5, loc="upper right", facecolor="#FFFFFF",
-              edgecolor="#CCCCCC", framealpha=0.95)
+    ax.set_xlabel("Tick")
+    ax.set_ylabel("Energy")
+    ax.set_title("Mother — Energy Without Food  (stress = 1 − energy)")
+    ax.legend(loc="upper right")
 
     final_energy = float(np.mean([row[-1] for row in mother_energy_history]))
     final_stress = 1.0 - final_energy
@@ -421,9 +416,8 @@ def plot_starvation_individual(
         f"Final stress: {final_stress:.3f}\n"
         f"Critical stress: {critical_stress:.1f}",
         transform=ax.transAxes, fontsize=8.0, verticalalignment="top",
-        color="#1A1A1A",
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="#FFFFFF",
-                  edgecolor="#CCCCCC", alpha=0.92),
+        bbox=dict(boxstyle="round,pad=0.4", facecolor="white",
+                  edgecolor="#CCCCCC", alpha=0.85),
     )
 
     # ── Right: Child energy ───────────────────────────────────────
@@ -465,11 +459,10 @@ def plot_starvation_individual(
     x_max_c = max(child_death_ticks) + 20
     ax.set_xlim(0, x_max_c)
     ax.set_ylim(-0.05, 1.05)
-    ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Energy", fontsize=10, color="#444444")
-    ax.set_title("Child — Energy Without Food  (hunger = 1 − energy)", fontsize=11, color="#1A1A1A")
-    ax.legend(fontsize=8.5, loc="upper right", facecolor="#FFFFFF",
-              edgecolor="#CCCCCC", framealpha=0.95)
+    ax.set_xlabel("Tick")
+    ax.set_ylabel("Energy")
+    ax.set_title("Child — Energy Without Food  (hunger = 1 − energy)")
+    ax.legend(loc="upper right")
 
     final_energy_c = float(np.mean([row[-1] for row in child_energy_history]))
     ax.text(
@@ -482,9 +475,8 @@ def plot_starvation_individual(
         f"Critical energy: {critical_energy_c:.1f}\n"
         f"Maturity age: {config.maturity_age}",
         transform=ax.transAxes, fontsize=8.0, verticalalignment="top",
-        color="#1A1A1A",
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="#FFFFFF",
-                  edgecolor="#CCCCCC", alpha=0.92),
+        bbox=dict(boxstyle="round,pad=0.4", facecolor="white",
+                  edgecolor="#CCCCCC", alpha=0.85),
     )
 
     plt.tight_layout()
@@ -532,15 +524,9 @@ def plot_population_trajectory(out_dir: str, ticks: int = 300) -> str:
     MEAN   = "#D6604D"
     VLINE  = "#555555"
 
-    fig, ax = plt.subplots(figsize=(11, 6), facecolor="#FFFFFF")
-    fig.patch.set_facecolor("#FFFFFF")
-    ax.set_facecolor("#FAFAFA")
-    ax.set_axisbelow(True)
-    ax.grid(axis="both", color="#E0E0E0", linewidth=0.7, linestyle="--", alpha=0.9)
-    for spine in ax.spines.values():
-        spine.set_edgecolor("#CCCCCC")
-        spine.set_linewidth(0.9)
-    ax.tick_params(colors="#333333", labelsize=9)
+    apply_academic_style()
+    fig, ax = plt.subplots(figsize=(11, 6))
+    style_axis(ax)
 
     tick_axis = history["tick"]
 
@@ -569,23 +555,21 @@ def plot_population_trajectory(out_dir: str, ticks: int = 300) -> str:
 
     ax.set_title(
         f"Agent Population Count — Phase 1 Test 04  |  seed={DEFAULT_SEED}",
-        fontsize=14, fontweight="bold", color="#1A1A1A", pad=12,
+        pad=12,
     )
-    ax.set_xlabel("Tick", fontsize=10, color="#444444")
-    ax.set_ylabel("Agent population count", fontsize=10, color="#444444")
+    ax.set_xlabel("Tick")
+    ax.set_ylabel("Agent population count")
     ax.set_xlim(0, ticks)
 
-    ax.legend(fontsize=9, loc="upper right", facecolor="#FFFFFF",
-              edgecolor="#CCCCCC", labelcolor="#333333", framealpha=0.95)
+    ax.legend(loc="upper right")
 
     final_mothers = history["alive_mothers"][-1]
     ax.text(
         0.02, 0.96,
         f"Final @ t={ticks}\nMothers: {final_mothers}\nseed={DEFAULT_SEED}",
         transform=ax.transAxes, fontsize=8.5, va="top",
-        color="#1A1A1A",
-        bbox=dict(boxstyle="round,pad=0.45", facecolor="#FFFFFF",
-                  edgecolor="#CCCCCC", alpha=0.95),
+        bbox=dict(boxstyle="round,pad=0.45", facecolor="white",
+                  edgecolor="#CCCCCC", alpha=0.85),
     )
 
     plt.tight_layout()

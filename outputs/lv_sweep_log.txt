@@ -1,0 +1,86 @@
+
+[lv_sweep]  72 runs  |  alpha=[0.01, 0.02, 0.05]  beta=[0.02, 0.05, 0.1, 0.2]  gamma=[0.002, 0.01, 0.05]
+  seeds=2  ticks=5000  workers=4  prior=0.5
+  output -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524
+
+  [1/72] a=0.010 b=0.020 g=0.010 s=43  ok
+  [2/72] a=0.010 b=0.020 g=0.002 s=42  ok
+  [3/72] a=0.010 b=0.020 g=0.010 s=42  ok
+  [4/72] a=0.010 b=0.020 g=0.002 s=43  ok
+  [5/72] a=0.010 b=0.020 g=0.050 s=42  ok
+  [6/72] a=0.010 b=0.020 g=0.050 s=43  ok
+  [7/72] a=0.010 b=0.050 g=0.002 s=42  ok
+  [8/72] a=0.010 b=0.050 g=0.002 s=43  ok
+  [9/72] a=0.010 b=0.050 g=0.010 s=42  ok
+  [10/72] a=0.010 b=0.050 g=0.050 s=42  ok
+  [11/72] a=0.010 b=0.050 g=0.050 s=43  ok
+  [12/72] a=0.010 b=0.050 g=0.010 s=43  ok
+  [13/72] a=0.010 b=0.100 g=0.002 s=42  ok
+  [14/72] a=0.010 b=0.100 g=0.002 s=43  ok
+  [15/72] a=0.010 b=0.100 g=0.010 s=42  ok
+  [16/72] a=0.010 b=0.100 g=0.010 s=43  ok
+  [17/72] a=0.010 b=0.100 g=0.050 s=42  ok
+  [18/72] a=0.010 b=0.200 g=0.002 s=42  ok
+  [19/72] a=0.010 b=0.100 g=0.050 s=43  ok
+  [20/72] a=0.010 b=0.200 g=0.002 s=43  ok
+  [21/72] a=0.010 b=0.200 g=0.010 s=43  ok
+  [22/72] a=0.010 b=0.200 g=0.050 s=42  ok
+  [23/72] a=0.010 b=0.200 g=0.010 s=42  ok
+  [24/72] a=0.010 b=0.200 g=0.050 s=43  ok
+  [25/72] a=0.020 b=0.020 g=0.010 s=43  ok
+  [26/72] a=0.020 b=0.020 g=0.002 s=42  ok
+  [27/72] a=0.020 b=0.020 g=0.002 s=43  ok
+  [28/72] a=0.020 b=0.020 g=0.010 s=42  ok
+  [29/72] a=0.020 b=0.020 g=0.050 s=43  ok
+  [30/72] a=0.020 b=0.050 g=0.002 s=42  ok
+  [31/72] a=0.020 b=0.020 g=0.050 s=42  ok
+  [32/72] a=0.020 b=0.050 g=0.002 s=43  ok
+  [33/72] a=0.020 b=0.050 g=0.010 s=42  ok
+  [34/72] a=0.020 b=0.050 g=0.010 s=43  ok
+  [35/72] a=0.020 b=0.050 g=0.050 s=43  ok
+  [36/72] a=0.020 b=0.050 g=0.050 s=42  ok
+  [37/72] a=0.020 b=0.100 g=0.010 s=42  ok
+  [38/72] a=0.020 b=0.100 g=0.010 s=43  ok
+  [39/72] a=0.020 b=0.100 g=0.002 s=42  ok
+  [40/72] a=0.020 b=0.100 g=0.002 s=43  ok
+  [41/72] a=0.020 b=0.100 g=0.050 s=42  ok
+  [42/72] a=0.020 b=0.100 g=0.050 s=43  ok
+  [43/72] a=0.020 b=0.200 g=0.002 s=43  ok
+  [44/72] a=0.020 b=0.200 g=0.002 s=42  ok
+  [45/72] a=0.020 b=0.200 g=0.010 s=42  ok
+  [46/72] a=0.020 b=0.200 g=0.010 s=43  ok
+  [47/72] a=0.020 b=0.200 g=0.050 s=43  ok
+  [48/72] a=0.020 b=0.200 g=0.050 s=42  ok
+  [49/72] a=0.050 b=0.020 g=0.002 s=42  ok
+  [50/72] a=0.050 b=0.020 g=0.002 s=43  ok
+  [51/72] a=0.050 b=0.020 g=0.010 s=43  ok
+  [52/72] a=0.050 b=0.020 g=0.010 s=42  ok
+  [53/72] a=0.050 b=0.020 g=0.050 s=42  ok
+  [54/72] a=0.050 b=0.050 g=0.002 s=43  ok
+  [55/72] a=0.050 b=0.020 g=0.050 s=43  ok
+  [56/72] a=0.050 b=0.050 g=0.002 s=42  ok
+  [57/72] a=0.050 b=0.050 g=0.010 s=42  ok
+  [58/72] a=0.050 b=0.050 g=0.010 s=43  ok
+  [59/72] a=0.050 b=0.050 g=0.050 s=42  ok
+  [60/72] a=0.050 b=0.050 g=0.050 s=43  ok
+  [61/72] a=0.050 b=0.100 g=0.002 s=42  ok
+  [62/72] a=0.050 b=0.100 g=0.002 s=43  ok
+  [63/72] a=0.050 b=0.100 g=0.010 s=42  ok
+  [64/72] a=0.050 b=0.100 g=0.010 s=43  ok
+  [65/72] a=0.050 b=0.100 g=0.050 s=43  ok
+  [66/72] a=0.050 b=0.200 g=0.002 s=43  ok
+  [67/72] a=0.050 b=0.100 g=0.050 s=42  ok
+  [68/72] a=0.050 b=0.200 g=0.002 s=42  ok
+  [69/72] a=0.050 b=0.200 g=0.010 s=42  ok
+  [70/72] a=0.050 b=0.200 g=0.050 s=42  ok
+  [71/72] a=0.050 b=0.200 g=0.010 s=43  ok
+  [72/72] a=0.050 b=0.200 g=0.050 s=43  ok
+
+Summary CSV -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524\sweep_summary.csv
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524\fig1_stability_heatmap.png
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524\fig2_best_oscillation_timeseries.png
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524\fig3_phase_portrait.png
+Saved -> C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524\fig4_spawn_rate_comparison.png
+
+All plots saved to: C:\Users\User\Desktop\FIBO_Study\3Y_2\FRA361_OPENTOPICS\Opentopics-Bio-Inspired\outputs\lv_ecology\exp_20260517_230524
+Best oscillating: alpha=0.010  beta=0.020  gamma=0.010  class=extinction

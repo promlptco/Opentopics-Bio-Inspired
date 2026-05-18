@@ -12,6 +12,52 @@ except ImportError:
     print("Warning: matplotlib not installed, plotting disabled")
 
 
+def apply_academic_style() -> None:
+    """Apply academic publication style to all subsequent matplotlib figures.
+
+    Sets serif font, white background, open-box spines (no top/right),
+    light horizontal gridlines, and clean transparent legend.
+    """
+    if plt is None:
+        return
+    import matplotlib
+    matplotlib.rcParams.update({
+        "font.family":         "serif",
+        "font.serif":          ["DejaVu Serif", "Times New Roman", "serif"],
+        "font.size":           10,
+        "axes.titlesize":      11,
+        "axes.titleweight":    "bold",
+        "axes.labelsize":      10,
+        "xtick.labelsize":     9,
+        "ytick.labelsize":     9,
+        "legend.fontsize":     8,
+        "figure.facecolor":    "white",
+        "axes.facecolor":      "white",
+        "axes.edgecolor":      "#888888",
+        "axes.linewidth":      0.8,
+        "axes.spines.top":     False,
+        "axes.spines.right":   False,
+        "axes.grid":           True,
+        "axes.grid.axis":      "y",
+        "grid.color":          "#D5E5F5",
+        "grid.linewidth":      0.7,
+        "grid.linestyle":      "-",
+        "axes.axisbelow":      True,
+        "xtick.color":         "#444444",
+        "ytick.color":         "#444444",
+        "text.color":          "#1A1A1A",
+        "legend.framealpha":   0.7,
+        "legend.edgecolor":    "#CCCCCC",
+        "legend.facecolor":    "white",
+    })
+
+
+def style_axis(ax) -> None:
+    """Remove top/right spines from a single axis (explicit complement to rcParams)."""
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+
 def ensure_plot_dir(output_dir: str) -> str:
     """Create plots subdirectory."""
     plot_dir = os.path.join(output_dir, "plots")

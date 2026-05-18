@@ -89,7 +89,7 @@ class Phase5ConfigFactory:
         mutation_enabled: bool = True,
         plasticity_enabled: bool = True,
         learning_rate: float = 1.0, # 0.1
-        plasticity_coefficient: float = 1.0, # 0.5 
+        plasticity_coefficient: float = 1.0, # 0.5
         phenotype_retention: float = 0.15,
         mutation_rate: float = 0.5, # 0.05
         mutation_sigma: float = 0.02,
@@ -98,6 +98,8 @@ class Phase5ConfigFactory:
         ecology_relaxation_factor: float = 1.2, # 1.15
         circle_world: bool = False,
         infant_starvation_multiplier: float | None = None,
+        food_entropy_alpha: float = 0.01,
+        maturity_age: int = 80,
     ) -> Config:
         """Build a Phase 5 Config with Phase 4b ecology and run parameters.
 
@@ -164,7 +166,7 @@ class Phase5ConfigFactory:
             reproduction_cooldown=120,
 
             # Child
-            maturity_age=80, # 200
+            maturity_age=maturity_age,
             starvation_threshold=1.0,
             infant_starvation_multiplier=ism,
 
@@ -203,10 +205,10 @@ class Phase5ConfigFactory:
             warmth_factor=0.0,  # 0.0 = thermoregulation disabled
 
             # Ecological mechanisms — Phase 4c locked settings
-            food_entropy_alpha=0.01,
+            food_entropy_alpha=food_entropy_alpha,
             food_entropy_beta=0.01,
             food_entropy_gamma=0.01,
-            food_patch_prior=0.45,
+            food_patch_prior=0.12,
             cry_decay_radius=mech.get("cry_decay_radius", 0.0),
             temperature_period=200,
             temperature_sensitivity=mech.get("temperature_sensitivity", 0.0),

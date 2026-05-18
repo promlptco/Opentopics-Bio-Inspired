@@ -73,6 +73,8 @@ class RunParams:
     cell_size: int = 15
     circle_world: bool = False
     mother_max_age: int | None = None  # None = use Phase5ConfigFactory default (400)
+    food_entropy_alpha: float = 0.01
+    maturity_age: int = 80
 
 
 # ===========================================================================
@@ -208,6 +210,8 @@ class EvolutionRunner:
             relax_ecology=p.relax_ecology,
             ecology_relaxation_factor=p.ecology_relaxation_factor,
             circle_world=p.circle_world,
+            food_entropy_alpha=p.food_entropy_alpha,
+            maturity_age=p.maturity_age,
         )
         if p.mother_max_age is not None:
             cfg.mother_max_age = p.mother_max_age
@@ -275,6 +279,8 @@ class EvolutionRunner:
             relax_ecology=p.relax_ecology,
             ecology_relaxation_factor=p.ecology_relaxation_factor,
             circle_world=p.circle_world,
+            food_entropy_alpha=p.food_entropy_alpha,
+            maturity_age=p.maturity_age,
         )
 
         sim = Simulation(cfg)
@@ -442,6 +448,7 @@ class EvolutionRunner:
             "circle_world": p.circle_world,
             "maturity_age": cfg.maturity_age,
             "mother_max_age": cfg.mother_max_age,
+            "food_entropy_alpha": cfg.food_entropy_alpha,
         }
 
     # ------------------------------------------------------------------
@@ -582,6 +589,18 @@ def main() -> None:
         help="Override mother_max_age (default: Phase5ConfigFactory value=400). "
              "Use 1000 for multi-generational Block 2 runs.",
     )
+    parser.add_argument(
+        "--food-entropy-alpha",
+        type=float,
+        default=0.01,
+        help="Shannon food-entropy alpha (0.0 = simple food, 0.01 = Block 2, 0.05 = Block 3).",
+    )
+    parser.add_argument(
+        "--maturity-age",
+        type=int,
+        default=80,
+        help="Ticks for a child to reach maturity (default: 80).",
+    )
 
     args = parser.parse_args()
     if args.checkpoint <= 0:
@@ -607,6 +626,8 @@ def main() -> None:
         cell_size=args.cell_size,
         circle_world=args.circle_world,
         mother_max_age=args.mother_max_age,
+        food_entropy_alpha=args.food_entropy_alpha,
+        maturity_age=args.maturity_age,
     )
 
     output_dir = (

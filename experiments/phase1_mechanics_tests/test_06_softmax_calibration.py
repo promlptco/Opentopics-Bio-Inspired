@@ -23,6 +23,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from agents.mother import softmax_probs, SOFTMAX_TAU
+from utils.plotting import apply_academic_style, style_axis
 
 MODULE_NUM = "06"
 DEFAULT_SEED = 42
@@ -332,10 +333,9 @@ def plot_softmax_calibration(
         "self": "#D6604D",
     }
 
-    plt.style.use("default")
+    apply_academic_style()
 
-    fig = plt.figure(figsize=(15, 9), facecolor="#FFFFFF")
-    fig.patch.set_facecolor("#FFFFFF")
+    fig = plt.figure(figsize=(15, 9))
 
     gs = fig.add_gridspec(
         2,
@@ -351,35 +351,13 @@ def plot_softmax_calibration(
     fig.suptitle(
         f"Softmax Calibration — Phase 1 Test 06  |  "
         f"τ={tau}, samples={n_samples:,}, seed={seed}",
-        fontsize=14,
         fontweight="bold",
-        color="#1A1A1A",
         y=1.02,
     )
 
     def _style_ax(ax, title: str) -> None:
-        ax.set_facecolor("#FAFAFA")
-        ax.set_title(
-            title,
-            fontsize=10,
-            fontweight="bold",
-            color="#1A1A1A",
-            pad=8,
-        )
-        ax.tick_params(colors="#333333", labelsize=8.5)
-
-        for spine in ax.spines.values():
-            spine.set_edgecolor("#CCCCCC")
-            spine.set_linewidth(0.85)
-
-        ax.grid(
-            axis="y",
-            color="#E0E0E0",
-            linewidth=0.7,
-            linestyle="--",
-            alpha=0.9,
-        )
-        ax.set_axisbelow(True)
+        style_axis(ax)
+        ax.set_title(title, pad=8)
 
     # ------------------------------------------------------------
     # Top row: observed vs theoretical for three scenarios
@@ -455,8 +433,8 @@ def plot_softmax_calibration(
         ax.set_xticks(x)
         ax.set_xticklabels([a.capitalize() for a in ACTIONS])
         ax.set_ylim(0, 110)
-        ax.set_xlabel("Action", fontsize=8.5, color="#444444")
-        ax.set_ylabel("Frequency (%)", fontsize=8.5, color="#444444")
+        ax.set_xlabel("Action")
+        ax.set_ylabel("Frequency (%)")
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
 
         ax.text(
@@ -467,24 +445,16 @@ def plot_softmax_calibration(
             fontsize=7.3,
             verticalalignment="top",
             horizontalalignment="left",
-            color="#1A1A1A",
             bbox=dict(
                 boxstyle="round,pad=0.35",
-                facecolor="#FFFFFF",
+                facecolor="white",
                 edgecolor="#CCCCCC",
-                alpha=0.95,
+                alpha=0.85,
             ),
         )
 
         if idx == 0:
-            ax.legend(
-                fontsize=7.5,
-                loc="upper right",
-                facecolor="#FFFFFF",
-                edgecolor="#CCCCCC",
-                labelcolor="#333333",
-                framealpha=0.95,
-            )
+            ax.legend(loc="upper right")
 
     # ------------------------------------------------------------
     # Bottom row: temperature sensitivity
@@ -556,18 +526,11 @@ def plot_softmax_calibration(
     ax_bottom.set_xticks(tau_x)
     ax_bottom.set_xticklabels([f"τ = {t}" for t in TEMP_TAUS])
     ax_bottom.set_ylim(0, 115)
-    ax_bottom.set_xlabel("Softmax temperature", fontsize=8.5, color="#444444")
-    ax_bottom.set_ylabel("Theoretical probability (%)", fontsize=8.5, color="#444444")
+    ax_bottom.set_xlabel("Softmax temperature")
+    ax_bottom.set_ylabel("Theoretical probability (%)")
     ax_bottom.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0f}%"))
 
-    ax_bottom.legend(
-        fontsize=8.5,
-        loc="upper right",
-        facecolor="#FFFFFF",
-        edgecolor="#CCCCCC",
-        labelcolor="#333333",
-        framealpha=0.95,
-    )
+    ax_bottom.legend(loc="upper right")
 
     plt.tight_layout()
 
