@@ -100,6 +100,7 @@ class Phase5ConfigFactory:
         infant_starvation_multiplier: float | None = None,
         food_entropy_alpha: float = 0.01,
         maturity_age: int = 80,
+        birth_scatter_radius: int = 2,
     ) -> Config:
         """Build a Phase 5 Config with Phase 4b ecology and run parameters.
 
@@ -219,5 +220,5 @@ class Phase5ConfigFactory:
             phenotype_retention=phenotype_retention,
 
             # Birth scatter — tighter radius for kin clustering
-            birth_scatter_radius=2,
+            birth_scatter_radius=birth_scatter_radius,
         )

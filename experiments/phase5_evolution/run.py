@@ -75,6 +75,7 @@ class RunParams:
     mother_max_age: int | None = None  # None = use Phase5ConfigFactory default (400)
     food_entropy_alpha: float = 0.01
     maturity_age: int = 80
+    birth_scatter_radius: int = 2
 
 
 # ===========================================================================
@@ -212,6 +213,7 @@ class EvolutionRunner:
             circle_world=p.circle_world,
             food_entropy_alpha=p.food_entropy_alpha,
             maturity_age=p.maturity_age,
+            birth_scatter_radius=p.birth_scatter_radius,
         )
         if p.mother_max_age is not None:
             cfg.mother_max_age = p.mother_max_age
@@ -281,6 +283,7 @@ class EvolutionRunner:
             circle_world=p.circle_world,
             food_entropy_alpha=p.food_entropy_alpha,
             maturity_age=p.maturity_age,
+            birth_scatter_radius=p.birth_scatter_radius,
         )
 
         sim = Simulation(cfg)
@@ -601,6 +604,12 @@ def main() -> None:
         default=80,
         help="Ticks for a child to reach maturity (default: 80).",
     )
+    parser.add_argument(
+        "--birth-scatter-radius",
+        type=int,
+        default=2,
+        help="Max radius around mother for child birth placement (default: 2).",
+    )
 
     args = parser.parse_args()
     if args.checkpoint <= 0:
@@ -628,6 +637,7 @@ def main() -> None:
         mother_max_age=args.mother_max_age,
         food_entropy_alpha=args.food_entropy_alpha,
         maturity_age=args.maturity_age,
+        birth_scatter_radius=args.birth_scatter_radius,
     )
 
     output_dir = (
