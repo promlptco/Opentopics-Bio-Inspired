@@ -82,6 +82,100 @@ def cliffs_delta(a, b):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 1b ── Food Distribution Mechanism: uniform vs Shannon entropy
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_food_distribution():
+    W, H = 50, 50
+    INIT_FOOD = 190
+    N_TICKS = 400
+    ALPHA = 0.02
+    N_EAT = 20  # illustrative consumption rate
+
+    def simulate(alpha, seed=42):
+        rng = np.random.default_rng(seed)
+        grid = np.zeros(W * H, dtype=bool)
+        grid[rng.choice(W * H, size=INIT_FOOD, replace=False)] = True
+        rate = alpha * np.log(2) if alpha > 0 else 0
+        counts = []
+        for _ in range(N_TICKS):
+            counts.append(int(grid.sum()))
+            food_idx = np.where(grid)[0]
+            if len(food_idx):
+                grid[rng.choice(food_idx, size=min(N_EAT, len(food_idx)), replace=False)] = False
+            if alpha == 0:
+                n_ate = min(N_EAT, len(food_idx))
+                empty_idx = np.where(~grid)[0]
+                if len(empty_idx) >= n_ate:
+                    grid[rng.choice(empty_idx, size=n_ate, replace=False)] = True
+            else:
+                empty_mask = ~grid
+                grid[empty_mask & (rng.random(W * H) < rate)] = True
+        return np.array(counts), grid.reshape(W, H)
+
+    counts0, snap0 = simulate(0.0)
+    counts2, snap2 = simulate(ALPHA)
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(2, 2, figsize=(11, 9), constrained_layout=True)
+
+        # (a) α=0 grid snapshot
+        ax = axes[0, 0]
+        fx0, fy0 = np.where(snap0)
+        ax.scatter(fx0, fy0, s=6, c="#4C72B0", alpha=0.85)
+        ax.set_xlim(-1, W); ax.set_ylim(-1, H); ax.set_aspect("equal")
+        ax.set_facecolor("#F7F7F7")
+        ax.set_title(f"(a) α = 0.0 — Uniform respawn\n"
+                     f"{snap0.sum()} / {W*H} cells  ({100*snap0.mean():.1f}% coverage)")
+        ax.set_xlabel("Grid x"); ax.set_ylabel("Grid y")
+
+        # (b) α=0.02 grid snapshot
+        ax = axes[0, 1]
+        fx2, fy2 = np.where(snap2)
+        ax.scatter(fx2, fy2, s=6, c="#55A868", alpha=0.85)
+        ax.set_xlim(-1, W); ax.set_ylim(-1, H); ax.set_aspect("equal")
+        ax.set_facecolor("#F7F7F7")
+        ss_count = int(np.mean(counts2[-50:]))
+        ax.set_title(f"(b) α = 0.02 — Shannon entropy\n"
+                     f"{snap2.sum()} / {W*H} cells  ({100*snap2.mean():.1f}% coverage)")
+        ax.set_xlabel("Grid x"); ax.set_ylabel("Grid y")
+
+        # (c) Food count over time
+        ax = axes[1, 0]
+        t = np.arange(N_TICKS)
+        ax.plot(t, counts0, color="#4C72B0", linewidth=1.8, label="α = 0.0 (uniform)")
+        ax.plot(t, counts2, color="#55A868", linewidth=1.8, label="α = 0.02 (Shannon)")
+        ax.axhline(INIT_FOOD, color="#4C72B0", linestyle="--", linewidth=0.9, alpha=0.55,
+                   label=f"init_food = {INIT_FOOD}")
+        ax.set_xlabel("Simulation tick")
+        ax.set_ylabel("Food cells on grid")
+        ax.set_title("(c) Food count dynamics")
+        ax.legend(fontsize=9, loc="center right")
+        ax.set_ylim(0, W * H + 100)
+
+        # (d) Spawn probability per empty cell per tick vs α
+        ax = axes[1, 1]
+        alphas = np.linspace(0, 0.06, 300)
+        rates  = alphas * np.log(2) * 100   # percent
+        ax.plot(alphas, rates, color="#4C72B0", linewidth=2.0)
+        ax.axvline(ALPHA, color="#55A868", linestyle="--", linewidth=1.3, alpha=0.85,
+                   label=f"Balanced α = {ALPHA}")
+        bal_rate = ALPHA * np.log(2) * 100
+        ax.scatter([ALPHA], [bal_rate], color="#55A868", s=70, zorder=5)
+        ax.annotate(f"  {bal_rate:.2f}% / cell / tick",
+                    xy=(ALPHA, bal_rate), fontsize=9, va="center", color="#55A868")
+        ax.set_xlabel("Entropy parameter α")
+        ax.set_ylabel("Spawn probability per empty cell per tick (%)")
+        ax.set_title("(d) Spawn rate = α · log(2)")
+        ax.legend(fontsize=9)
+        ax.set_ylim(bottom=0)
+
+        fig.suptitle("Food Distribution Mechanism: Uniform Respawn vs Shannon Entropy",
+                     fontsize=13, fontweight="bold")
+
+    savefig(fig, "fig01b_food_distribution.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FIGURE 2 ── Phase 2 Self-Survival Baseline (3 ecologies, data-driven)
 # ─────────────────────────────────────────────────────────────────────────────
 PH2_DIR = Path("outputs/phase2_survival_minimal/newmech_auto_1000_percept8")
@@ -135,30 +229,69 @@ def fig_ph2_baseline():
 def fig_ph2_ovat():
     PH2_OVAT = PH2_DIR / "sensitivity_ovat"
 
-    panels = [
-        ("set_A_init_food.csv",          "param_value", "Initial food cells",      "(a) Food abundance (init_food)"),
-        ("set_B_eat_gain.csv",           "param_value", "Energy gain per food",    "(b) Energy per food (eat_gain)"),
-        ("set_C_move_cost.csv",          "param_value", "Energy cost per move",    "(c) Movement cost (move_cost)"),
-        ("set_D_food_entropy_alpha.csv", "param_value", "Entropy parameter α",     "(d) Food patchiness (α)"),
-    ]
-
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(2, 2, figsize=(11, 7), constrained_layout=True)
 
-        for ax, (fname, xcol, xlabel, title) in zip(axes.flatten(), panels):
-            df  = pd.read_csv(PH2_OVAT / fname)
-            x   = df[xcol].values
-            y   = df["tail_pop_mean"].values
-            sd  = df["tail_pop_sd"].values
+        # ── Panel (a): init_food — two lines: α=0.0 vs α=0.02 ────────────────
+        ax = axes[0, 0]
+        xcol = "param_value"
 
-            ax.plot(x, y, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
-                    markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
-            ax.fill_between(x, np.maximum(0, y - sd), y + sd,
-                            color="#4C72B0", alpha=0.18)
-            ax.set_xlabel(xlabel)
-            ax.set_ylabel("Tail-window population (mean ± SD)")
-            ax.set_title(title)
-            ax.set_ylim(bottom=0)
+        df_a0 = pd.read_csv(PH2_OVAT / "set_A_fine_alpha0_init_food.csv")
+        x0, y0, sd0 = df_a0[xcol].values, df_a0["tail_pop_mean"].values, df_a0["tail_pop_sd"].values
+        ax.plot(x0, y0, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
+                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8,
+                label="α = 0.0 (uniform respawn)")
+        ax.fill_between(x0, np.maximum(0, y0 - sd0), y0 + sd0, color="#4C72B0", alpha=0.18)
+
+        df_a2 = pd.read_csv(PH2_OVAT / "set_A_fine_alpha02_init_food.csv")
+        x2, y2, sd2 = df_a2[xcol].values, df_a2["tail_pop_mean"].values, df_a2["tail_pop_sd"].values
+        ax.plot(x2, y2, "s-", color="#C44E52", linewidth=1.8, markersize=6,
+                markerfacecolor="#C44E52", markeredgecolor="white", markeredgewidth=0.8,
+                label="α = 0.02 (Shannon entropy ON)")
+        ax.fill_between(x2, np.maximum(0, y2 - sd2), y2 + sd2, color="#C44E52", alpha=0.15)
+
+        ymax_a = float(np.max(np.concatenate([y0 + sd0, y2 + sd2])))
+        ax.set_ylim(0, ymax_a + 1.5)
+        ax.set_xlabel("Initial food cells")
+        ax.set_ylabel("Tail-window population (mean ± SD)")
+        ax.set_title("(a) Food abundance (init_food)")
+        ax.legend(loc="upper left", fontsize=8.5)
+
+        # ── Panel (b): eat_gain ───────────────────────────────────────────────
+        ax = axes[0, 1]
+        df_b = pd.read_csv(PH2_OVAT / "set_B_fine_eat_gain.csv")
+        xb, yb, sdb = df_b[xcol].values, df_b["tail_pop_mean"].values, df_b["tail_pop_sd"].values
+        ax.plot(xb, yb, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
+                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
+        ax.fill_between(xb, np.maximum(0, yb - sdb), yb + sdb, color="#4C72B0", alpha=0.18)
+        ax.set_xlabel("Energy gain per food")
+        ax.set_ylabel("Tail-window population (mean ± SD)")
+        ax.set_title("(b) Energy per food (eat_gain)")
+        ax.set_ylim(bottom=0)
+
+        # ── Panel (c): move_cost ──────────────────────────────────────────────
+        ax = axes[1, 0]
+        df_c = pd.read_csv(PH2_OVAT / "set_C_fine_move_cost.csv")
+        xc, yc, sdc = df_c[xcol].values, df_c["tail_pop_mean"].values, df_c["tail_pop_sd"].values
+        ax.plot(xc, yc, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
+                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
+        ax.fill_between(xc, np.maximum(0, yc - sdc), yc + sdc, color="#4C72B0", alpha=0.18)
+        ax.set_xlabel("Energy cost per move")
+        ax.set_ylabel("Tail-window population (mean ± SD)")
+        ax.set_title("(c) Movement cost (move_cost)")
+        ax.set_ylim(bottom=0)
+
+        # ── Panel (d): food patchiness α — single solid line ─────────────────
+        ax = axes[1, 1]
+        df_d = pd.read_csv(PH2_OVAT / "set_D_fine_food_entropy_alpha.csv")
+        xd, yd, sdd = df_d[xcol].values, df_d["tail_pop_mean"].values, df_d["tail_pop_sd"].values
+        ax.plot(xd, yd, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
+                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
+        ax.fill_between(xd, np.maximum(0, yd - sdd), yd + sdd, color="#4C72B0", alpha=0.18)
+        ax.set_xlabel("Entropy parameter α")
+        ax.set_ylabel("Tail-window population (mean ± SD)")
+        ax.set_title("(d) Food patchiness (α)")
+        ax.set_ylim(bottom=0)
 
         fig.suptitle("OVAT Sensitivity: Parameter Effect on Population Stability",
                      fontsize=13, fontweight="bold")
@@ -166,45 +299,375 @@ def fig_ph2_ovat():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FIGURE 3 ── Food Mechanism: self-only pop + child maturation composite
+# FIGURE 2c ── Failed Forage Mechanism Explained
+# Why does FAILED_FORAGE differ across ecologies?
+# Panel (a): Forage action breakdown (PICK / MOVE / FAILED) — what failure means
+# Panel (b): PICK rate vs failed_forage_rate per seed — food accessibility proxy
+# Panel (c): Total food consumed (PICK count) vs population — consumption pressure
 # ─────────────────────────────────────────────────────────────────────────────
-def fig_food_mechanism():
-    alpha_labels = ["F0\n(a=0.00)", "F1\n(a=0.01)", "F2\n(a=0.05)", "F3\n(a=0.10)"]
-    p2_pop  = [11.7, 8.8,  7.6,  6.8];  p2_sd  = [0.9,  1.66, 2.01, 1.99]
-    p3_matr = [0.287, 0.493, 0.940, 0.960]; p3_sd = [0.108, 0.137, 0.063, 0.053]
-    bar_col_matr = ["#4C72B0", "#55A868", "#DD8452", "#C44E52"]
-    x = np.arange(4)
+def fig_ph2_failed_forage():
+    ECO_COLORS = {"harsh": "#C44E52", "balanced": "#4C72B0", "easy": "#55A868"}
+    ECO_LABELS = {"harsh": "Harsh", "balanced": "Balanced", "easy": "Easy"}
+
+    # Ecology parameters for annotation
+    ECO_PARAMS = {
+        "harsh":    dict(init_food=150, alpha=0.0,  move_cost=0.05,  pop=3.6),
+        "balanced": dict(init_food=40,  alpha=0.02, move_cost=0.02,  pop=9.5),
+        "easy":     dict(init_food=40,  alpha=0.02, move_cost=0.005, pop=13.5),
+    }
+
+    dfs = {}
+    for eco in ["harsh", "balanced", "easy"]:
+        df = pd.read_csv(PH2_DIR / f"validation_{eco}.csv")
+        df["ff_rate"]   = df["FAILED_FORAGE"] / df["FORAGE"]
+        df["pick_rate"] = df["PICK"]          / df["FORAGE"]
+        df["move_rate"] = df["MOVE"]          / df["FORAGE"]
+        df["ecology"]   = eco
+        dfs[eco] = df
+
+    # ── aggregate per ecology ─────────────────────────────────────────────────
+    agg = {}
+    for eco, df in dfs.items():
+        agg[eco] = {
+            "pick_mean":  df["pick_rate"].mean(),
+            "move_mean":  df["move_rate"].mean(),
+            "ff_mean":    df["ff_rate"].mean(),
+            "pick_std":   df["pick_rate"].std(),
+            "move_std":   df["move_rate"].std(),
+            "ff_std":     df["ff_rate"].std(),
+            "pick_total": df["PICK"].mean(),
+            "pop_mean":   df["final_pop"].mean(),
+        }
+
+    ecos = ["harsh", "balanced", "easy"]
 
     with plt.rc_context(STYLE):
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
+        fig, axes = plt.subplots(1, 3, figsize=(13, 4.5), constrained_layout=True)
 
-        bars = ax1.bar(x, p2_pop, 0.6, yerr=p2_sd, color="#4C72B0", alpha=0.72,
-                       capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"))
-        for bar, v in zip(bars, p2_pop):
-            ax1.text(bar.get_x()+bar.get_width()/2, v+0.3, f"{v:.1f}",
-                     ha="center", va="bottom", fontsize=11)
+        # ── (a) Stacked proportional bar — action breakdown ───────────────────
+        ax = axes[0]
+        x  = np.arange(len(ecos))
+        w  = 0.55
+
+        pick_vals = [agg[e]["pick_mean"] for e in ecos]
+        move_vals = [agg[e]["move_mean"] for e in ecos]
+        ff_vals   = [agg[e]["ff_mean"]   for e in ecos]
+
+        bar_pick = ax.bar(x, pick_vals, w,
+                          color="#55A868", alpha=0.88, label="PICK (on food)")
+        bar_move = ax.bar(x, move_vals, w, bottom=pick_vals,
+                          color="#4C72B0", alpha=0.75, label="MOVE toward food")
+        bot_ff   = [p + m for p, m in zip(pick_vals, move_vals)]
+        bar_ff   = ax.bar(x, ff_vals, w, bottom=bot_ff,
+                          color="#C44E52", alpha=0.88, label="FAILED (no food visible)")
+
+        # annotate FAILED % on top of each bar
+        for i, (bot, val) in enumerate(zip(bot_ff, ff_vals)):
+            ax.text(i, bot + val + 0.003, f"{val*100:.1f}%",
+                    ha="center", va="bottom", fontsize=10, color="#C44E52", fontweight="bold")
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([ECO_LABELS[e] for e in ecos])
+        ax.set_ylabel("Fraction of forage attempts")
+        ax.set_ylim(0, 1.08)
+        ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
+        ax.set_title("(a) Forage Action Breakdown")
+        ax.legend(loc="lower left", fontsize=9)
+
+        # ── (b) PICK rate vs failed_forage_rate per seed ─────────────────────
+        ax = axes[1]
+        for eco in ecos:
+            df = dfs[eco]
+            ax.scatter(df["pick_rate"] * 100, df["ff_rate"] * 100,
+                       color=ECO_COLORS[eco], alpha=0.65, s=40, zorder=3,
+                       label=ECO_LABELS[eco])
+            mx = agg[eco]["pick_mean"] * 100
+            my = agg[eco]["ff_mean"]   * 100
+            ax.scatter(mx, my, color=ECO_COLORS[eco], s=120,
+                       marker="D", edgecolors="white", linewidths=1.2, zorder=5)
+
+        ax.set_xlabel("PICK rate (% of forage on food)")
+        ax.set_ylabel("Failed forage rate (%)")
+        ax.set_title("(b) Food Accessibility vs. Failure Rate")
+
+        all_pick = np.concatenate([dfs[e]["pick_rate"].values for e in ecos])
+        all_ff   = np.concatenate([dfs[e]["ff_rate"].values   for e in ecos])
+        slope, intercept, r, p, _ = stats.linregress(all_pick * 100, all_ff * 100)
+        xfit = np.linspace(all_pick.min() * 100, all_pick.max() * 100, 100)
+        ax.plot(xfit, intercept + slope * xfit, "--", color="#888888",
+                linewidth=1.2, alpha=0.7, label=f"Trend  r = {r:.2f}")
+        # legend bottom-left, clear of the data cluster in upper-right
+        ax.legend(loc="lower left", fontsize=9)
+
+        # ── (c) Consumption pressure: PICK total vs population ────────────────
+        ax = axes[2]
+        for eco in ecos:
+            df = dfs[eco]
+            ax.scatter(df["final_pop"], df["PICK"],
+                       color=ECO_COLORS[eco], alpha=0.60, s=40, zorder=3,
+                       label=ECO_LABELS[eco])
+            mx = agg[eco]["pop_mean"]
+            my = agg[eco]["pick_total"]
+            ax.scatter(mx, my, color=ECO_COLORS[eco], s=120,
+                       marker="D", edgecolors="white", linewidths=1.2, zorder=5)
+
+        ax.set_xlabel("Final population (alive mothers)")
+        ax.set_ylabel("Total food consumed (PICK count)")
+        ax.set_title("(c) Consumption Pressure by Ecology")
+        # legend upper-left — data clusters are centre-right and far-right
+        ax.legend(loc="upper left", fontsize=9)
+
+        fig.suptitle(
+            "Why Does Failed Forage Differ Across Ecologies?\n"
+            "FAILED = no food visible within perception radius (r = 8 cells)",
+            fontsize=12, fontweight="bold",
+        )
+
+    savefig(fig, "fig02c_ph2_failed_forage.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 3 ── Food Mechanism: Phase 2 vs Phase 3 population + child maturation
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_food_mechanism():
+    PH3_JSON = Path("outputs/phase3_food_comparison/exp_20260516_011140/summary.json")
+    with open(PH3_JSON) as f:
+        ph3 = json.load(f)["conditions"]
+
+    alpha_labels = ["F0\n(α=0.00)", "F1\n(α=0.01)", "F2\n(α=0.05)", "F3\n(α=0.10)"]
+    conds = ["F0", "F1", "F2", "F3"]
+
+    # Phase 2 self-only (hardcoded from validated Phase 2 runs)
+    p2_pop = [11.7, 8.8,  7.6,  6.8]
+    p2_sd  = [0.9,  1.66, 2.01, 1.99]
+
+    # Phase 3 — mothers + mature children, care enabled, reproduction disabled
+    p3_pop  = [ph3[c]["tail_mean_pop"]              for c in conds]
+    p3_matr = [ph3[c]["child_maturation_rate_mean"] for c in conds]
+    p3_sd   = [ph3[c]["child_maturation_rate_sd"]   for c in conds]
+
+    x   = np.arange(4)
+    w   = 0.35
+    C2  = "#4C72B0"   # Phase 2 blue
+    C3  = "#55A868"   # Phase 3 green
+
+    with plt.rc_context(STYLE):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
+
+        # ── (a) Phase 2 vs Phase 3 population grouped bars ───────────────────
+        b2 = ax1.bar(x - w/2, p2_pop, w, yerr=p2_sd, color=C2, alpha=0.80,
+                     capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"),
+                     label="Phase 2 — self-only (mothers, care OFF)")
+        b3 = ax1.bar(x + w/2, p3_pop, w, color=C3, alpha=0.80,
+                     label="Phase 3 — with care (mothers + children)")
+
+        for bar, v in zip(b2, p2_pop):
+            ax1.text(bar.get_x() + bar.get_width()/2, v + 0.4, f"{v:.1f}",
+                     ha="center", va="bottom", fontsize=9.5, color=C2)
+        for bar, v in zip(b3, p3_pop):
+            ax1.text(bar.get_x() + bar.get_width()/2, v + 0.4, f"{v:.1f}",
+                     ha="center", va="bottom", fontsize=9.5, color=C3)
+
         ax1.set_xticks(x); ax1.set_xticklabels(alpha_labels)
-        ax1.set_ylabel("Mean alive mothers (tail window)")
+        ax1.set_ylabel("Mean alive agents (tail window)")
         ax1.set_xlabel("Food distribution condition")
-        ax1.set_title("(a) Self-only population")
-        ax1.set_ylim(0, 15)
+        ax1.set_title("(a) Population: Phase 2 vs Phase 3")
+        ax1.set_ylim(0, 36)
+        ax1.legend(fontsize=8.5, loc="upper left")
 
-        bars2 = ax2.bar(x, p3_matr, 0.6, yerr=p3_sd, color=bar_col_matr, alpha=0.80,
+        # ── (b) Phase 3 child maturation rate ────────────────────────────────
+        bar_col = ["#4C72B0", "#55A868", "#DD8452", "#C44E52"]
+        bars2 = ax2.bar(x, p3_matr, 0.6, yerr=p3_sd, color=bar_col, alpha=0.82,
                         capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"))
         for bar, v in zip(bars2, p3_matr):
-            ax2.text(bar.get_x()+bar.get_width()/2, v+0.02, f"{v:.3f}",
+            ax2.text(bar.get_x() + bar.get_width()/2, v + 0.02, f"{v:.3f}",
                      ha="center", va="bottom", fontsize=11)
         ax2.set_xticks(x); ax2.set_xticklabels(alpha_labels)
         ax2.set_ylabel("Child maturation rate (fraction)")
         ax2.set_xlabel("Food distribution condition")
-        ax2.set_title("(b) Child maturation rate")
-        ax2.set_ylim(0, 1.20)
+        ax2.set_title("(b) Child maturation rate (Phase 3)")
+        ax2.set_ylim(0, 1.22)
         ax2.axhline(1.0, color="#999999", linestyle="--", linewidth=0.9)
 
-        fig.suptitle("Effect of Shannon Entropy Food Distribution on Survival and Child Maturation",
-                     fontsize=13, fontweight="bold", y=1.02)
-        fig.tight_layout()
+        fig.suptitle(
+            "Effect of Food Replenishment Rate (α) on Population and Child Maturation",
+            fontsize=13, fontweight="bold")
     savefig(fig, "fig03_food_mechanism.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 3b ── Predator-Prey / Lotka-Volterra Analogy (analytical)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_predator_prey_vl():
+    """Analytical Lotka-Volterra reference figure for the predator-prey analogy.
+
+    Panels:
+        (a) Time series — food (prey) and agents (predator) oscillate out of phase.
+        (b) Phase portrait — closed orbit around the co-existence equilibrium.
+    """
+    from scipy.integrate import odeint
+
+    def lv(state, t, r, a, b, d):
+        F, A = state
+        return [r * F - a * F * A, b * F * A - d * A]
+
+    # Parameters chosen for clear, stable oscillations
+    r, a, b, d = 1.0, 0.10, 0.075, 0.5
+    # Equilibrium: F* = d/b, A* = r/a
+    F_eq, A_eq = d / b, r / a
+    t = np.linspace(0, 65, 4000)
+    sol = odeint(lv, [10.0, 5.0], t, args=(r, a, b, d))
+    F, A = sol[:, 0], sol[:, 1]
+
+    # Find first peaks for lag annotation
+    def first_peak(arr):
+        for i in range(1, len(arr) - 1):
+            if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
+                return i
+        return None
+
+    i_F = first_peak(F)
+    i_A = first_peak(A)
+
+    with plt.rc_context(STYLE):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5), constrained_layout=True)
+
+        # ── Panel (a): time series ──────────────────────────────────────────
+        ax1.plot(t, F, color="#4C72B0", lw=2.0, label="Food (prey)")
+        ax1.plot(t, A, color="#C44E52", lw=2.0, label="Agents (predator)")
+        ax1.set_xlabel("Time (arbitrary units)")
+        ax1.set_ylabel("Count (normalised)")
+        ax1.set_title("(a) Lotka-Volterra time series")
+        ax1.legend(loc="upper right")
+
+        if i_F is not None and i_A is not None:
+            y_ann = max(F[i_F], A[i_A]) + 1.8
+            ax1.annotate(
+                "", xy=(t[i_A], A[i_A] + 0.8), xytext=(t[i_F], F[i_F] + 0.8),
+                arrowprops=dict(arrowstyle="->", color="#888888", lw=1.2))
+            ax1.text(
+                (t[i_F] + t[i_A]) / 2, y_ann,
+                "predator peak\nlags prey peak",
+                ha="center", fontsize=9, color="#666666")
+
+        # ── Panel (b): phase portrait ───────────────────────────────────────
+        ax2.plot(F, A, color="#8172B2", lw=1.5, alpha=0.85, zorder=2)
+        ax2.plot(F[0], A[0], "o", color="#55A868", ms=8, zorder=3, label="Start (F=10, A=5)")
+        ax2.axvline(F_eq, color="#4C72B0", lw=1.0, linestyle="--", alpha=0.55,
+                    label=f"F* = {F_eq:.1f}")
+        ax2.axhline(A_eq, color="#C44E52", lw=1.0, linestyle="--", alpha=0.55,
+                    label=f"A* = {A_eq:.0f}")
+        ax2.set_xlabel("Food count (prey F)")
+        ax2.set_ylabel("Agent count (predator A)")
+        ax2.set_title("(b) Phase portrait — closed orbit")
+        ax2.legend(loc="upper right", fontsize=9)
+        ax2.annotate(
+            f"Co-existence\nequilibrium",
+            xy=(F_eq, A_eq), xytext=(F_eq + 1.8, A_eq + 2.5),
+            arrowprops=dict(arrowstyle="->", color="#888888", lw=1.0),
+            fontsize=9, color="#555555")
+
+        fig.suptitle(
+            "Theoretical Reference: Lotka-Volterra Predator-Prey Structure",
+            fontsize=13, fontweight="bold")
+    savefig(fig, "fig03b_predator_prey_vl.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 3c ── Predator-Prey from OUR simulation (SimpleLVSim)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_predator_prey_simulation():
+    """Agent-based simulation echo of the LV predator-prey analogy.
+
+    Uses SimpleLVSim (density-dependent Shannon spawn: -α·p·ln p) from the
+    lv_ecology experiment — same codebase, best-oscillating parameters.
+
+    Panels:
+        (a) Normalised time series — food and agents oscillate out of phase.
+        (b) Phase portrait from seed=42, coloured by simulation tick.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(Path(".").resolve()))
+    from experiments.lv_ecology.lv_sweep import SimpleLVSim
+
+    ALPHA  = 0.05
+    HUNGER = 0.05
+    GAMMA  = 0.002
+    TICKS  = 3_000
+    SEEDS  = list(range(42, 52))   # 10 seeds
+    REC    = 5
+    FOOD_C = "#2ca02c"   # green
+    AGT_C  = "#1f77b4"   # blue
+
+    all_food, all_agt = [], []
+    for s in SEEDS:
+        sim = SimpleLVSim(seed=s, alpha=ALPHA, hunger=HUNGER,
+                          repro_cost=GAMMA, record_every=REC)
+        ft, at = sim.run(TICKS)
+        all_food.append(np.array(ft, float))
+        all_agt.append(np.array(at, float))
+
+    # use shortest run to handle early extinctions
+    min_len = min(len(a) for a in all_food)
+    all_food = np.array([a[:min_len] for a in all_food])
+    all_agt  = np.array([a[:min_len] for a in all_agt])
+    tick_axis = np.arange(min_len) * REC
+
+    # normalise to grand means for same-axis comparison
+    grand_f = all_food.mean()
+    grand_a = all_agt.mean()
+    norm_food = all_food / grand_f
+    norm_agt  = all_agt / grand_a
+
+    mf = norm_food.mean(0);  sf = norm_food.std(0)
+    ma = norm_agt.mean(0);   sa = norm_agt.std(0)
+
+    with plt.rc_context(STYLE):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5),
+                                        constrained_layout=True)
+
+        # ── Panel (a): normalised time series ──────────────────────────────
+        ax1.fill_between(tick_axis, mf - sf, mf + sf,
+                         color=FOOD_C, alpha=0.18)
+        ax1.plot(tick_axis, mf, color=FOOD_C, lw=2.0, label="Food (normalised)")
+        ax1.fill_between(tick_axis, ma - sa, ma + sa,
+                         color=AGT_C, alpha=0.18)
+        ax1.plot(tick_axis, ma, color=AGT_C, lw=2.0, label="Agents (normalised)")
+        ax1.axhline(1.0, color="#aaaaaa", lw=0.8, linestyle="--")
+        ax1.set_xlabel("Simulation tick")
+        ax1.set_ylabel("Count / grand mean")
+        ax1.set_title("(a) Agent-based simulation: time series")
+        ax1.legend(loc="upper right")
+
+        # ── Panel (b): phase portrait (seed=42) ────────────────────────────
+        f0 = norm_food[0]
+        a0 = norm_agt[0]
+        pts   = len(f0)
+        cmap  = plt.get_cmap("plasma")
+        colors = cmap(np.linspace(0, 1, pts - 1))
+        for i in range(pts - 1):
+            ax2.plot(f0[i:i+2], a0[i:i+2], color=colors[i], lw=0.8, alpha=0.75)
+
+        sm = plt.cm.ScalarMappable(cmap=cmap,
+                                   norm=plt.Normalize(0, TICKS))
+        sm.set_array([])
+        cb = fig.colorbar(sm, ax=ax2, shrink=0.75, pad=0.02)
+        cb.set_label("Simulation tick", fontsize=10)
+        cb.ax.tick_params(labelsize=9)
+
+        ax2.plot(f0[0], a0[0], "o", color="#55A868", ms=8, zorder=5,
+                 label="Start (t = 0)")
+        ax2.set_xlabel("Food (normalised)")
+        ax2.set_ylabel("Agents (normalised)")
+        ax2.set_title("(b) Phase portrait: simulation orbit")
+        ax2.legend(loc="upper right", fontsize=9)
+
+        fig.suptitle(
+            "Agent-Based Simulation Echo: Same Predator-Prey Structure"
+            f"\n(alpha={ALPHA}, hunger={HUNGER}, gamma={GAMMA},"
+            f"  {len(SEEDS)} seeds x {TICKS:,} ticks)",
+            fontsize=12, fontweight="bold")
+    savefig(fig, "fig03c_predator_prey_simulation.png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -390,6 +853,58 @@ def fig_ph5_expressed_vs_genome():
                      fontsize=13, fontweight="bold")
         fig.tight_layout()
     savefig(fig, "fig08_ph5_expressed_vs_genome.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 8b ── Genome vs Expressed: all three motivations (Mut ON / Plast ON)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_ph5_expressed_vs_genome_all():
+    """3-panel genome vs expressed for care, forage, self — shows which
+    motivation plasticity dominates (largest genome-expressed gap)."""
+    df = pd.read_csv(
+        BASE / "outputs/phase5_evolution/block2_main_mut_on_plast_on/snapshots.csv")
+    df = df[df["n_mothers"] > 0]
+
+    motives = [
+        ("care",   "mean_genome_care",   "mean_expressed_care",   "#2166ac", "#d6604d", "Care (g_c / w_c)"),
+        ("forage", "mean_genome_forage", "mean_expressed_forage", "#1a9850", "#f4a582", "Forage (g_f / w_f)"),
+        ("self",   "mean_genome_self",   "mean_expressed_self",   "#7b2d8b", "#fdae61", "Self (g_s / w_s)"),
+    ]
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(14, 4.5),
+                                  sharey=False, constrained_layout=True)
+
+        for ax, (name, g_col, e_col, g_color, e_color, title) in zip(axes, motives):
+            agg = df.groupby("tick")[[g_col, e_col]].agg(
+                ["mean", "sem"]).reset_index()
+            agg.columns = ["tick", "g_mean", "g_sem", "e_mean", "e_sem"]
+
+            ax.plot(agg["tick"] / 1000, agg["g_mean"],
+                    color=g_color, lw=2.0, label="Genome")
+            ax.fill_between(agg["tick"] / 1000,
+                            agg["g_mean"] - 1.96 * agg["g_sem"],
+                            agg["g_mean"] + 1.96 * agg["g_sem"],
+                            color=g_color, alpha=0.15)
+
+            ax.plot(agg["tick"] / 1000, agg["e_mean"],
+                    color=e_color, lw=2.0, linestyle="--", label="Expressed")
+            ax.fill_between(agg["tick"] / 1000,
+                            agg["e_mean"] - 1.96 * agg["e_sem"],
+                            agg["e_mean"] + 1.96 * agg["e_sem"],
+                            color=e_color, alpha=0.15)
+
+            ax.axhline(1/3, color="#aaaaaa", linestyle=":", lw=1.0, label="Neutral (1/3)")
+            ax.set_title(title)
+            ax.set_xlabel("Tick (x10^3)")
+            ax.set_ylabel("Weight (0-1)")
+            ax.legend(loc="upper right", fontsize=8)
+            ax.set_ylim(0.0, 0.7)
+
+        fig.suptitle(
+            "Genome vs. Expressed Weight: All Three Motivations  (Mut ON / Plast ON)",
+            fontsize=13, fontweight="bold")
+    savefig(fig, "fig08b_ph5_expressed_vs_genome_all.png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -763,17 +1278,304 @@ def fig_stat_correlation():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 16 -- Lens 1: Ecological Validity
+# 2-panel: care action rate (flat) vs child maturation rate (3.4x jump)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_lens1_ecological():
+    alphas     = [0.0, 0.01, 0.05, 0.10]
+    xlabels    = ["F0\n(uniform)", "F1\na=0.01", "F2\na=0.05", "F3\na=0.10"]
+    care_rate  = [28.24, 28.62, 33.85, 33.10]
+    maturation = [28.67, 49.33, 94.00, 96.00]
+    mat_sd     = [10.77, 13.73,  6.29,  5.33]
+    colors     = ["#aec7e8", "#6baed6", "#2171b5", "#08519c"]
+    x = np.arange(4)
+
+    with plt.rc_context(STYLE):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4.5),
+                                       constrained_layout=True)
+
+        # Left: care action rate
+        bars1 = ax1.bar(x, care_rate, color=colors, width=0.6, edgecolor="white")
+        ax1.set_xticks(x); ax1.set_xticklabels(xlabels, fontsize=10)
+        ax1.set_ylabel("Care action rate (%)")
+        ax1.set_ylim(0, 48)
+        ax1.set_title("(a) Care action rate vs food patchiness", fontsize=11)
+        for bar, v in zip(bars1, care_rate):
+            ax1.text(bar.get_x() + bar.get_width() / 2, v + 0.5,
+                     f"{v:.1f}%", ha="center", va="bottom", fontsize=10)
+        ax1.axhline(y=care_rate[0], color="#999999", linewidth=1, linestyle="--", zorder=0)
+
+        # Right: child maturation rate
+        bars2 = ax2.bar(x, maturation, yerr=mat_sd, color=colors, width=0.6,
+                        edgecolor="white", capsize=5,
+                        error_kw=dict(elinewidth=1.5, ecolor="#444444"))
+        ax2.set_xticks(x); ax2.set_xticklabels(xlabels, fontsize=10)
+        ax2.set_ylabel("Child maturation rate (%)")
+        ax2.set_ylim(0, 118)
+        ax2.set_title("(b) Child maturation rate vs food patchiness", fontsize=11)
+        for bar, v, sd in zip(bars2, maturation, mat_sd):
+            ax2.text(bar.get_x() + bar.get_width() / 2, v + sd + 1.5,
+                     f"{v:.1f}%", ha="center", va="bottom", fontsize=10)
+
+        # Annotate 3.4x multiplier
+        y0, y2 = maturation[0], maturation[2]
+        mult = y2 / y0
+        ax2.annotate(
+            f"x{mult:.1f}",
+            xy=(2, y2 + mat_sd[2] + 2),
+            xytext=(2.5, 82),
+            fontsize=12, fontweight="bold", color="#d62728",
+            arrowprops=dict(arrowstyle="->", color="#d62728", lw=1.5),
+        )
+
+        fig.suptitle(
+            "Lens 1: Ecology Changes Return on Investment for Care, Not Care Allocation",
+            fontsize=12, fontweight="bold",
+        )
+    savefig(fig, "fig16_lens1_ecological.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 17 -- Lens 2: Multi-Scale Fitness
+# 3-panel: population (extinction tick), individual (maturation rate),
+#          behavioral (genome care drift) -- all from Phase 5
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_lens2_multiscale():
+    keys       = ["mut_off_plast_off", "mut_on_plast_off",
+                  "mut_off_plast_on",  "mut_on_plast_on"]
+    short_lbl  = ["Mut-/Pl-", "Mut+/Pl-", "Mut-/Pl+", "Mut+/Pl+"]
+    colors_bar = [COND_COLORS[k] for k in keys]
+
+    # ── Panel A: population scale (mean extinction tick)
+    pop_means = [np.mean(np.array(EXT_TICKS[k]) / 1000) for k in keys]
+    pop_se    = [np.std(np.array(EXT_TICKS[k]) / 1000, ddof=1)
+                 / np.sqrt(len(EXT_TICKS[k])) for k in keys]
+
+    # ── Panel B: individual scale (mean maturation rate from lifecycle)
+    ind_means, ind_se = [], []
+    for _, folder in COND_DIRS:
+        path = BASE / f"outputs/phase5_evolution/{folder}/mother_lifecycle.csv"
+        df   = pd.read_csv(path)
+        df   = df[df["total_children"] > 0].copy()
+        df["mat_rate"] = df["matured_children"] / df["total_children"]
+        seed_means = df.groupby("seed")["mat_rate"].mean()
+        ind_means.append(seed_means.mean())
+        ind_se.append(seed_means.std(ddof=1) / np.sqrt(len(seed_means)))
+
+    # ── Panel C: behavioral scale (mean genome care at t=2000)
+    beh_means, beh_se = [], []
+    TARGET = 2000
+    for _, folder in COND_DIRS:
+        df  = pd.read_csv(BASE / f"outputs/phase5_evolution/{folder}/snapshots.csv")
+        sub = df[df["tick"] == TARGET]
+        seed_vals = sub.groupby("seed")["mean_genome_care"].mean()
+        beh_means.append(seed_vals.mean())
+        beh_se.append(seed_vals.std(ddof=1) / np.sqrt(len(seed_vals)))
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(13, 4.5), constrained_layout=True)
+        y = np.arange(len(keys))
+
+        for ax, means, ses, xlabel, title in [
+            (axes[0], pop_means, pop_se,
+             "Mean extinction tick (x10^3)",
+             "(a) Population scale\nExtinction tick"),
+            (axes[1], [v * 100 for v in ind_means],
+             [s * 100 for s in ind_se],
+             "Mean maturation rate (%)",
+             "(b) Individual scale\nChild maturation rate"),
+            (axes[2], [v * 100 for v in beh_means],
+             [s * 100 for s in beh_se],
+             "Genome care weight (%) at t=2000",
+             "(c) Behavioral scale\nGenome care weight"),
+        ]:
+            ax.barh(y, means, xerr=ses, color=colors_bar, alpha=0.85,
+                    capsize=5, error_kw=dict(elinewidth=1.5, ecolor="black"))
+            ax.set_yticks(y)
+            ax.set_yticklabels(short_lbl, fontsize=10)
+            ax.set_xlabel(xlabel, fontsize=10)
+            ax.set_title(title, fontsize=11)
+            ax.invert_yaxis()
+
+        fig.suptitle(
+            "Lens 2: Multi-Scale Fitness Hierarchy Across All Four Conditions",
+            fontsize=12, fontweight="bold",
+        )
+    savefig(fig, "fig17_lens2_multiscale.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 18 -- Lens 3: Baldwin co-evolution
+# Dual-axis: genome care weight + child maturation rate per generation
+# Shows both rising together -- direct evidence drift is adaptive not random
+# Data: Mut ON / Plast ON condition, pooled across all seeds
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_lens3_baldwin():
+    path = BASE / "outputs/phase5_evolution/block2_main_mut_on_plast_on/mother_lifecycle.csv"
+    df   = pd.read_csv(path)
+    df   = df[df["total_children"] > 0].copy()
+    df["mat_rate"] = df["matured_children"] / df["total_children"]
+
+    # Aggregate per generation (pooled across seeds)
+    def se(x):
+        return x.std(ddof=1) / np.sqrt(len(x)) if len(x) > 1 else 0.0
+
+    gen_agg = (
+        df.groupby("generation")
+        .agg(
+            gc_mean  = ("final_genome_care", "mean"),
+            gc_se    = ("final_genome_care", se),
+            mat_mean = ("mat_rate",          "mean"),
+            mat_se   = ("mat_rate",          se),
+            n        = ("agent_id",          "count"),
+        )
+        .reset_index()
+    )
+    # Keep only generations with enough mothers for a stable mean
+    gen_agg = gen_agg[gen_agg["n"] >= 5].copy()
+
+    # Light smoothing (rolling 3-generation window) for visual clarity
+    gen_agg["gc_smooth"]  = gen_agg["gc_mean"].rolling(3, min_periods=1, center=True).mean()
+    gen_agg["mat_smooth"] = gen_agg["mat_mean"].rolling(3, min_periods=1, center=True).mean()
+
+    c1 = "#2166ac"   # genome care — blue
+    c2 = "#d6604d"   # maturation  — red-orange
+
+    with plt.rc_context(STYLE):
+        fig, ax1 = plt.subplots(figsize=(9, 5))
+
+        # ── left axis: genome care weight
+        ax1.plot(gen_agg["generation"], gen_agg["gc_smooth"],
+                 color=c1, linewidth=2.2, label="Genome care weight (left axis)", zorder=4)
+        ax1.fill_between(
+            gen_agg["generation"],
+            (gen_agg["gc_mean"] - gen_agg["gc_se"]).clip(0),
+            (gen_agg["gc_mean"] + gen_agg["gc_se"]).clip(1),
+            color=c1, alpha=0.15, zorder=3,
+        )
+        ax1.axhline(1 / 3, color=c1, linewidth=1.0, linestyle=":",
+                    alpha=0.6, label="Neutral baseline (1/3)")
+        ax1.set_ylabel("Mean genome care weight", color=c1, fontsize=11)
+        ax1.tick_params(axis="y", labelcolor=c1)
+        ax1.set_ylim(0.25, 0.60)
+        ax1.set_xlabel("Generation", fontsize=11)
+
+        # ── right axis: maturation rate
+        ax2 = ax1.twinx()
+        ax2.spines["right"].set_visible(True)
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["left"].set_visible(False)
+        ax2.plot(gen_agg["generation"], gen_agg["mat_smooth"],
+                 color=c2, linewidth=2.2, linestyle="--",
+                 label="Child maturation rate (right axis)", zorder=4)
+        ax2.fill_between(
+            gen_agg["generation"],
+            (gen_agg["mat_mean"] - gen_agg["mat_se"]).clip(0),
+            (gen_agg["mat_mean"] + gen_agg["mat_se"]).clip(1),
+            color=c2, alpha=0.15, zorder=3,
+        )
+        ax2.set_ylabel("Mean child maturation rate (fitness proxy)", color=c2, fontsize=11)
+        ax2.tick_params(axis="y", labelcolor=c2)
+        ax2.set_ylim(0.0, 1.0)
+
+        # Shared legend
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1 + h2, l1 + l2, loc="upper left", fontsize=9)
+
+        fig.suptitle(
+            "Lens 3: Genome Care and Fitness Co-evolve Across Generations (Mut ON / Plast ON)",
+            fontsize=12, fontweight="bold",
+        )
+        fig.tight_layout()
+    savefig(fig, "fig18_lens3_baldwin.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 19 -- Lens 2: Multi-Scale Fitness Over Time
+# 3-panel time series: population size, child survival rate, genome care weight
+# All four conditions plotted as mean +/- SE ribbons across seeds over ticks
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_lens2_overtime():
+    frames = []
+    for cond, folder in COND_DIRS:
+        p = BASE / f"outputs/phase5_evolution/{folder}/snapshots.csv"
+        df = pd.read_csv(p)
+        df["cond"] = cond
+        frames.append(df)
+    all_df = pd.concat(frames, ignore_index=True)
+
+    def tick_agg(sub, col, smooth=False):
+        grp = (
+            sub.groupby("tick")[col]
+            .agg(m="mean", s="std", n="count")
+            .reset_index()
+        )
+        grp["se"] = grp["s"] / np.sqrt(grp["n"])
+        if smooth:
+            grp["m"] = grp["m"].rolling(7, min_periods=1, center=True).mean()
+        return grp
+
+    panels = [
+        ("population_size",     False, "Population size (mothers + children)",  "(a) Population scale"),
+        ("child_survival_rate", True,  "Child survival rate (7-tick rolling)",  "(b) Individual scale"),
+        ("mean_genome_care",    False, "Mean genome care weight",               "(c) Behavioral scale"),
+    ]
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(3, 1, figsize=(10, 11), constrained_layout=True)
+
+        for ax, (col, smooth, ylabel, title) in zip(axes, panels):
+            for cond in ["mut_off_plast_off", "mut_on_plast_off",
+                         "mut_off_plast_on",  "mut_on_plast_on"]:
+                sub = all_df[all_df["cond"] == cond].copy()
+                agg = tick_agg(sub, col, smooth=smooth)
+                x   = agg["tick"] / 1_000
+
+                ax.plot(x, agg["m"],
+                        color=COND_COLORS[cond], linewidth=1.8,
+                        label=COND_LABELS[cond])
+                ax.fill_between(
+                    x,
+                    (agg["m"] - agg["se"]).clip(0),
+                    (agg["m"] + agg["se"]),
+                    color=COND_COLORS[cond], alpha=0.13,
+                )
+
+            if col == "mean_genome_care":
+                ax.axhline(1 / 3, color="gray", linewidth=1.0, linestyle=":",
+                           alpha=0.70, label="Neutral baseline (1/3)")
+
+            ax.set_ylabel(ylabel, fontsize=10)
+            ax.set_title(title, fontsize=11)
+            ax.set_xlabel("Simulation tick (x10³)", fontsize=10)
+
+        axes[0].legend(fontsize=9, ncol=2, loc="upper right")
+
+        fig.suptitle(
+            "Lens 2: Multi-Scale Fitness Trajectories Over Time (all conditions)",
+            fontsize=12, fontweight="bold",
+        )
+    savefig(fig, "fig19_lens2_overtime.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RUN ALL
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    fig_food_distribution()
     fig_ph2_baseline()
     fig_ph2_ovat()
+    fig_ph2_failed_forage()
     fig_food_mechanism()
+    fig_predator_prey_vl()
+    fig_predator_prey_simulation()
     fig_ph4_weight_sweep()
     fig_ph5_extinction()
     fig_ph5_population_4cond()
     fig_ph5_genome_care_4cond()
     fig_ph5_expressed_vs_genome()
+    fig_ph5_expressed_vs_genome_all()
     fig_ph5_child_survival_4cond()
     fig_birth_scatter_sensitivity()
     fig_ph5_plasticity_4cond()
@@ -781,4 +1583,8 @@ if __name__ == "__main__":
     fig_stat_pairwise()
     fig_stat_regression()
     fig_stat_correlation()
-    print("All 14 figures saved to outputs/report_figures/")
+    fig_lens1_ecological()
+    fig_lens2_multiscale()
+    fig_lens2_overtime()
+    fig_lens3_baldwin()
+    print("All figures saved to outputs/report_figures/")
