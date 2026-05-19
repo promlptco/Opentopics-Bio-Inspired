@@ -147,7 +147,6 @@ class Phase5ConfigFactory:
             # Population — neutral genome start (care=forage=self=1/3)
             init_mothers=15, # 15
             init_food=init_food,
-            max_population=140,
 
             # Perception — Phase 4b BEST_CALIBRATED value
             perception_radius=int(eco.get("perception_radius", 8)),

@@ -131,7 +131,6 @@ def make_config(alpha: float, prior: float, eco: dict, max_ticks: int) -> Config
     cfg.mutation_rate = 0.5
     cfg.mutation_sigma = 0.02
     cfg.min_mutation_rate = 0.01
-    cfg.max_population = 140
     cfg.plastic_gain = 0.1
     cfg.plasticity_metabolic_alpha = 0.01
     cfg.plasticity_maintenance_beta = 0.001

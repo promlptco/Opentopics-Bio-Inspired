@@ -102,7 +102,6 @@ def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -
 
     cfg.init_mothers = 15
     cfg.initial_energy = 1.0
-    cfg.max_population = 140
 
     # Phase 4b BEST_CALIBRATED ecology
     cfg.init_food = int(eco.get("init_food", 300))
@@ -127,6 +126,9 @@ def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -
     cfg.forage_weight = 1.0
     cfg.self_weight = 1.0
     cfg.care_weight = 0.0
+
+    # Consistent maturity age (no effect — mother-only, no children)
+    cfg.maturity_age = 80
 
     # Mother-only mode — all other mechanisms off
     cfg.children_enabled = False

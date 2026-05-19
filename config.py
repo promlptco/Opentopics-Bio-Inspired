@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class Config:
@@ -12,7 +12,10 @@ class Config:
     # Population
     init_mothers: int = 12
     init_food: int = 45
-    max_population: int = 100
+    max_population: int = field(init=False)  # auto = width * height
+
+    def __post_init__(self):
+        self.max_population = self.width * self.height
 
     # Perception
     perception_radius: int = 8

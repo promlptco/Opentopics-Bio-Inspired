@@ -25,7 +25,7 @@ import json
 # ─────────────────────────────────────────────────────────────────────────────
 INIT_MOTHERS       = 15
 INITIAL_ENERGY     = 1.0
-MATURITY_AGE       = 200
+MATURITY_AGE       = 80
 MAX_TICKS          = 400
 SWEEP_SEEDS        = list(range(42, 52))          # 10 seeds per combo
 VALIDATION_SEEDS   = list(range(42, 52))          # 10 seeds for final validation

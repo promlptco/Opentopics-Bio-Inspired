@@ -53,12 +53,12 @@ COND_LABELS = {
     "mut_on_plast_on":   "Mut ON / Plast ON",
 }
 
-# Extinction ticks per condition (hardcoded from summary JSONs)
+# Extinction ticks per condition (hardcoded from summary JSONs — max_pop=500, mother_max_age=1000)
 EXT_TICKS = {
-    "mut_off_plast_off": [4161, 9059, 12226, 11287, 8822, 6866, 7002, 7439, 14178, 9131],
-    "mut_on_plast_off":  [5670, 10720, 15410, 9691, 13594, 6382, 9905, 9840, 14828, 9504],
-    "mut_off_plast_on":  [10814, 14111, 12860, 13000, 14974, 15057, 17208, 29732],
-    "mut_on_plast_on":   [9658, 12423, 14653, 16696, 17199, 17135, 17240, 22182, 11553, 23003],
+    "mut_off_plast_off": [6019, 9824, 8641, 9271, 8759, 9247, 8481, 12897, 8841, 8966],
+    "mut_on_plast_off":  [11289, 15324, 20762, 22707, 5116, 29975, 17239, 23970, 18900, 25703],
+    "mut_off_plast_on":  [13021, 12273, 16488, 20081, 14162, 14565, 15040, 14438, 16433, 24923],
+    "mut_on_plast_on":   [9459, 14054, 13561, 22227, 11324, 11392, 21546, 29214, 12986, 14808],
 }
 
 COND_DIRS = [
@@ -674,37 +674,48 @@ def fig_predator_prey_simulation():
 # FIGURE 4 ── Phase 4 Weight Sweep: care_weight vs outcomes
 # ─────────────────────────────────────────────────────────────────────────────
 def fig_ph4_weight_sweep():
-    df = pd.read_csv(BASE / "outputs/phase4_weight_sweep/sweep_ism1/sweep_summary.csv")
+    # maturity_age=80 re-run (consistent with Phase 3, 4c, 5)
+    df = pd.read_csv(BASE / "outputs/phase4_weight_sweep/sweep_20260519_224937/sweep_summary.csv")
+
+    # Dynamic thresholds from sweep results
+    viable = df[df["c_matr_mean"] >= 0.10].sort_values(["care_weight", "forage_weight"])
+    viable_cw = float(viable.iloc[0]["care_weight"])   # 0.5
+    opt_row   = df.sort_values(["c_matr_mean", "m_surv_mean"], ascending=False).iloc[0]
+    opt_cw    = float(opt_row["care_weight"])           # 1.5
 
     with plt.rc_context(STYLE):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
 
         sc = ax1.scatter(df["care_weight"], df["c_matr_mean"],
                          c=df["forage_weight"], cmap="viridis_r",
-                         s=55, alpha=0.85, edgecolors="white", linewidths=0.4)
+                         s=65, alpha=0.85, edgecolors="white", linewidths=0.4)
         cb1 = fig.colorbar(sc, ax=ax1, shrink=0.85)
         cb1.set_label("Forage weight", fontsize=10)
-        ax1.axvline(0.5, color="#C44E52", linestyle="--", linewidth=1.0, alpha=0.7,
-                    label="Optimal (g_c = 0.5)")
+        ax1.axvline(viable_cw, color="#2171b5", linestyle=":", linewidth=1.2, alpha=0.8,
+                    label=f"Viable min (g_c = {viable_cw})")
+        ax1.axvline(opt_cw, color="#C44E52", linestyle="--", linewidth=1.2, alpha=0.8,
+                    label=f"Optimal (g_c = {opt_cw})")
         ax1.set_xlabel("Care weight (g_c)")
         ax1.set_ylabel("Child maturation rate")
         ax1.set_title("(a) Care weight vs. child maturation")
-        ax1.legend(fontsize=9)
 
         sc2 = ax2.scatter(df["care_weight"], df["m_surv_mean"],
                           c=df["forage_weight"], cmap="viridis_r",
-                          s=55, alpha=0.85, edgecolors="white", linewidths=0.4)
+                          s=65, alpha=0.85, edgecolors="white", linewidths=0.4)
         cb2 = fig.colorbar(sc2, ax=ax2, shrink=0.85)
         cb2.set_label("Forage weight", fontsize=10)
-        ax2.axvline(0.5, color="#C44E52", linestyle="--", linewidth=1.0, alpha=0.7,
-                    label="Optimal (g_c = 0.5)")
+        ax2.axvline(viable_cw, color="#2171b5", linestyle=":", linewidth=1.2, alpha=0.8,
+                    label=f"Viable min (g_c = {viable_cw})")
+        ax2.axvline(opt_cw, color="#C44E52", linestyle="--", linewidth=1.2, alpha=0.8,
+                    label=f"Optimal (g_c = {opt_cw})")
         ax2.set_xlabel("Care weight (g_c)")
-        ax2.set_ylabel("Mother survival rate")
-        ax2.set_title("(b) Care weight vs. mother survival")
-        ax2.legend(fontsize=9)
+        ax2.set_ylabel("Adult pool ratio (final adults / initial)")
+        ax2.set_title("(b) Care weight vs. adult pool ratio")
 
-        fig.suptitle("Genome Weight Sweep: Care Allocation vs. Fitness Outcomes",
-                     fontsize=13, fontweight="bold", y=1.02)
+        fig.suptitle(
+            "Genome Weight Sweep: Care Allocation vs. Fitness Outcomes  (maturity_age = 80)",
+            fontsize=13, fontweight="bold", y=1.02,
+        )
         fig.tight_layout()
     savefig(fig, "fig04_ph4_weight_sweep.png")
 
@@ -1449,9 +1460,9 @@ def fig_lens3_baldwin():
                  color=c1, linewidth=2.2, label="Genome care weight (left axis)", zorder=4)
         ax1.fill_between(
             gen_agg["generation"],
-            (gen_agg["gc_mean"] - gen_agg["gc_se"]).clip(0),
-            (gen_agg["gc_mean"] + gen_agg["gc_se"]).clip(1),
-            color=c1, alpha=0.15, zorder=3,
+            (gen_agg["gc_smooth"] - gen_agg["gc_se"]).clip(0.25),
+            (gen_agg["gc_smooth"] + gen_agg["gc_se"]).clip(None, 0.60),
+            color=c1, alpha=0.20, zorder=3,
         )
         ax1.axhline(1 / 3, color=c1, linewidth=1.0, linestyle=":",
                     alpha=0.6, label="Neutral baseline (1/3)")
@@ -1460,7 +1471,7 @@ def fig_lens3_baldwin():
         ax1.set_ylim(0.25, 0.60)
         ax1.set_xlabel("Generation", fontsize=11)
 
-        # ── right axis: maturation rate
+        # ── right axis: maturation rate (ribbon capped to ±0.12 around smoothed line)
         ax2 = ax1.twinx()
         ax2.spines["right"].set_visible(True)
         ax2.spines["top"].set_visible(False)
@@ -1468,11 +1479,12 @@ def fig_lens3_baldwin():
         ax2.plot(gen_agg["generation"], gen_agg["mat_smooth"],
                  color=c2, linewidth=2.2, linestyle="--",
                  label="Child maturation rate (right axis)", zorder=4)
+        ribbon_cap = 0.12  # per-generation SE is large (0/1 outcomes); cap ribbon width
         ax2.fill_between(
             gen_agg["generation"],
-            (gen_agg["mat_mean"] - gen_agg["mat_se"]).clip(0),
-            (gen_agg["mat_mean"] + gen_agg["mat_se"]).clip(1),
-            color=c2, alpha=0.15, zorder=3,
+            (gen_agg["mat_smooth"] - ribbon_cap).clip(0),
+            (gen_agg["mat_smooth"] + ribbon_cap).clip(None, 1.0),
+            color=c2, alpha=0.12, zorder=3,
         )
         ax2.set_ylabel("Mean child maturation rate (fitness proxy)", color=c2, fontsize=11)
         ax2.tick_params(axis="y", labelcolor=c2)
@@ -1492,6 +1504,128 @@ def fig_lens3_baldwin():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 20 -- Lens 3: Baldwin bottleneck — why assimilation is incomplete
+# 3-panel: (a) surviving seeds per generation, (b) genome-care diversity collapse,
+# (c) care-genome drift with OLS trend.  Bottleneck zone shaded across all panels.
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_lens3_bottleneck():
+    path = BASE / "outputs/phase5_evolution/block2_main_mut_on_plast_on/mother_lifecycle.csv"
+    df   = pd.read_csv(path)
+    df   = df[df["total_children"] > 0].copy()
+
+    seeds_per_gen = (
+        df.groupby("generation")["seed"].nunique().reset_index(name="n_seeds")
+    )
+
+    def se(x):
+        return x.std(ddof=1) / np.sqrt(len(x)) if len(x) > 1 else 0.0
+
+    gen_agg = (
+        df.groupby("generation")
+        .agg(gc_mean=("final_genome_care", "mean"),
+             gc_std =("final_genome_care", "std"),
+             gc_se  =("final_genome_care", se))
+        .reset_index()
+    )
+    gen_agg = gen_agg.merge(seeds_per_gen, on="generation")
+    gen_agg["gc_std"]   = gen_agg["gc_std"].fillna(0)
+    gen_agg["gc_smooth"] = gen_agg["gc_mean"].rolling(3, min_periods=1, center=True).mean()
+
+    # OLS trend on raw mean
+    slope, intercept, _, p_val, _ = stats.linregress(
+        gen_agg["generation"], gen_agg["gc_mean"]
+    )
+    trend_y = slope * gen_agg["generation"] + intercept
+
+    # Bottleneck: fewer than 5 seeds still alive
+    BT = 5
+    bt_gens = gen_agg[gen_agg["n_seeds"] < BT]["generation"].values
+
+    def shade_bt(ax):
+        if len(bt_gens) == 0:
+            return
+        runs, s, prev = [], bt_gens[0], bt_gens[0]
+        for g in bt_gens[1:]:
+            if g - prev > 1:
+                runs.append((s, prev))
+                s = g
+            prev = g
+        runs.append((s, prev))
+        first = True
+        for s0, e0 in runs:
+            ax.axvspan(s0 - 0.5, e0 + 0.5,
+                       color="#ffcccc", alpha=0.40, zorder=0,
+                       label="Bottleneck zone\n(<5 lineages)" if first else "_nolegend_")
+            first = False
+
+    c_pop  = "#4C72B0"
+    c_div  = "#8172B2"
+    c_care = "#2166ac"
+    c_bt   = "#d62728"
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(3, 1, figsize=(10, 11), constrained_layout=True)
+
+        # (a) Surviving lineages per generation
+        ax = axes[0]
+        shade_bt(ax)
+        ax.bar(gen_agg["generation"], gen_agg["n_seeds"],
+               color=c_pop, alpha=0.75, width=0.9, zorder=2)
+        ax.axhline(BT, color=c_bt, linewidth=1.5, linestyle="--", zorder=3,
+                   label=f"Critical threshold ({BT} lineages)")
+        ax.set_yticks([0, 2, 4, 6, 8, 10])
+        ax.set_ylabel("Surviving lineages (out of 10)", fontsize=10)
+        ax.set_title("(a) Population extinction — surviving lineages per generation", fontsize=11)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, fontsize=9)
+
+        # (b) Genetic diversity (std dev of genome care)
+        ax = axes[1]
+        shade_bt(ax)
+        ax.fill_between(gen_agg["generation"], 0, gen_agg["gc_std"],
+                        color=c_div, alpha=0.35, zorder=1)
+        ax.plot(gen_agg["generation"], gen_agg["gc_std"],
+                color=c_div, linewidth=1.8, zorder=2)
+        ax.set_ylabel("Std dev of genome care weight", fontsize=10)
+        ax.set_title(
+            "(b) Genetic diversity — collapses as surviving lineages fall below threshold",
+            fontsize=11,
+        )
+
+        # (c) Care genome drift with OLS trend
+        ax = axes[2]
+        shade_bt(ax)
+        ax.plot(gen_agg["generation"], gen_agg["gc_smooth"],
+                color=c_care, linewidth=2.2, zorder=3,
+                label="Mean genome care (3-gen rolling)")
+        ax.fill_between(
+            gen_agg["generation"],
+            (gen_agg["gc_smooth"] - gen_agg["gc_se"]).clip(0.25),
+            (gen_agg["gc_smooth"] + gen_agg["gc_se"]).clip(None, 0.55),
+            color=c_care, alpha=0.18, zorder=2,
+        )
+        ax.plot(gen_agg["generation"], trend_y,
+                color=c_care, linewidth=1.3, linestyle="--", alpha=0.65, zorder=3,
+                label=f"OLS trend (+{slope*10:.4f} per 10 gen,  p = {p_val:.3f})")
+        ax.axhline(1 / 3, color="gray", linewidth=1.0, linestyle=":",
+                   alpha=0.70, label="Neutral baseline (1/3)")
+        ax.set_ylabel("Mean genome care weight", fontsize=10)
+        ax.set_title("(c) Care genome drift — directional but incomplete assimilation", fontsize=11)
+        ax.legend(fontsize=9)
+        ax.set_ylim(0.25, 0.55)
+
+        for ax in axes:
+            ax.set_xlabel("Generation", fontsize=10)
+
+        fig.suptitle(
+            "Lens 3: Why Baldwin Assimilation Remained Incomplete\n"
+            "Bottleneck zones erase genetic diversity before selection can fix care genes",
+            fontsize=12, fontweight="bold",
+        )
+    savefig(fig, "fig20_lens3_bottleneck.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FIGURE 19 -- Lens 2: Multi-Scale Fitness Over Time
 # 3-panel time series: population size, child survival rate, genome care weight
 # All four conditions plotted as mean +/- SE ribbons across seeds over ticks
@@ -1505,27 +1639,29 @@ def fig_lens2_overtime():
         frames.append(df)
     all_df = pd.concat(frames, ignore_index=True)
 
-    def tick_agg(sub, col, smooth=False):
+    def tick_agg(sub, col, smooth=False, min_seeds=5):
         grp = (
             sub.groupby("tick")[col]
             .agg(m="mean", s="std", n="count")
             .reset_index()
         )
+        grp = grp[grp["n"] >= min_seeds].copy()
         grp["se"] = grp["s"] / np.sqrt(grp["n"])
         if smooth:
             grp["m"] = grp["m"].rolling(7, min_periods=1, center=True).mean()
         return grp
 
+    # (panel_letter, col, ylabel, smooth, add_baseline, ylim)
     panels = [
-        ("population_size",     False, "Population size (mothers + children)",  "(a) Population scale"),
-        ("child_survival_rate", True,  "Child survival rate (7-tick rolling)",  "(b) Individual scale"),
-        ("mean_genome_care",    False, "Mean genome care weight",               "(c) Behavioral scale"),
+        ("(a)", "population_size",     "Population size (mothers + children)", False, False, None),
+        ("(b)", "child_survival_rate", "Child survival rate (7-tick rolling)",  True,  False, None),
+        ("(c)", "mean_genome_care",    "Mean genome care weight",               False, True,  (0.29, 0.43)),
     ]
 
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(3, 1, figsize=(10, 11), constrained_layout=True)
 
-        for ax, (col, smooth, ylabel, title) in zip(axes, panels):
+        for ax, (lbl, col, ylabel, smooth, add_baseline, ylim) in zip(axes, panels):
             for cond in ["mut_off_plast_off", "mut_on_plast_off",
                          "mut_off_plast_on",  "mut_on_plast_on"]:
                 sub = all_df[all_df["cond"] == cond].copy()
@@ -1542,13 +1678,19 @@ def fig_lens2_overtime():
                     color=COND_COLORS[cond], alpha=0.13,
                 )
 
-            if col == "mean_genome_care":
+            if add_baseline:
                 ax.axhline(1 / 3, color="gray", linewidth=1.0, linestyle=":",
                            alpha=0.70, label="Neutral baseline (1/3)")
 
+            if ylim is not None:
+                ax.set_ylim(*ylim)
+
             ax.set_ylabel(ylabel, fontsize=10)
-            ax.set_title(title, fontsize=11)
             ax.set_xlabel("Simulation tick (x10³)", fontsize=10)
+
+            # panel letter as an in-axes annotation (top-left, never buried in y-label)
+            ax.text(0.01, 0.97, lbl, transform=ax.transAxes,
+                    va="top", ha="left", fontsize=11, fontweight="bold")
 
         axes[0].legend(fontsize=9, ncol=2, loc="upper right")
 
@@ -1587,4 +1729,5 @@ if __name__ == "__main__":
     fig_lens2_multiscale()
     fig_lens2_overtime()
     fig_lens3_baldwin()
+    fig_lens3_bottleneck()
     print("All figures saved to outputs/report_figures/")

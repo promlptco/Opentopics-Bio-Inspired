@@ -129,7 +129,6 @@ def make_config(alpha: float, eco: dict, max_ticks: int,
     cfg.mutation_rate = 0.5
     cfg.mutation_sigma = 0.02
     cfg.min_mutation_rate = 0.01
-    cfg.max_population = 140
     return cfg
 
 

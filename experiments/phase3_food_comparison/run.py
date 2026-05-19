@@ -110,7 +110,6 @@ def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -
     # Population
     cfg.init_mothers = 15
     cfg.initial_energy = 1.0
-    cfg.max_population = 140
 
     # Phase 4b BEST_CALIBRATED ecology
     cfg.init_food = int(eco.get("init_food", 300))
