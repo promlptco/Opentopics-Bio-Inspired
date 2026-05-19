@@ -1,12 +1,13 @@
-﻿# Agent-Based Simulation of the Ecological Study of Maternal Care Instinct
+﻿# Can Maternal Care Emerge from Ecological Pressure?
 
-### FRA361 Open Topics
+### A Bio-Inspired Simulation Study — FRA361 Open Topics
 
 **Author:** Chantouch Orungrote · FIBO, King Mongkut's University of Technology Thonburi
-**Student ID** 66340500011
-**Date:** 20 May 2026
+**Date:** May 2026
 
 ---
+
+## Act I — Foundation
 
 ### 1. Background Study and Literature Review
 
@@ -48,6 +49,7 @@ Five project requirements define what the simulation must provide for the resear
 | **Evolution Validation** | Combinations of mutation × plasticity conditions are tested against baseline ecological settings across 30 seeds (10 seeds × 3 repeats in Phase 2; 10 seeds per condition in Phase 5). Results must be reproducible and seed-deterministic. |
 | **Multiscale Fitness Measurement** | Three outcome variables must be measurable independently per seed: extinction tick (population scale), child maturation rate from lifecycle CSVs (individual scale), and genome care weight trend (behavioral/genomic scale). The research question requires fitness evidence at all three scales the Baldwin theory predicts. |
 | **Calibrated Ecology** | Baseline ecological parameters (move cost, eat gain, food entropy α, birth scatter radius) are calibrated through systematic experiments and reused consistently across all asynchronous evolution runs. |
+| **Statistical Analysis** | Cohort-level fitness metrics are computed and compared across conditions, including child maturation rate, plasticity drift, plasticity learning cost, and per-mother lifetime reproductive success. |
 
 ---
 
@@ -78,6 +80,8 @@ Five project requirements define what the simulation must provide for the resear
 *With the research framing, requirements, and operational scope established, the system that addresses them can now be described in full.*
 
 ---
+
+## Act II — System Design and Implementation
 
 ### 5. Solution Design and System Overview
 
@@ -239,6 +243,8 @@ Each agent passes through four lifecycle stages. Fitness selection operates thro
 
 ---
 
+## Act III — Experiments and Analysis
+
 ### 7. Experiment Design
 
 Five sequential experiment phases validate the system, calibrate the ecology, and test the Baldwin Effect hypothesis. Each phase builds directly on the confirmed output of the previous.
@@ -290,14 +296,6 @@ Five sequential experiment phases validate the system, calibrate the ecology, an
 
 #### Phase 1 — Mechanisms Unit Test
 
-| | |
-|---|---|
-| **Objective** | Verify that all computational mechanisms operate correctly before any ecological experiment begins. |
-| **Hypothesis** | All 13 unit tests will pass without exception, and the mutation distribution will follow the expected Gaussian parameters (mean ≈ 0.5, σ ≈ 0.1). |
-| **Independent variable** | The module under test: mutation, inheritance, reproduction, or population stability. |
-| **Dependent variable** | Pass/fail result per test; mutation distribution mean and standard deviation; extinction tick under the no-food control condition. |
-| **Control variable** | Fixed random seed for determinism; isolated module testing with all other mechanisms held at default values; initial energy = 1.0; initial agents = 15. |
-
 Thirteen unit tests across four modules confirmed mechanical correctness before any ecological runs began.
 
 | Module | Tests | Key Verification |
@@ -308,8 +306,6 @@ Thirteen unit tests across four modules confirmed mechanical correctness before 
 | Population Stability | 4/4 PASS | No immediate extinction; no explosion; seed-determinism; no-food → extinction at t=200 |
 
 The last case — no food causes extinction by tick 200 — pre-validates the ecological setup. Food is not a tunable convenience; it is the irreducible energy source the system depends on. Any ecological calibration must ensure food is present and accessible.
-
-**Phase 1 Conclusion:** All 13 tests passed across all four modules. Every computational mechanism operates as designed. The no-food control confirmed population extinction by tick 200, validating food as the irreducible energy source. The system is mechanically certified and ready for ecological calibration.
 
 ---
 
@@ -323,7 +319,7 @@ Food availability is not only a quantity — it is a dynamic governed by the spa
 
 ![Figure 1b](outputs/report_figures/fig01b_food_distribution.png)
 
-*Figure 1b. Food distribution mechanism. Uniform respawn holds food near the initial count; Shannon entropy spawning creates denser, patchier food as α increases.*
+*Figure 1b. Food distribution mechanism comparison (50×50 grid, init\_food = 190, illustrative consumption rate of 20 food cells per tick). (a) Grid snapshot at steady state under uniform respawn (α = 0.0): food is fixed at 190 cells (7.6% coverage), scattered uniformly across all cells. (b) Grid snapshot at steady state under Shannon entropy spawning (α = 0.02): food count rises to 1,058 cells (42.3% coverage) as each empty cell spawns food at rate p\_spawn = α·log(2) ≈ 1.39% per tick. (c) Food count dynamics: the uniform mechanism holds constant at init\_food while the Shannon mechanism rises from init\_food to a consumption-limited steady state. (d) Spawn probability per empty cell per tick as a linear function of α — a direct design lever, with the Balanced ecology value (α = 0.02, marked) producing 1.39% spawn probability per cell per tick.*
 
 The food mechanism is therefore an ecological design decision with direct consequences for agent survival and selection pressure. Uniform respawn creates a fixed, predictable food floor that agents must compete for efficiently. Shannon entropy creates a richer, dynamically regulated food environment where more food is available per agent — but only when consumption does not overwhelm replenishment. Phase 2 characterises each parameter's individual contribution to population stability via OVAT sweeps. Phase 3 examines how food distribution interacts with maternal care and child maturation.
 
@@ -352,19 +348,11 @@ The food mechanism is therefore an ecological design decision with direct conseq
 
 #### Phase 2 — Self-Survival Baseline
 
-| | |
-|---|---|
-| **Objective** | Calibrate the ecological baseline by identifying a parameter set that sustains stable agent survival under genuine but non-catastrophic resource pressure. |
-| **Hypothesis** | A balanced ecology with moderate movement cost and mild food patchiness will produce stable population dynamics with real foraging pressure, while a harsh ecology with high movement cost will cause rapid population decline. |
-| **Independent variable** | Ecology type (Harsh, Balanced, Easy) defined by `init_food`, `move_cost`, `eat_gain`, and food entropy α; individual parameters varied in the OVAT sweep. |
-| **Dependent variable** | Final population size, mean agent energy, and failed forage rate at tick 1,000. |
-| **Control variable** | Mothers-only agents; no children, care, reproduction, mutation, or plasticity; world size 50×50; initial population 15 mothers; initial energy 1.0; hunger rate 1/35 per tick; run length 1,000 ticks; 10 seeds × 3 repeats per ecology. |
-
 The first full ecological runs placed mothers-only agents (care disabled, no children) across three ecological difficulty levels, establishing the survival floor of the system. Each condition was run for 1,000 ticks across 10 seeds × 3 repeats (30 runs per ecology).
 
 ![Figure 2](outputs/report_figures/fig02_ph2_baseline.png)
 
-*Figure 2. Self-survival baseline across harsh, balanced, and easy ecologies. The balanced ecology is the middle-ground baseline for later phases.*
+*Figure 2. Self-survival baseline across three ecological difficulty levels (n = 30 runs per ecology). (a) Final population distribution — box shows IQR, line is median, whiskers extend to 1.5×IQR. (b) Mean energy per agent. (c) Failed forage rate: fraction of forage motivations that did not find food. The balanced ecology (blue) is the operational middle ground selected for all subsequent phases.*
 
 | Ecology | init_food | move_cost | eat_gain | α | Population (final) | Energy (mean) | Failed Forage |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -382,7 +370,7 @@ To confirm which parameters govern the survival baseline, a one-variable-at-a-ti
 
 ![Figure 2b](outputs/report_figures/fig02b_ph2_ovat.png)
 
-*Figure 2b. OVAT sensitivity for self-only stability. Food mechanism, eat gain, movement cost, and food patchiness all affect population persistence; eat gain and patchiness are the strongest practical levers.*
+*Figure 2b. OVAT parameter sensitivity for self-only population stability (n = 30 per point, mean ± SD shaded). (a) Food abundance swept under two food mechanisms: blue (α = 0.0, uniform respawn) and red (α = 0.02, Shannon entropy ON). At low init\_food the uniform mechanism cannot sustain the population, while Shannon entropy supports stable populations at the same quantity — showing that food mechanism type interacts with food abundance. (b) Eat gain: strongest individual-parameter sensitivity; population collapses below eat\_gain ≈ 0.15. (c) Movement cost: monotonically decreasing; survival drops sharply above move\_cost = 0.02. (d) Food patchiness (α): population rises steeply from α = 0.0 to α ≈ 0.02 and plateaus, indicating that minimal spatial clustering already provides most of the survival benefit.*
 
 The OVAT results confirm that **eat\_gain** is the highest-sensitivity parameter, followed by **movement cost**. Panel (a) explicitly compares the two food mechanisms: under uniform respawn (α = 0.0), food abundance below init\_food ≈ 100 fails to sustain the population, while Shannon entropy (α = 0.02) supports stable populations at much lower init\_food values — the food *mechanism type* can dominate the food *quantity* effect. Panel (d) shows that the population benefit of spatial patchiness saturates quickly: the steepest gain occurs between α = 0.0 and α ≈ 0.02, with diminishing returns above that threshold. The three ecological baselines were selected from a full multi-parameter grid using population stability and mean energy as the sole criteria — not from the OVAT directly. Single-variable effects of each parameter are read from this figure; cross-ecology parameter comparisons are not meaningful.
 
@@ -392,7 +380,7 @@ The failed forage rate in Figure 2(c) shows a counterintuitive ordering — Bala
 
 ![Figure 2c](outputs/report_figures/fig02c_ph2_failed_forage.png)
 
-*Figure 2c. Failed forage mechanism. Failure is rare but informative: higher direct food access lowers failed forage, while total food consumption tracks final population size.*
+*Figure 2c. Mechanism of failed forage across ecologies (n = 30 seeds per ecology). (a) Forage action breakdown: every forage tick resolves as PICK (agent stands on food), MOVE (food visible within radius r = 8, agent steps toward it), or FAILED (no food visible anywhere in the perception window). FAILED is a small but ecologically informative fraction (2.4–3.3%). (b) PICK rate vs. failed forage rate across individual seeds (diamond = ecology mean). Higher PICK rate — food found at the agent's current cell — anticorrelates with failure (r = −0.67): when the food grid is accessible, failure is rare. (c) Total food consumed (PICK count) vs. final population. Each ecology cluster reflects its calibrated parameter package; Balanced and Easy share the same food grid parameters (init\_food = 40, α = 0.02) but differ only in population size — the cleanest pairwise comparison available.*
 
 **The forage decision hierarchy.** When a mother agent selects FORAGE, it first checks whether food is present at its current cell (PICK). If not, it scans within perception radius r = 8 and moves toward the nearest visible food (MOVE). Only if neither condition holds — no food at the cell and none visible within radius 8 — does the action fail. Failed forage is therefore not a random-walk failure; it is a *food-visibility* failure reflecting the local balance between food availability and consumption pressure.
 
@@ -402,8 +390,6 @@ The failed forage rate in Figure 2(c) shows a counterintuitive ordering — Bala
 
 **Implication.** Failed forage rate is a proxy for food-visibility pressure at the local scale — how often the perception window is empty — shaped by the full ecology package. The OVAT sweep establishes each parameter's independent contribution; the three baselines represent integrated difficulty levels calibrated to produce biologically interpretable population and energy outcomes.
 
-**Phase 2 Conclusion:** The Balanced ecology (init_food = 40, move_cost = 0.02, eat_gain = 0.5, α = 0.02) was selected as the operational baseline for all subsequent phases. It produces a stable final population of approximately 9.5 agents with a mean energy of 0.47 and a failed forage rate of 1.9%, satisfying the criterion of genuine resource pressure without population collapse.
-
 ---
 
 *With the system verified and the ecological baseline calibrated, the next question is which food distribution makes care the fitness-dominant strategy.*
@@ -411,14 +397,6 @@ The failed forage rate in Figure 2(c) shows a counterintuitive ordering — Bala
 ---
 
 #### Phase 3 — Food Mechanism Search
-
-| | |
-|---|---|
-| **Objective** | Identify the food distribution mechanism that makes maternal care fitness-positive — the ecological condition under which offspring provisioning consistently improves child survival. |
-| **Hypothesis** | Shannon entropy food spawning will increase child maturation rate compared to uniform respawn, because spatial patchiness creates local food scarcity that makes maternal energy transfer more critical for offspring survival than independent foraging. |
-| **Independent variable** | Food spawning mechanism and entropy coefficient α: F0 (uniform, α = 0.00), F1 (entropy, α = 0.01), F2 (entropy, α = 0.05), F3 (entropy, α = 0.10). |
-| **Dependent variable** | Child maturation rate, care action rate, mean agent energy, and population size at the end of each run. |
-| **Control variable** | Genome weights fixed at care = forage = self = 1.0; birth scatter radius = 2; Balanced ecology parameters from Phase 2; 10 seeds per condition. |
 
 Food is not merely a resource in this simulation — it is the ecological pressure dial. The question is not just "how much food?" but "how is food distributed?" Real ecological systems do not distribute food uniformly. Savanna grasslands have patchy grass density driven by rainfall variance. Tropical forests have seasonal fruit clusters. Coral reefs show non-uniform prey distribution driven by current patterns and shelter structure.
 
@@ -435,7 +413,7 @@ Shannon entropy food spawning works as a **stochastic per-patch Bernoulli proces
 
 ![Figure 3](outputs/report_figures/fig03_food_mechanism.png)
 
-*Figure 3. Food replenishment controls child maturation. Higher α increases child survival strongly, while the self-only baseline responds differently because it has no care burden.*
+*Figure 3. Effect of food replenishment rate (α) on population and child maturation. (a) Grouped comparison: Phase 2 self-only mothers (blue, care OFF, error bars = ±1 SD) vs Phase 3 total alive agents — mothers + mature children — (green, care ON, n = 10 seeds each). Phase 2 population decreases with α because the guaranteed 1:1 food floor is removed and replenishment cannot keep pace with consumption when α is low. Phase 3 total population increases with α because higher food density enables more children to survive to maturity. (b) Phase 3 child maturation rate rises from 28.7% at α = 0 to 96.0% at α = 0.10 — a 3.3× gain — as food availability per agent improves. Error bars = ±1 SD.*
 
 #### The Predator-Prey Analogy
 
@@ -449,11 +427,11 @@ Note the inversion: the ecology that hurts the individual (lower self-only popul
 
 ![Figure 3b](outputs/report_figures/fig03b_predator_prey_vl.png)
 
-*Figure 3b. Lotka-Volterra reference. Food and agents oscillate out of phase, giving a theoretical analogue for resource-consumer cycling.*
+*Figure 3b. Theoretical reference: Lotka-Volterra predator-prey structure. (a) Time series — food (prey, blue) and agents (predator, red) oscillate out of phase; the predator peak lags the prey peak because agent population can only grow after food abundance rises. (b) Phase portrait — the system traces a closed orbit around the co-existence equilibrium (F\* = 6.7, A\* = 10), confirming neutral stability. Our agent-food system exhibits the same structural signature: agents deplete food locally, food recovers stochastically, and the cycle repeats — with care acting as a hedge against the trough.*
 
 ![Figure 3c](outputs/report_figures/fig03c_predator_prey_simulation.png)
 
-*Figure 3c. Agent-based predator-prey analogue. Food and agents show the same lagged resource-consumer cycle without an explicit predator-prey equation.*
+*Figure 3c. Agent-based simulation echo of the same predator-prey structure (α = 0.05, hunger = 0.05, γ = 0.002, 10 seeds × 3,000 ticks). Both food and agent counts are normalized to their grand means for direct comparison. (a) Time series — food (green) and agents (blue) oscillate out of phase with the same lag structure as the analytical model; shading = ±1 SD across seeds. (b) Phase portrait from a single representative seed (seed = 42), colored by simulation tick (yellow = early, purple = late): the trajectory forms a bounded orbit, confirming that the agent-based model reproduces the Lotka-Volterra attractor without any explicit coupling term — the predator-prey cycle emerges purely from the Shannon food spawn rule interacting with agent consumption.*
 
 #### Food Spatial Dynamics and Birth Scatter Radius
 
@@ -461,7 +439,7 @@ A subsequent experiment revealed a critical interaction between food distributio
 
 ![Figure 10](outputs/report_figures/fig10_birth_scatter_sensitivity.png)
 
-*Figure 10. Birth scatter radius sensitivity. Survival collapses when offspring are born beyond radius 2, identifying the provisioning boundary.*
+*Figure 10. Birth scatter radius sensitivity. Median survival drops from 16.9k (radius=2 baseline) to 3.9k (radius=3) — a 77% reduction. Radius=5 gives no additional penalty vs. radius=3, confirming the phase transition occurs at the boundary between radius 2 and 3. This mirrors natal philopatry in real ecology: offspring born beyond effective provisioning range starve regardless of food availability.*
 
 This is analogous to natal philopatry: offspring born too far from the mother's territory cannot be efficiently provisioned. Our simulation exhibits the same hard threshold behavior — the care-forage loop integrity collapses at radius = 3.
 
@@ -485,17 +463,7 @@ This is analogous to natal philopatry: offspring born too far from the mother's 
 | Child maturation at selected baseline | 49.3% ± 13.7% |
 | Reason selected | Real care pressure without collapse; radius > 2 caused rapid extinction |
 
-**Phase 3 Conclusion:** Shannon entropy α = 0.01 was selected as the evolutionary baseline for Phase 5. It produces a child maturation rate of 49.3% ± 13.7%, providing genuine care-positive selection pressure without causing population collapse. Birth scatter radius = 2 was confirmed as the hard provisioning boundary; all seeds went extinct when the radius was increased to 3.
-
 #### Phase 4 — Full Ecology Baseline & Genome Weight Sweep
-
-| | |
-|---|---|
-| **Objective** | Identify the genome weight configuration that maximises child maturation under the calibrated ecology, and determine the viable operating range for the Phase 5 evolutionary starting point. |
-| **Hypothesis** | Increasing the care genome weight will improve child maturation only when foraging weight is also sufficient; high care with low foraging weight will deplete maternal energy and reduce reproductive output. |
-| **Independent variable** | Care genome weight (g_c) and foraging genome weight (g_f) varied across a grid sweep; self weight (g_s) held at reference values. |
-| **Dependent variable** | Child maturation rate and adult pool ratio (proportion of mothers relative to children). |
-| **Control variable** | Food entropy α = 0.01; birth scatter radius = 2; maturity age = 80 ticks; 10 seeds per genome configuration; all other ecology parameters at the Balanced baseline. |
 
 Phase 3 introduced the full system: mothers reproduce, children exist, and care is a real energetic commitment competing with foraging. The food mechanism results (Section 3) were produced here, demonstrating child maturation rising from 28.7% to 96.0% as food became patchier.
 
@@ -508,11 +476,9 @@ A genome weight sweep (Phase 4) over the care/forage/self space under the calibr
 
 ![Figure 4](outputs/report_figures/fig04_ph4_weight_sweep.png)
 
-*Figure 4. Phase 4 genome weight sweep. Care improves maturation only when paired with enough forage; high care with low forage remains energetically unstable.*
+*Figure 4. Phase 4 genome weight sweep (maturity_age=80): care allocation vs. fitness outcomes. (a) Care weight vs. child maturation rate — the viable minimum is g_c=0.5 (blue dotted line, maturation=28.9%); the optimal is g_c=1.5 with high forage (red dashed line, maturation=69.1%). (b) Care weight vs. adult pool ratio (final alive adults / initial 15 mothers; values >1.0 indicate matured offspring joined the adult pool) — forage weight (color) must be elevated alongside care; low-forage runs (dark points) collapse regardless of care weight. Each point is one (g_c, g_f) combination averaged over 30 seed-replicates.*
 
 The corrected sweep (maturity_age=80, matching Phases 3, 4c, and 5) changes the interpretation from the original run at maturity_age=200. With a biologically realistic juvenile period, meaningful maturation is achievable at moderate care (g_c=0.5 produces 28.9%) and climbs steeply when forage also rises. The result establishes three constraints carried into the evolutionary phase: (1) care must be non-zero — g_c=0.1 produces near-zero maturation regardless of forage; (2) forage and care must rise together — high care with low forage collapses the mother; (3) the Phase 5 genome starts at the neutral point (g_c = g_f = g_s = 1/3 normalized), placing it below the viable minimum, which means selection pressure to increase care must emerge from ecology rather than being preloaded into the genome.
-
-**Phase 4 Conclusion:** The optimal genome configuration is g_c = 1.5, g_f = 2.0, g_s = 1.0 (pre-normalization), achieving 69.1% child maturation and an adult pool ratio of 1.53×. The viable minimum is g_c = 0.5, g_f = 1.0, producing 28.9% maturation. Phase 5 begins at the neutral genome (g_c = g_f = g_s = 1/3 normalized) — deliberately below the viable minimum — so that any upward drift in genome care must arise from natural selection rather than an initial advantage.
 
 ---
 
@@ -521,14 +487,6 @@ The corrected sweep (maturity_age=80, matching Phases 3, 4c, and 5) changes the 
 ---
 
 #### Phase 5 — The Baldwin Effect Experiment
-
-| | |
-|---|---|
-| **Objective** | Test whether genetic mutation and phenotypic plasticity, individually and in combination, extend lineage survival and produce directional genome drift toward care under the calibrated ecology. |
-| **Hypothesis** | The combined condition (Mut ON / Plast ON) will achieve the longest survival and the greatest genome drift toward care, consistent with the Baldwin Effect: plasticity enables behavioral discovery in stage one, and mutation encodes the learned optimum into the genome in stage two. |
-| **Independent variable** | Mutation status (ON/OFF) and plasticity status (ON/OFF), forming a 2×2 factorial design: Null (both OFF), Mutation only, Plasticity only, Mutation + Plasticity. |
-| **Dependent variable** | Extinction tick, mean genome care weight over time, genome-behavior distance, child survival rate, innateness index, and generational depth. |
-| **Control variable** | Food entropy α = 0.01; birth scatter radius = 2; maturity age = 80 ticks; mother max age = 1,000 ticks; neutral starting genome (g_c = g_f = g_s = 1/3); 10 seeds per condition; maximum 40,000 ticks per run. |
 
 Phase 5 ran 10 seeds × 40,000 maximum ticks under a 2×2 factorial design crossing mutation and plasticity:
 
@@ -545,93 +503,273 @@ Every condition ended in extinction before tick 40,000.
 
 *Figure 5. Lineage survival duration (extinction tick) across all four experimental conditions (max_population = 2,500 = 50×50 grid). Boxes show interquartile range; horizontal line = median; dots = individual seeds. All three mechanism-active conditions outlive the null (~7,900). The Mut ON / Plast OFF condition achieves the highest median (~19,100 ticks). All lineages extinct; no seed reached the 40,000-tick ceiling.*
 
-**Phase 5 Result:** All four conditions went extinct before the 40,000-tick ceiling. Contrary to the hypothesis, Mutation only (Mut ON / Plast OFF) achieved the highest median survival (~19,100 ticks), while the combined condition (Mut ON / Plast ON) reached only ~13,600 ticks. Genome care drifted upward in mutation-enabled conditions, confirming directional selection toward care under the calibrated ecology. The mechanistic explanation for these outcomes is provided in Section 8.
+#### Extinction Is Not Failure
 
-### 8. Results and Analysis
+The experiment asked **whether plasticity and mutation extend lineage survival** relative to rigid agents. The answer is ordered and consistent:
 
-Phase 5 produced three empirical findings that collectively characterise the evolutionary dynamics of maternal care under the calibrated ecology. The analysis addresses three questions in sequence: why all lineages went extinct, how genome care evolved differently across conditions, and why the combined mutation-plus-plasticity condition underperformed mutation alone — the result most contrary to the Baldwin Effect prediction.
+1. **Mutation alone** (mut_ON / plast_OFF) achieves the highest median survival (~19,100 ticks vs. ~7,900 for the null) — genetic diversity accumulates freely when the population ceiling is the full grid rather than an artificial cap.
+2. **Plasticity alone** produces the second-largest shift — mut_OFF / plast_ON reaches tick 26,255 on one seed, with median ~16,800.
+3. **Mutation + Plasticity together** achieves median ~13,600, below plasticity-alone — the energy cost of learning partially offsets the mutation benefit.
+4. The **null** (no mutation, no plasticity) goes extinct earliest (~7,900 median).
 
-#### Q1. Why Did All Lineages Go Extinct?
+The result shows both mutation and plasticity independently extend lineage survival relative to the null. The unexpected finding is that their **combination underperforms mutation alone** — a result explained by two interacting costs shown in Figure 22.
 
-All four experimental conditions ended in extinction before the 40,000-tick ceiling, with median survival times ranging from approximately 7,900 ticks (null condition) to approximately 19,100 ticks (Mut ON / Plast OFF). The proximate cause is a density-dependent ecological cascade, not a direct failure of genome or behavior (Figure 21).
-
-![Figure 21](outputs/report_figures/fig21_extinction_mechanism.png)
-
-*Figure 21. Extinction cascade decomposed across four time-series panels: (a) population size showing the growth-to-collapse trajectory; (b) mean mother energy declining under density pressure; (c) genome-care diversity (std_genome_care) collapsing as the population contracts; (d) cumulative learning cost for plasticity-enabled conditions, illustrating the metabolic overhead that compounds the energy decline.*
-
-The cascade proceeds in three stages. First, population size grows toward the resource ceiling — individual seed peaks of 160–175 agents observed in snapshots.csv, against a carrying capacity of approximately 140–165 agents imposed by food spawning kinetics and grid size. Second, as density rises, per-capita food availability declines: the Shannon entropy spawning rate (α · ln 2 per empty cell per tick) cannot scale with consumption at high population, lowering mean mother energy from its mid-run values toward the reproduction threshold. Third, when mean energy falls below the reproduction threshold of 0.85, birth rates decline while existing agents continue aging and dying, reducing effective population size below the demographic replacement rate. The resulting population implosion eliminates all remaining lineages in rapid succession. In plasticity-enabled conditions, the metabolic brain cost (α = 0.01 per tick per plastic agent) compounds the energy decline, accelerating the transition from energy stress to reproductive failure (Figure 21, panel d).
-
-This cascade is an emergent property of the interaction between a finite food environment, density-dependent per-capita resource access, and an energy-gated reproduction threshold. It is not attributable to any single parameter failure; rather, it reflects the same population regulation dynamics observed in natural bounded ecosystems where resource renewal cannot keep pace with consumer density at peak population.
-
-#### Q2. How Did Genome Care Evolve Across Conditions?
-
-Genome care weight exhibited directional upward drift in both mutation-enabled conditions, while remaining near the neutral starting value of 1/3 in mutation-disabled conditions — a result consistent with the first-order prediction of natural selection on heritable variation (Figure 7, Figure 8c).
-
-![Figure 6](outputs/report_figures/fig06_ph5_population_4cond.png)
-
-*Figure 6. Population dynamics across all four conditions (10 seeds per condition). Mutation-enabled conditions sustain larger populations for longer, consistent with their higher median extinction ticks.*
-
-![Figure 7](outputs/report_figures/fig07_ph5_genome_care_4cond.png)
-
-*Figure 7. Mean genome care weight over time for all four conditions. Both mutation-enabled conditions show progressive upward drift from the 1/3 neutral starting point. Mutation-disabled conditions remain approximately stationary, confirming that drift requires heritable variation.*
-
-![Figure 8c](outputs/report_figures/fig08c_ph5_expressed_vs_genome_4cond.png)
-
-*Figure 8c. Genome versus expressed motivational weights across all four conditions and all three motivations (care, forage, self). Plasticity-OFF rows show genome and expressed weights tracking closely; Plasticity-ON rows show systematic decoupling, most pronounced in the care column.*
-
-The mechanism producing this drift is implicit fitness selection acting through the maternal care-maturation loop. Under the calibrated ecology with Shannon entropy food distribution (α = 0.01), a mother with higher genome care weight allocates more ticks to provisioning her offspring, improving the child's probability of surviving to maturity. Children that survive to maturity inherit their mother's care-biased genome, with an additional 15% assimilation term pulling the child's starting genome further toward the mother's expressed phenotype. Over successive generations, lineages carrying higher care weights produce more maturing offspring per reproductive cycle, which gradually increases the mean genome care weight in the population. This selection gradient is precisely what the calibrated ecology in Phases 2–4 was designed to produce.
-
-Plasticity introduces a systematic decoupling between genome state and expressed behavior. In Plasticity-ON conditions, the expressed care weight diverges from the inherited genome care weight: mean genome-behavior distance reaches approximately 0.324 in plasticity-enabled runs, compared with approximately 0.0019 in Mut ON / Plast OFF and approximately 0.0000 in the null condition. This decoupling has a direct consequence for heritable selection: the fitness differential between agents is driven by expressed behavior (which determines actual provisioning), but the heritable component — the genome — reflects only partial behavioral information. Selection therefore acts on a genome-behavior signal that is contaminated by within-lifetime phenotypic adjustment, reducing the per-generation efficiency of genomic care accumulation.
-
-#### Q3. Why Did Mutation + Plasticity Underperform Mutation Alone?
-
-The combined condition (Mut ON / Plast ON) achieved a median extinction tick of approximately 13,600 ticks, approximately 28% shorter than Mut ON / Plast OFF (~19,100 ticks), despite the theoretical prediction from the Baldwin Effect that the combination should outperform either mechanism individually (Figure 22).
+#### Why Does Mut ON / Plast ON Underperform Mut ON / Plast OFF?
 
 ![Figure 22](outputs/report_figures/fig22_plast_cost_analysis.png)
 
-*Figure 22. Mechanism decomposition comparing Mut ON / Plast OFF versus Mut ON / Plast ON across four outcome variables: (a) genome-behavior distance (selection decoupling), (b) mean mother energy, (c) mean learning cost, (d) mean genome care weight trajectory. The bar heights represent condition means; error bars indicate ±1 SEM across the 10 seeds.*
+*Figure 22. Mechanism decomposition: why Mut ON / Plast ON achieves lower median survival than Mut ON / Plast OFF. (a) Genome–expressed decoupling (genome-behavior distance): the Plast ON condition maintains a substantially larger gap between genome and expressed weight throughout the run — the genome encodes one strategy, but plasticity overrides it tick-to-tick in response to immediate rewards. This dilutes the fitness signal that selection uses to push genome care upward. (b) Plasticity tax on the energy budget: dotted lines show mean learning cost per tick for Plast ON vs Plast OFF conditions. The Plast ON condition carries a persistent metabolic overhead (~0.01–0.02 energy/tick) that reduces the energy available for reproduction. Over tens of thousands of ticks this compounds into meaningfully fewer births. (c) Genome care drift comparison: both mut_ON conditions drift upward from the neutral 1/3 baseline, but Plast OFF drifts faster and reaches a higher peak — confirming that the difference is rate, not direction. Plasticity does not prevent care evolution; it slows it by reducing selection pressure clarity.*
 
-![Figure 23](outputs/report_figures/fig23_energy_to_fitness_conversion.png)
+Two mechanisms act simultaneously:
 
-*Figure 23. Energy-to-fitness conversion summary. Mean mother energy is higher in plasticity-enabled conditions due to adaptive behavioral flexibility, but this energy advantage is not converted into higher child survival rates or accelerated genome care assimilation. The deficit is attributable to genome-behavior decoupling reducing the fidelity of natural selection on inherited care weights.*
+1. **Selection pressure decoupling:** With plasticity ON, expressed behavior responds to immediate rewards (forage outperforms care when food is scarce). The expressed phenotype diverges from the genome, making the genome-to-fitness gradient noisy. Selection still acts on the genome, but the signal is diluted — the same pro-care genome produces variable fitness outcomes depending on which expressed behavior plasticity happens to select at the moment of reproduction. The genome-behavior distance panel (a) directly measures this decoupling.
 
-Three independent mechanisms account for this underperformance, and their combined effect is additive:
+2. **Metabolic overhead:** The plasticity maintenance cost (`plasticity_maintenance_beta = 0.001/tick`) subtracts from the energy budget each tick. Per tick the cost is small; over ~13,000 ticks it removes meaningful energy from the reproductive budget. Mothers in Plast ON conditions reach the reproduction threshold (0.85 energy) less often, producing fewer offspring per lifetime. Panel (b) shows this drain directly: the Plast ON energy curve sits below the Plast OFF curve from early in the run.
 
-**Mechanism 1 — Metabolic overhead.** Each plastic agent pays a brain cost of α = 0.01 energy per tick regardless of whether the current behavioral adjustment is beneficial. In a run lasting 15,000–20,000 ticks, this accumulates to a substantial per-capita energy drain (Figure 22, panel c). While mean mother energy remains slightly higher in Mut ON / Plast ON compared with Mut ON / Plast OFF — indicating that behavioral flexibility offsets some of the cost — the net energy advantage over mutation alone is insufficient to compensate for the other two mechanisms described below.
+These two costs are independent and additive. A simulation design that reduced the plasticity maintenance cost while preserving behavioral flexibility would isolate which effect dominates — a concrete next experiment.
 
-**Mechanism 2 — Selection decoupling.** Plasticity allows expressed care behavior to diverge from the inherited genome. A mother whose genome encodes low care (g_c ≈ 0.25) may nevertheless express high care (w_c ≈ 0.45) after environmental reward learning, successfully raising her offspring. Her child inherits the low-care genome, adjusted by only 15% of the phenotypic gap through Baldwin assimilation. The selection signal that would otherwise favor high-care genomes is weakened: low-care genomes are partially rescued by phenotypic flexibility, reducing their selective disadvantage relative to high-care genomes. The genome-behavior distance of ~0.324 in plasticity conditions versus ~0.0019 in Mut ON / Plast OFF quantifies the magnitude of this decoupling. Natural selection operates on heritable variation; when expressed behavior and genome diverge substantially, the fidelity of the selection-reproduction-inheritance chain is reduced (Figure 22, panel a; Figure 23).
+#### Population Dynamics Across All Four Conditions
 
-**Mechanism 3 — Baldwin Effect incompleteness.** The Baldwin Effect requires two sequential stages: (1) plasticity enables behavioral discovery of the fitness optimum, and (2) mutation-selection assimilates the discovered optimum into the genome. The 15% phenotype retention term implements an assimilation channel, but 40,000 ticks is insufficient for the second stage to complete. In the Mut ON / Plast OFF condition, selection operates directly on genomic variation without the noise of phenotypic decoupling, allowing care-positive genomes to accumulate faster even though there is no within-lifetime behavioral adjustment. In effect, removing plasticity sharpens the genome-to-fitness gradient, making mutation-based selection more efficient in the time horizon available to this simulation.
+![Figure 6](outputs/report_figures/fig06_ph5_population_4cond.png)
 
-Taken together, these three mechanisms explain why the Baldwin Effect, while theoretically sound, does not produce a fitness advantage in the parameter regime of this study. The effect requires a time horizon long enough for Stage 2 assimilation to reduce the genome-behavior gap below the level at which selection decoupling becomes costly — a condition that was not met within the 40,000-tick ceiling. The empirical result is therefore not evidence against the Baldwin Effect in principle; it is evidence that the mechanism operates on timescales that exceed those accessible to the current experimental design.
+*Figure 6. Mother population dynamics across all four experimental conditions. Each panel shows individual seed trajectories (thin lines) and mean ± 95% CI (thick line and band). The initial burst (mothers reproducing rapidly from the 15-agent seed population) is followed by a long decline as ecological pressure accumulates. Mut ON / Plast OFF (top right) achieves the highest median survival before final collapse; Mut ON / Plast ON (bottom right) collapses earlier despite having both mechanisms active, reflecting the metabolic cost of plasticity reducing reproductive budget.*
 
-#### Supporting Evidence: Additional Behavioral Outcomes
+#### Why Did All Lineages Go Extinct?
 
-Three further outcome variables corroborate the Q1–Q3 interpretation and are presented here as supporting evidence.
+The ecological configuration is demanding: 50×50 grid, 15 initial mothers, Shannon entropy food (α=0.01). Every tick a mother spends caring is a tick she is not foraging; when food becomes locally depleted, the energy cascade reaches a tipping point. Figure 21 decomposes this cascade into its four structural components.
+
+![Figure 21](outputs/report_figures/fig21_extinction_mechanism.png)
+
+*Figure 21. Why did all lineages go extinct? Four-panel decomposition of the extinction cascade. (a) Population trajectories across all conditions: after the initial burst, population stabilises near the ecological carrying capacity (~165 agents, orange dashed line), then declines as food regeneration cannot keep pace with consumption at that density. (b) Mean mother energy over time: the declining energy baseline is the direct signature of resource exhaustion — as population density stays near carrying capacity, per-capita food availability falls and mothers accumulate lower energy reserves tick by tick. (c) Genome diversity (std of genome care weight): mutation-ON conditions build diversity during the population growth phase, but diversity collapses in the final decline as lineages converge on single survivors — removing the raw material selection needs to continue adapting. Mutation-OFF conditions remain near zero throughout. (d) Plasticity tax: for the two Plast ON conditions, the dotted lines show mean learning cost as a fraction of the energy budget — a persistent overhead that reduces the reproductive energy available to each mother, accelerating the energy cascade relative to Plast OFF conditions.*
+
+The extinction mechanism runs in three sequential stages:
+
+1. **Growth phase (ticks 0–~3,000):** Population expands rapidly from 15 founders; food density is high relative to demand; energy levels are stable.
+2. **Density ceiling phase (~3,000–peak survival):** Population approaches the ecological carrying capacity (~165 agents). Shannon food regeneration (α=0.01) cannot keep pace with consumption at this density. Mean mother energy begins its slow decline. Plasticity-enabled conditions survive longer because within-lifetime behavioral flexibility allows individuals to exploit food patches more efficiently.
+3. **Collapse phase (final ~2,000–5,000 ticks):** Energy falls below the reproduction threshold across most mothers; births slow; the population shrinks, reducing genome diversity to near zero. Without new mutation input the remaining genomes cannot adapt, and the last survivors die before the 40,000-tick ceiling.
+
+This is the **ecological carrying capacity ceiling**: not an artificial parameter limit, but the natural equilibrium where food regeneration rate equals consumption rate at peak population density. The same dynamics appear in island colonisation models — rapid growth, density-dependent resource limitation, genetic bottleneck, and extinction.
+
+#### Genome Care Weight Evolution
+
+![Figure 7](outputs/report_figures/fig07_ph5_genome_care_4cond.png)
+
+*Figure 7. Genome care weight (g_c) evolution across all four conditions. The neutral starting value is 1/3 (dashed grey). Mutation ON conditions (green, purple) drift upward over time — reaching ~0.38–0.41 before extinction — while Mutation OFF conditions (blue, red) remain near neutral. This directional drift under selection is the genomic signature of the Baldwin assimilation pathway.*
+
+The directional genome drift is the most important result: in conditions where mutation is ON, the care weight rises consistently above the neutral starting point. Selection is actively favoring care-weighted genomes. That this drift has not yet stabilized reflects the time constraint imposed by ecological carrying capacity, not the absence of the evolutionary signal.
+
+#### Expressed vs. Genome Care: The Plasticity Gap
+
+![Figure 8](outputs/report_figures/fig08b_ph5_expressed_vs_genome_all.png)
+
+*Figure 8. Genome vs. expressed weight for all three motivations (Mutation ON / Plasticity ON). Solid lines = genome; dashed lines = expressed phenotype; dotted = neutral baseline (1/3). Care (left): expressed stays ~0.15 below genome — plasticity suppresses care under foraging pressure while the genome drifts upward toward 0.40. Forage (center): expressed tracks genome closely at ~0.60 — the most faithfully expressed motivation, least modified by plasticity. Self (right): expressed stays ~0.10 below genome — self-preservation is also suppressed relative to its genome-coded level, though less severely than care.*
+
+The three-panel comparison reveals which motivation plasticity dominates. Forage is the least plastically modified — agents forage at roughly the rate their genome predicts. Care is the most suppressed — the genome codes for increasing care investment, but the expressed phenotype consistently lags behind under immediate survival pressure. This gap is the behavioral signature of the Baldwin Effect: the genome assimilates the learned direction, but the plastic phenotype must still manage tick-to-tick survival, creating a persistent offset between genetic predisposition and realized behavior.
+
+#### Genome vs. Expressed: All Four Conditions Compared
+
+![Figure 8c](outputs/report_figures/fig08c_ph5_expressed_vs_genome_4cond.png)
+
+*Figure 8c. Genome vs. expressed weight for all three motivations across all four experimental conditions (4 rows × 3 columns). Each cell shows genome (solid) and expressed (dashed) weights with ±95% CI bands. **Plast OFF rows (rows 1–2):** expressed weight tracks genome weight closely — no plasticity modifier active, so the two lines overlap. **Plast ON rows (rows 3–4):** a systematic gap opens between genome and expressed weight, largest in the care column. The Mut ON / Plast ON condition (row 4) shows the clearest genome–expressed divergence: care genome drifts toward 0.40 while expressed care is suppressed to ~0.15 by foraging pressure, and forage expressed weight inflates well above the genome baseline. This four-condition comparison directly visualises why plasticity decouples genome from phenotype: in Plast OFF conditions selection acts directly on expressed behavior (genome = phenotype), whereas in Plast ON conditions the genome encodes a predisposition that plasticity continuously overrides in the short term.*
+
+The key diagnostic is the **care column**: in Plast OFF conditions, expressed care tracks the genome (no decoupling); in Plast ON conditions, expressed care is chronically below the genome, confirming that homeostatic plasticity allocates away from care under food scarcity even as the genome accumulates pro-care alleles. This is the mechanism that makes Mut ON / Plast ON slower to assimilate than Mut ON / Plast OFF — not the absence of selection, but the dilution of its signal.
+
+#### Child Survival Across All Conditions
 
 ![Figure 9](outputs/report_figures/fig09_ph5_child_survival_4cond.png)
 
-*Figure 9. Child survival rate over time across all four conditions. Mutation-enabled conditions sustain higher child survival rates for longer, consistent with the genome care drift reported in Figure 7. Plasticity-enabled conditions show a slight reduction in child survival relative to their mutation-matched counterpart.*
+*Figure 9. Child maturation / survival rate over time across all four conditions (10-tick rolling mean; band = mean ± 95% CI). All conditions maintain a non-zero maturation rate for most of their lifespan — consistent with the Phase 3 baseline of 49.3% — before collapsing as final mothers die. Plasticity ON conditions (red, purple) show slightly higher and more stable maturation rates in the early-to-mid phase.*
+
+#### Plasticity and Innateness: The Baldwin Signal
 
 ![Figure 11](outputs/report_figures/fig11_ph5_plasticity_4cond.png)
 
-*Figure 11. Innateness index (genome-behavior alignment) across conditions. Plasticity-OFF conditions maintain an innateness index near 1.0 throughout; Plasticity-ON conditions show a sustained departure, confirming that phenotypic adjustment is actively used and not suppressed by metabolic cost.*
+*Figure 11. Plasticity coefficient (φ, blue solid) and innateness index (orange dashed) across all four conditions. In Plast OFF conditions (top row), the plasticity coefficient is fixed at 0.0 by design; innateness index remains stable near 0. In Plast ON conditions (bottom row), φ remains near 1.0 (full plasticity capacity maintained), while the innateness index rises gradually — reflecting weak but consistent progress toward genetically innate expression of the learned care behavior.*
+
+The gradual rise of the innateness index in Plast ON conditions is the most direct observable evidence of the Baldwin Effect's Step 2 (genetic assimilation) beginning. It does not complete within 40,000 ticks, but the trend is directional and consistent across seeds.
+
+#### Generational Depth
 
 ![Figure 12](outputs/report_figures/fig12_ph5_generation_4cond.png)
 
-*Figure 12. Mean generation depth over time. Mutation-enabled conditions reach greater generational depth before extinction, indicating that their longer survival produces more complete reproductive cycles and a more direct test of multi-generational genome drift.*
+*Figure 12. Highest generation reached over time across all four conditions. Mut ON conditions (green, purple) accumulate generations faster due to longer survival and mutation-driven turnover. Mut ON / Plast ON reaches approximately generation 60 before extinction — providing 60 full generational cycles for selection to act on genome variation, though with slower genome drift than Mut ON / Plast OFF due to selection pressure decoupling. Mut OFF conditions plateau as genetic diversity cannot be replenished.*
 
-Child survival rate (Figure 9) follows the same ordering as extinction tick — Mut ON / Plast OFF sustains the highest rates — consistent with the interpretation that sharper genome-level selection in the absence of phenotypic decoupling produces more reliable care provisioning. The innateness index (Figure 11) confirms that plasticity is actively expressed throughout the run: values depart significantly from 1.0 in plasticity-enabled conditions, ruling out the possibility that the mechanism is suppressed entirely by metabolic cost. Generational depth (Figure 12) is shallower in all conditions than would be required to observe full Baldwin assimilation, providing direct evidence for the incomplete Baldwin Effect interpretation advanced in Q3.
+The ~60 generational cycles reached by the mut_on_plast_on condition are enough for detectable genome drift (Figure 7) but not enough for full assimilation. The mut_on_plast_off condition, surviving longer (~19,100 median ticks), accumulates comparable generational depth while retaining a tighter genome-to-fitness link — explaining why its genome care drift is steeper despite identical mutation parameters. Real biological evolution of maternal instinct occurred over millions of generations — our 40,000-tick window captures the beginning of the process, not its completion.
 
-Together, Figures 9, 11, and 12 are consistent with a single mechanistic account: plasticity increases within-lifetime behavioral flexibility, but at the cost of reducing the efficiency of between-generation genomic selection. Under the current parameter regime and time horizon, the cost dominates the benefit.
+#### Shannon Alpha Block 3 Comparison
 
-#### Summary of Results
+A Block 3 run using higher Shannon entropy (α=0.05, Mut ON, Plast OFF) showed extinction across all 10 seeds in the range 11,259–12,805 ticks — substantially later than the same mutation-only condition under baseline food (~10,000 ticks). Higher food patchiness extended plasticity-free survival, confirming the food-fitness coupling: harsher food regimes create more selection pressure, increasing the relative advantage of any genomic configuration that supports care.
 
-| Research Question | Finding |
-| --- | --- |
-| Q1 — Why did all lineages go extinct? | Density-dependent ecological cascade: population growth → food depletion → energy decline below reproduction threshold → demographic collapse. Plasticity brain cost accelerated this in plastic conditions. |
-| Q2 — How did genome care evolve? | Directional upward drift in both mutation-enabled conditions, driven by implicit fitness selection through the care-maturation loop. Plasticity decoupled expressed from inherited behavior, reducing drift efficiency. |
-| Q3 — Why did Mut+Plast underperform Mut alone? | Three additive mechanisms: metabolic overhead reducing net energy gain; selection decoupling weakening the genome-to-fitness gradient; and incomplete Baldwin assimilation within the available time horizon. |
+---
+
+*The experiment produced scientifically coherent results. The final section reads these results through three interpretive lenses.*
+
+---
+
+### 8. Result and Analysis
+
+#### Three Lenses, One Story
+
+#### Lens 1 — Ecological Validity
+
+The Phase 3 experiment showed that food patchiness raises child maturation 3.4× without any change to genome weights. The deeper question is **why the ecology produces this effect** — what structural property of patchy food converts care from a cost into a low-cost benefit.
+
+In a **uniform food** environment, every cell has equal expected yield. A mother can forage at any location equally well, and her child placed anywhere is equally distant from the next food source. Care costs energy and diverts time from foraging — a net negative unless food return is very high.
+
+In a **patchy food** environment, food is spatially clustered: high density in a few locations, low everywhere else. A mother who locates a patch forages at that patch. The birth scatter radius (2 cells) means her child is placed *at* the same patch. Provisioning the child from that patch costs almost nothing extra — the mother would harvest the patch regardless. The care action is **bundled** with the foraging action: one spatial position serves both purposes simultaneously.
+
+This is the structural mechanism: patchy food collapses the spatial separation between foraging and caregiving. It is not that mothers care *more* in patchy environments — Figure 16 panel (a) shows care rate barely changes. It is that the **same care action becomes more efficient** because mother and child co-occupy the food source. The 3.4× maturation gain is the ecological payoff of this spatial bundling, not the result of any change in motivation.
+
+This mechanism connects to a broader pattern in evolutionary ecology: altricial species — where helpless offspring require sustained provisioning — dominate spatially heterogeneous environments precisely because patch fidelity makes care nearly cost-free. Our simulation reproduces this structural relationship from first principles, without assuming altricial life history in advance.
+
+![Figure 16](outputs/report_figures/fig16_lens1_ecological.png)
+
+*Figure 16. Lens 1 evidence: Phase 3 conditions compared on two metrics. (a) Care action rate rises only modestly (28.2% to 33.8%) across all food conditions — the genome weights are identical; behavior barely changes. (b) Child maturation rate triples from 28.7% to 96.0% as food becomes patchy. The divergence between the two panels is the key signal: the same behavioral investment yields radically different offspring outcomes because food patchiness collapses the spatial cost of caregiving. Care action rate is the input; maturation rate is the output; the ecology is the amplifier.*
+
+#### Lens 2 — Multi-Scale Fitness
+
+Fitness in this system is a hierarchy, not a single number:
+
+**Population persistence** (extinction tick) is the coarsest measure. All conditions go extinct; the ordering — mut_ON > plast_ON > mut+plast > null — reveals mechanism effects.
+
+**Child maturation rate** is the individual-level fitness proxy closest to Lifetime Reproductive Success. This is the number that changed from 28.7% to 96.0% as food became patchy, and it determines whether a genome's care strategy actually pays off generation-to-generation.
+
+**Behavioral responsiveness** — care winning against self in the right moment — is the within-lifetime fitness signal. Agents with high plasticity respond to child energy states dynamically; agents without plasticity apply static care weights regardless of child condition.
+
+**Genome frequency** across generations would be the true gene-level fitness measure (Dawkins's selfish gene), but this requires lineage tracing across generations that the snapshot system does not fully capture. The genome care weight drift (Figure 7) is the closest available proxy.
+
+![Figure 17](outputs/report_figures/fig17_lens2_multiscale.png)
+
+*Figure 17. Lens 2 evidence: three fitness scales compared simultaneously across all four experimental conditions. (a) Population scale: mean extinction tick shows Mut ON / Plast OFF achieving the highest median survival (~19,100 ticks), followed by Mut OFF / Plast ON (~16,800), Mut ON / Plast ON (~13,600), and the null (~7,900). Mutation alone is the strongest single mechanism; plasticity alone is second; their combination underperforms either in isolation. (b) Individual scale: mean child maturation rate per mother-lifetime shows plasticity-enabled conditions rear proportionally more offspring to independence within each lifetime, despite shorter lineage-level survival. (c) Behavioral scale: mean genome care weight at tick 2000 shows mutation-enabled conditions begin diverging upward from the neutral 1/3 baseline, reflecting selection acting on genome variation. All three scales confirm the same story: mutation drives genome evolution, plasticity improves within-lifetime care efficiency, but their combination carries a metabolic cost overhead that reduces lineage survival relative to mutation alone.*
+
+Figure 17 collapses each run into a single summary bar. Figure 19 shows the same three scales **as trajectories over time**, revealing when the conditions diverge and how quickly each scale responds to the mechanisms.
+
+![Figure 19](outputs/report_figures/fig19_lens2_overtime.png)
+
+*Figure 19. Lens 2: Multi-scale fitness trajectories over simulation time for all four conditions (mean +/- SE across seeds). (a) Population scale: plasticity-enabled conditions (red, purple) sustain larger populations for longer before the final decline; plasticity-free conditions (blue, green) collapse earlier and more steeply. (b) Individual scale: child survival rate (7-tick rolling mean) is systematically higher in plasticity-enabled runs throughout the simulation, reflecting the within-lifetime responsiveness advantage. (c) Behavioral scale: genome care weight diverges from the neutral 1/3 baseline only in mutation-enabled conditions (green, purple), while mutation-OFF conditions remain flat — confirming that evolutionary drift requires both genetic variation and sufficient time under selection. Lines end at the last surviving seed for each condition.*
+
+#### Lens 3 — The Baldwin Effect Signal
+
+The Baldwin Effect has two sequential requirements: sufficient generational depth for selection to compound, and sufficient population stability for genetic diversity to survive between selection events. The experiment established that neither requirement was fully met within the 40,000-tick window. This lens explains why from the theory's own perspective — not because the ecology is too harsh, but because Baldwin assimilation operates on a fundamentally different timescale than a single experimental run.
+
+**Generational depth.** The best condition (Mutation ON / Plasticity ON) reached approximately 60 generations before extinction. Estimates of the generational timescale required for behavioral instinct to assimilate from plastic learning range from several hundred (Hinton and Nowlan 1987, computational estimate) to tens of thousands (observed in field populations of birds and primates). Sixty generations represent the very beginning of the assimilation window — equivalent to watching the first minutes of a process that takes hours. The genome drift observed in Figure 7 and Figure 18 is real and directional, but 60 generations are not enough for selection to compound the signal above the noise floor set by genetic drift.
+
+**The effective population bottleneck.** The census population peaked near 150–175 agents (the ecological carrying capacity with Shannon food α=0.01), but effective population size (Ne) — the number of individuals actively contributing genome diversity to the next generation — was far smaller during crash phases. When the population collapsed to fewer than 10 breeding mothers, the minimum fitness difference detectable above genetic drift is approximately 1/(2Ne) = 5% per generation. Care-genome advantages during stable-population phases are likely smaller than this threshold, meaning selection cannot consistently fix care-promoting alleles before the next bottleneck resets the diversity.
+
+**The narrow assimilation window.** Baldwin assimilation requires three conditions to hold simultaneously: (1) care must be fitness-positive — confirmed by Phase 3; (2) genome diversity must be available for selection to act on — present only during stable mid-run phases; (3) the lineage must survive long enough for selection to accumulate across generations — cut short by extinction. These three conditions are met at different times and rarely overlap for long enough. The ecology that creates care pressure (spatially patchy food) also creates the population dynamics that close the assimilation window before it opens fully.
+
+**What the incomplete signal tells us.** The direction of the drift is the scientifically meaningful result: the genome moves toward care under ecological pressure, not away from it. This confirms that the system is on the Baldwin pathway even if it cannot complete the journey. The incomplete assimilation is not a null result — it identifies the boundary condition: to observe full assimilation, the evolutionary experiment would need a longer stable population phase, achievable by either relaxing food harshness after the initial selection event or increasing carrying capacity to buffer against genetic bottlenecks.
+
+![Figure 18](outputs/report_figures/fig18_lens3_baldwin.png)
+
+*Figure 18. Lens 3 evidence: genome care weight (blue solid, left axis) and child maturation rate (red dashed, right axis) per generation, Mutation ON / Plasticity ON condition, all seeds pooled. Only generations with 5 or more observed mothers are shown; shaded bands are +/- SE; lines are 3-generation rolling means. The genome care weight rises from the neutral 1/3 baseline toward ~0.40 across 60 generations — a directional but incomplete signal. Child maturation rate shows high per-generation variance with no clear trend, reflecting small effective sample sizes per generation and stochastic bottleneck dynamics. Together these two curves describe the boundary condition for Baldwin assimilation: the drift direction is correct, but the generational depth and population stability required to confirm adaptive co-evolution are not reached within this run.*
+
+Figure 20 unpacks the structural reason for this incompleteness — showing how lineage extinction, diversity collapse, and incomplete drift are causally linked across the same generational timeline.
+
+![Figure 20](outputs/report_figures/fig20_lens3_bottleneck.png)
+
+*Figure 20. Lens 3: Why Baldwin assimilation remained incomplete. Bottleneck zones (shaded red) mark generations where fewer than 5 out of 10 lineages were still alive. (a) Surviving lineages drop from 10 to 1 by generation 56 as seeds go extinct one by one — the breeding pool contracts to a single surviving lineage. (b) Genetic diversity (standard deviation of genome care) builds through generation ~20, then erodes as lineages vanish; at the onset of the bottleneck zone, diversity collapses from ~0.04 to near zero, removing the raw material selection needs. (c) Mean genome care weight drifts upward throughout (OLS slope significant, p < 0.05), confirming the drift is directional — but the collapse of diversity in the bottleneck zone halts further compounding. Full Baldwin assimilation requires this drift to continue for hundreds to tens of thousands of generations under stable population conditions; 63 generations under declining population represents only the opening phase of that process.*
+
+---
+
+### 9. Conclusions
+
+**Research question:** Under what ecological conditions does care behavior emerge from agents with no pre-programmed drive to care, and does that ecology sustain care as fitness-positive across all three measurement scales?
+
+The question has two parts. The first is answered. The second is answered at two of three scales, with one scale partially resolved and one identifying the clearest direction for future work.
+
+#### Part 1 — Ecological Conditions: Answered
+
+Food distribution is the primary ecological lever. Shannon entropy food spawning at α = 0.01–0.05 creates spatial patchiness that makes care the effective foraging strategy for the mother-child pair — child maturation rises from 28.7% to 94–96% as patchiness increases (Figure 3). Birth scatter radius is the second critical variable: offspring placed beyond radius = 2 cells collapse maturation regardless of food regime, a hard phase transition at the provisioning boundary (Figure 10).
+
+These two ecological variables — food patchiness and offspring proximity — are sufficient to make care valuable. The ecology that hurts the individual (lower self-only population) rewards the pair (higher child maturation). This is the ecological signature of care paying off under pressure.
+
+#### Part 2 — Fitness Across Three Scales: Partially Answered
+
+**Population scale — partially answered.**
+Both mutation and plasticity independently extend lineage survival relative to the null (mut_ON / plast_OFF achieves the highest median at ~19,100 ticks; plasticity alone reaches tick 26,255 on one seed). However, all lineages go extinct before tick 40,000.
+
+**Individual scale — partially answered, with a known gap.**
+Under the Phase 5 baseline ecology (α = 0.01), child maturation averages 49.3% — a clear improvement over no-care conditions, but well below the 94–96% achievable under α = 0.05. The stronger ecological pressure that maximizes individual fitness was identified in Phase 3 but was not used as the Phase 5 evolutionary baseline. This is the clearest gap in the study: the ecology that most strongly selects for care was not the ecology under which evolution was tested.
+
+**Behavioral scale — answered.**
+Under mutation-enabled conditions, genome care weight drifts consistently above the neutral starting value across all seeds (Figure 7). The expressed-vs-genome gap confirms that plasticity is actively mediating between ecological pressure and genetic predisposition (Figure 8). Care is winning at the behavioral level when ecology demands it.
+
+#### What the Partial Answer Tells Us
+
+The incomplete resolution at the population and individual scales is itself informative. It reveals that the ecological viability window for Baldwin assimilation is narrow: the ecology must be patchy enough to make care valuable, but not so harsh that population bottlenecks erase genetic diversity before assimilation can proceed. The 40,000-tick window captures the entry into this window, not its traversal.
+
+In real biology, the transition from plastic maternal behavior to innate maternal instinct required ecological persistence across millions of generations. The fossil record shows this transition coinciding with prolonged periods of environmental variability — exactly the regime in which patchy, unpredictable resources would have made care the dominant strategy. Our simulation reproduces the beginning of that pathway under controlled conditions. The answer to the research question is not yet complete, but the conditions under which a complete answer becomes possible are now identified.
+
+---
+
+### 10. Future Implementation
+
+The current study identifies three specific structural gaps where targeted changes would produce qualitatively different results. Each is a concrete, implementable experiment rather than a vague direction.
+
+#### Fix 1 — Use the Strongest Ecological Pressure as the Evolutionary Baseline
+
+**Problem:** Phase 3 identified α = 0.05 as the food patchiness level that maximises child maturation (94–96%), but Phase 5 ran evolution at α = 0.01 (49.3% maturation). The ecology that most strongly selects for care was not the ecology under which evolution was tested.
+
+**Implementation:** Re-run all four Phase 5 conditions with `food_entropy_alpha = 0.05`. Keep all other parameters identical. This single change is predicted to: (a) increase per-generation selection pressure on care-weighted genomes, (b) steepen genome care drift, and (c) potentially allow partial Baldwin assimilation within the 40,000-tick window.
+
+**Expected outcome:** Faster genome drift toward care; possible stabilisation of the lineage for longer runs. The comparison between α=0.01 and α=0.05 runs directly tests whether ecological harshness accelerates or terminates assimilation — the narrow window hypothesis from Lens 3.
+
+#### Fix 2 — Isolate the Two Costs of Plasticity
+
+**Problem:** Figure 22 shows that Mut ON / Plast ON underperforms Mut ON / Plast OFF through two simultaneous mechanisms — metabolic overhead (learning cost) and selection pressure decoupling. Currently it is impossible to separate their contributions.
+
+**Implementation:** Add a `plasticity_maintenance_beta` sweep as a new experiment block. Run Mut ON / Plast ON at three levels: `beta = 0.0` (zero learning cost, decoupling only), `beta = 0.001` (current value), and `beta = 0.005` (higher cost). If extinction tick drops monotonically with beta, cost dominates. If the zero-cost condition still underperforms Plast OFF, decoupling dominates.
+
+**Expected outcome:** Identifies which of the two plasticity costs is the binding constraint on lineage survival, directly informing whether reducing neural remodeling cost is sufficient to make the Plast+Mut combination competitive.
+
+#### Fix 3 — Extend Simulation Horizon for Surviving Lineages
+
+**Problem:** All 40 seeds (10 per condition) go extinct before tick 40,000. The Baldwin assimilation signal is directional but incomplete — the genome drifts toward care but never stabilises. We cannot observe whether assimilation would complete given more time.
+
+**Implementation:** Increase `max_ticks` to 200,000 for the Mut ON / Plast OFF condition only (lowest extinction risk). Add a periodic food enrichment event at tick 40,000 and 80,000 — a small one-time food density boost (`init_food += 50`) that simulates a resource pulse, temporarily relieving density-dependent pressure and giving the surviving lineage room to rebuild genetic diversity. This is biologically motivated: real environments have boom-bust resource cycles.
+
+**Expected outcome:** Longer stable-population phases give selection more generational cycles. If the genome care weight stabilises above 0.40 and the population reaches a new equilibrium, full assimilation is demonstrated within a single run. If the lineage still goes extinct, the ecological carrying capacity constraint is binding regardless of time horizon.
+
+#### Fix 4 — Add Lineage Tracking for True Gene-Level Fitness
+
+**Problem:** The current snapshot system records population-level genome statistics but cannot follow individual lineages across generations. The Selfish Gene Theory framing requires gene-frequency tracking, not just population means.
+
+**Implementation:** Assign each agent a unique `lineage_id` inherited from its mother. Record lineage-level survival statistics: how many generations did this lineage persist? What was its final genome care weight at extinction? This adds one integer field to the agent and one output CSV per run — minimal implementation cost with large analytical gain.
+
+**Expected outcome:** Enables direct measurement of gene-level fitness (which lineages contributed most offspring to later generations) and distinguishes genetic drift from selection at the individual lineage level. This would convert the genome care drift observation from a population-level mean into a true evolutionary fitness claim.
+
+---
+
+## Appendix — Experimental Parameters
+
+**Biologically derived parameters (design values, 5 ticks = 1 day):**
+
+| Parameter | Design Value | Biological Basis |
+|---|---|---|
+| Maturity age | 200 ticks (40 days) | Juvenile dependency period |
+| Mother max age | 400 ticks (80 days) | Adult reproductive lifespan |
+| Hunger rate | 1/35 ≈ 0.0286/tick | 7-day adult starvation window |
+| Infant starvation multiplier | 35/15 ≈ 2.33 | 3-day infant starvation without care |
+| Reproduction threshold | 0.85 energy | Body-condition gate |
+
+**Phase 5 Block 2 run parameters (with Phase 5 adjustments):**
+
+| Parameter | Value |
+|---|---|
+| World size | 50 × 50 grid |
+| Initial mothers | 15 |
+| Max population | 2,500 (50 × 50 grid) |
+| Maturity age | 80 ticks |
+| Mother max age | 1,000 ticks |
+| Perception radius | octile A* |
+| Birth scatter radius | 2 cells |
+| Food entropy alpha | 0.01 |
+| Mutation rate | 0.50 |
+| Mutation sigma | 0.02 |
+| Phenotype retention | 0.15 |
+| Seeds per condition | 10 |
+| Max ticks | 40,000 |
 
 ---
 
