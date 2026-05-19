@@ -94,8 +94,6 @@ class Phase5ConfigFactory:
         mutation_rate: float = 0.5, # 0.05
         mutation_sigma: float = 0.02,
         max_ticks: int = 40_000,
-        relax_ecology: bool = False,
-        ecology_relaxation_factor: float = 1.2, # 1.15
         circle_world: bool = False,
         infant_starvation_multiplier: float | None = None,
         food_entropy_alpha: float = 0.01,
@@ -115,8 +113,6 @@ class Phase5ConfigFactory:
             mutation_rate: Per-gene probability of applying a perturbation.
             mutation_sigma: Gaussian noise std-dev for mutations.
             max_ticks: Total simulation duration in ticks.
-            relax_ecology: If True, inflate init_food for pilot runs.
-            ecology_relaxation_factor: Multiplier on init_food when relax=True.
             circle_world: If True, restrict the arena to an inscribed circle.
             infant_starvation_multiplier: Override ISM loaded from ecology JSON.
                 None = use the value from the ecology file (default behaviour).
@@ -129,8 +125,6 @@ class Phase5ConfigFactory:
         fb  = Phase5ConfigFactory._FALLBACK
 
         init_food = eco.get("init_food", fb["init_food"])
-        if relax_ecology:
-            init_food = int(init_food * ecology_relaxation_factor)
 
         ism = (
             infant_starvation_multiplier

@@ -41,8 +41,6 @@ class RunParams:
         seeds: Number of independent seeds to run.
         seed_start: Value of the first seed; subsequent seeds increment by 1.
         workers: Number of parallel worker processes.
-        relax_ecology: If True, inflate food for pilot runs.
-        ecology_relaxation_factor: Multiplier on init_food when relax=True.
         checkpoint: Snapshot interval in ticks for writing Phase 5 metrics.
         headless: If False (default), open a live pygame grid window. Forces
             seeds=1 and runs in the main process. Set True for multi-seed runs.
@@ -65,8 +63,6 @@ class RunParams:
     seeds: int = 10
     seed_start: int = 42
     workers: int = 4
-    relax_ecology: bool = False
-    ecology_relaxation_factor: float = 1.15
     checkpoint: int = 10
     headless: bool = False
     vis_every: int = 1
@@ -90,7 +86,7 @@ class EvolutionRunner:
     public methods: run_sweep() and save().
 
     Example:
-        params = RunParams(seeds=5, max_ticks=5_000, relax_ecology=True)
+        params = RunParams(seeds=5, max_ticks=5_000)
         runner = EvolutionRunner(params)
         results = runner.run_sweep(Path("outputs/phase5_evolution/pilot"))
     """
@@ -208,8 +204,6 @@ class EvolutionRunner:
             mutation_rate=p.mutation_rate,
             mutation_sigma=p.mutation_sigma,
             max_ticks=p.max_ticks,
-            relax_ecology=p.relax_ecology,
-            ecology_relaxation_factor=p.ecology_relaxation_factor,
             circle_world=p.circle_world,
             food_entropy_alpha=p.food_entropy_alpha,
             maturity_age=p.maturity_age,
@@ -278,8 +272,6 @@ class EvolutionRunner:
             mutation_rate=p.mutation_rate,
             mutation_sigma=p.mutation_sigma,
             max_ticks=p.max_ticks,
-            relax_ecology=p.relax_ecology,
-            ecology_relaxation_factor=p.ecology_relaxation_factor,
             circle_world=p.circle_world,
             food_entropy_alpha=p.food_entropy_alpha,
             maturity_age=p.maturity_age,
@@ -445,7 +437,6 @@ class EvolutionRunner:
             "phenotype_retention": p.phenotype_retention,
             "plasticity_local_search": "motivation_vector",
             "max_ticks": p.max_ticks,
-            "relax_ecology": p.relax_ecology,
             "checkpoint": p.checkpoint,
             "cell_size": p.cell_size,
             "circle_world": p.circle_world,
@@ -552,12 +543,6 @@ def main() -> None:
     parser.add_argument("--seeds",                     type=int,   default=10)
     parser.add_argument("--seed-start",                type=int,   default=42)
     parser.add_argument("--workers",                   type=int,   default=4)
-    parser.add_argument(
-        "--relax-ecology",
-        type=lambda x: x.lower() == "true",
-        default=False,
-    )
-    parser.add_argument("--ecology-relaxation-factor", type=float, default=1.15)
     parser.add_argument("--output-dir",                type=str,   default=None)
     parser.add_argument(
         "--headless",
@@ -628,8 +613,6 @@ def main() -> None:
         seeds=args.seeds,
         seed_start=args.seed_start,
         workers=args.workers,
-        relax_ecology=args.relax_ecology,
-        ecology_relaxation_factor=args.ecology_relaxation_factor,
         headless=args.headless,
         vis_every=args.vis_every,
         cell_size=args.cell_size,

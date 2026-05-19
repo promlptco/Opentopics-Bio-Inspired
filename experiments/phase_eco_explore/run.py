@@ -65,10 +65,10 @@ def _cell_seed_worker(args: tuple) -> dict:
         mutation_rate=0.05,
         mutation_sigma=0.02,
         max_ticks=max_ticks,
-        relax_ecology=True,
-        ecology_relaxation_factor=relax_factor,
         infant_starvation_multiplier=ism,
     )
+    eco = Phase5ConfigFactory.load_ecology()
+    cfg.init_food = int(eco.get("init_food", Phase5ConfigFactory._FALLBACK["init_food"]) * relax_factor)
 
     genomes = [
         Genome(

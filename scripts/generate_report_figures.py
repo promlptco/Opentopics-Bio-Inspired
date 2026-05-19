@@ -53,12 +53,12 @@ COND_LABELS = {
     "mut_on_plast_on":   "Mut ON / Plast ON",
 }
 
-# Extinction ticks per condition (hardcoded from summary JSONs — max_pop=500, mother_max_age=1000)
+# Extinction ticks per condition (hardcoded from summary JSONs — max_pop=2500, mother_max_age=1000)
 EXT_TICKS = {
-    "mut_off_plast_off": [6019, 9824, 8641, 9271, 8759, 9247, 8481, 12897, 8841, 8966],
-    "mut_on_plast_off":  [11289, 15324, 20762, 22707, 5116, 29975, 17239, 23970, 18900, 25703],
-    "mut_off_plast_on":  [13021, 12273, 16488, 20081, 14162, 14565, 15040, 14438, 16433, 24923],
-    "mut_on_plast_on":   [9459, 14054, 13561, 22227, 11324, 11392, 21546, 29214, 12986, 14808],
+    "mut_off_plast_off": [5763, 8648, 7532, 8294, 4816, 4284, 6776, 10367, 8394, 15182],
+    "mut_on_plast_off":  [10057, 12341, 17894, 7760, 32423, 20377, 13737, 21707, 26238, 25191],
+    "mut_off_plast_on":  [7459, 15211, 11034, 18318, 11724, 25400, 20589, 26255, 10581, 24344],
+    "mut_on_plast_on":   [13400, 11245, 13724, 19543, 12831, 16607, 13022, 25446, 10267, 21215],
 }
 
 COND_DIRS = [
@@ -1702,6 +1702,274 @@ def fig_lens2_overtime():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 8c ── Genome vs Expressed: ALL 4 conditions × 3 motivations (4×3 grid)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_ph5_expressed_vs_genome_4cond():
+    """4-row × 3-col panel: genome vs expressed weight for every
+    condition × motivation combination.
+    Plast OFF rows show expressed ≈ genome (no gap).
+    Plast ON rows show systematic suppression of care/self.
+    Useful to compare which mechanism drives the genome-expressed gap.
+    """
+    motives = [
+        ("mean_genome_care",   "mean_expressed_care",   "#2166ac", "#d6604d", "Care  (g_c / w_c)"),
+        ("mean_genome_forage", "mean_expressed_forage", "#1a9850", "#f4a582", "Forage  (g_f / w_f)"),
+        ("mean_genome_self",   "mean_expressed_self",   "#7b2d8b", "#fdae61", "Self  (g_s / w_s)"),
+    ]
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(4, 3, figsize=(14, 16),
+                                 sharey=False, constrained_layout=True)
+
+        for row, (cond, folder) in enumerate(COND_DIRS):
+            df = pd.read_csv(BASE / f"outputs/phase5_evolution/{folder}/snapshots.csv")
+            df = df[df["n_mothers"] > 0]
+
+            for col, (g_col, e_col, g_color, e_color, m_title) in enumerate(motives):
+                ax = axes[row, col]
+                agg = df.groupby("tick")[[g_col, e_col]].agg(["mean", "sem"]).reset_index()
+                agg.columns = ["tick", "g_mean", "g_sem", "e_mean", "e_sem"]
+
+                ax.plot(agg["tick"] / 1000, agg["g_mean"],
+                        color=g_color, lw=2.0, label="Genome")
+                ax.fill_between(agg["tick"] / 1000,
+                                agg["g_mean"] - 1.96 * agg["g_sem"],
+                                agg["g_mean"] + 1.96 * agg["g_sem"],
+                                color=g_color, alpha=0.15)
+
+                ax.plot(agg["tick"] / 1000, agg["e_mean"],
+                        color=e_color, lw=2.0, linestyle="--", label="Expressed")
+                ax.fill_between(agg["tick"] / 1000,
+                                agg["e_mean"] - 1.96 * agg["e_sem"],
+                                agg["e_mean"] + 1.96 * agg["e_sem"],
+                                color=e_color, alpha=0.15)
+
+                ax.axhline(1/3, color="#aaaaaa", linestyle=":", lw=1.0, label="Neutral (1/3)")
+
+                if row == 0:
+                    ax.set_title(m_title, fontsize=11, fontweight="bold")
+                if col == 0:
+                    ax.set_ylabel(COND_LABELS[cond], fontsize=9.5)
+                ax.set_xlabel("Tick (x10³)", fontsize=9)
+                ax.set_ylim(0.0, 0.75)
+                if row == 0 and col == 0:
+                    ax.legend(fontsize=8, loc="lower right")
+
+        fig.suptitle(
+            "Genome vs. Expressed Weight — All 4 Conditions × 3 Motivations",
+            fontsize=13, fontweight="bold")
+    savefig(fig, "fig08c_ph5_expressed_vs_genome_4cond.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 21 ── Why Did All Lineages Go Extinct? (energy + diversity cascade)
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_extinction_mechanism():
+    """4-panel decomposition of the extinction cascade.
+
+    (a) Population trajectory — all 4 conditions; shows boom-bust dynamics
+        and the ecological carrying capacity ceiling (~150-175 agents).
+    (b) Mean mother energy over time — declining baseline shows resource
+        exhaustion as population peaks and food is depleted faster than
+        Shannon respawn can recover it.
+    (c) Genome diversity (std_genome_care) over time — shows diversity
+        buildup and then collapse near extinction, removing the raw material
+        for selection. Mutation-OFF lines stay near zero throughout.
+    (d) Energy budget breakdown for the two plast-ON conditions —
+        mean_learning_cost vs mean_mother_energy shows how much of the
+        energy budget the plasticity maintenance cost consumes.
+    """
+    frames = {}
+    for cond, folder in COND_DIRS:
+        df = pd.read_csv(BASE / f"outputs/phase5_evolution/{folder}/snapshots.csv")
+        frames[cond] = df
+
+    CARRY = 165  # approximate ecological carrying capacity
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
+        ax_a, ax_b, ax_c, ax_d = axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]
+
+        # ── (a) Population trajectories ──────────────────────────────────────
+        for cond, folder in COND_DIRS:
+            df = frames[cond]
+            agg = df.groupby("tick")["population_size"].agg(["mean", "sem"]).reset_index()
+            ax_a.plot(agg["tick"] / 1000, agg["mean"],
+                      color=COND_COLORS[cond], lw=1.8, label=COND_LABELS[cond])
+            ax_a.fill_between(agg["tick"] / 1000,
+                              (agg["mean"] - agg["sem"]).clip(0),
+                              agg["mean"] + agg["sem"],
+                              color=COND_COLORS[cond], alpha=0.13)
+        ax_a.axhline(CARRY, color="#CC6633", lw=1.2, linestyle="--", alpha=0.75,
+                     label=f"Ecological carrying capacity (~{CARRY})")
+        ax_a.set_xlabel("Tick (x10³)"); ax_a.set_ylabel("Population size")
+        ax_a.set_ylim(bottom=0)
+        ax_a.legend(fontsize=8, loc="upper right")
+        ax_a.text(0.01, 0.97, "(a)", transform=ax_a.transAxes,
+                  va="top", ha="left", fontsize=11, fontweight="bold")
+        ax_a.set_title("Population trajectory", fontsize=11)
+
+        # ── (b) Mean mother energy — resource exhaustion signal ───────────────
+        for cond, folder in COND_DIRS:
+            df = frames[cond]
+            dfa = df[df["n_mothers"] > 0]
+            agg = dfa.groupby("tick")["mean_mother_energy"].agg(["mean", "sem"]).reset_index()
+            ax_b.plot(agg["tick"] / 1000, agg["mean"],
+                      color=COND_COLORS[cond], lw=1.8, label=COND_LABELS[cond])
+            ax_b.fill_between(agg["tick"] / 1000,
+                              (agg["mean"] - agg["sem"]).clip(0),
+                              agg["mean"] + agg["sem"],
+                              color=COND_COLORS[cond], alpha=0.13)
+        ax_b.set_xlabel("Tick (x10³)"); ax_b.set_ylabel("Mean mother energy")
+        ax_b.set_ylim(bottom=0)
+        ax_b.legend(fontsize=8, loc="upper right")
+        ax_b.text(0.01, 0.97, "(b)", transform=ax_b.transAxes,
+                  va="top", ha="left", fontsize=11, fontweight="bold")
+        ax_b.set_title("Mean mother energy (resource exhaustion signal)", fontsize=11)
+
+        # ── (c) Genome diversity (std_genome_care) — diversity collapse ───────
+        for cond, folder in COND_DIRS:
+            df = frames[cond]
+            dfa = df[df["n_mothers"] > 0]
+            agg = dfa.groupby("tick")["std_genome_care"].agg(["mean", "sem"]).reset_index()
+            ax_c.plot(agg["tick"] / 1000, agg["mean"],
+                      color=COND_COLORS[cond], lw=1.8, label=COND_LABELS[cond])
+            ax_c.fill_between(agg["tick"] / 1000,
+                              (agg["mean"] - agg["sem"]).clip(0),
+                              agg["mean"] + agg["sem"],
+                              color=COND_COLORS[cond], alpha=0.13)
+        ax_c.set_xlabel("Tick (x10³)"); ax_c.set_ylabel("Std genome care weight")
+        ax_c.set_ylim(bottom=0)
+        ax_c.legend(fontsize=8, loc="upper right")
+        ax_c.text(0.01, 0.97, "(c)", transform=ax_c.transAxes,
+                  va="top", ha="left", fontsize=11, fontweight="bold")
+        ax_c.set_title("Genome diversity (std care) — collapse before extinction", fontsize=11)
+
+        # ── (d) Learning cost vs mother energy: plasticity tax ─────────────────
+        plast_conds = [("mut_on_plast_on",  "block2_main_mut_on_plast_on"),
+                       ("mut_off_plast_on", "block2_main_mut_off_plast_on")]
+        ref_conds   = [("mut_on_plast_off",  "block2_main_mut_on_plast_off")]
+
+        for cond, folder in plast_conds + ref_conds:
+            df = frames[cond]
+            dfa = df[df["n_mothers"] > 0]
+            agg_e = dfa.groupby("tick")["mean_mother_energy"].agg(["mean", "sem"]).reset_index()
+            agg_c = dfa.groupby("tick")["mean_learning_cost"].agg(["mean", "sem"]).reset_index()
+
+            ls = "-" if "plast_on" in cond else "--"
+            ax_d.plot(agg_e["tick"] / 1000, agg_e["mean"],
+                      color=COND_COLORS[cond], lw=1.8, linestyle=ls,
+                      label=f"{COND_LABELS[cond]} energy")
+            ax_d.plot(agg_c["tick"] / 1000, agg_c["mean"],
+                      color=COND_COLORS[cond], lw=1.4, linestyle=":",
+                      alpha=0.7, label=f"{COND_LABELS[cond]} learning cost")
+
+        ax_d.set_xlabel("Tick (x10³)"); ax_d.set_ylabel("Energy value (0–1)")
+        ax_d.set_ylim(bottom=0)
+        ax_d.legend(fontsize=7, loc="upper right", ncol=1)
+        ax_d.text(0.01, 0.97, "(d)", transform=ax_d.transAxes,
+                  va="top", ha="left", fontsize=11, fontweight="bold")
+        ax_d.set_title("Plasticity tax: learning cost vs. mother energy", fontsize=11)
+
+        fig.suptitle(
+            "Why Did All Lineages Go Extinct? — Energy Cascade & Diversity Bottleneck",
+            fontsize=13, fontweight="bold")
+    savefig(fig, "fig21_extinction_mechanism.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 22 ── Why Mut ON / Plast ON < Mut ON / Plast OFF?
+#              Mechanism decomposition: learning cost + selection decoupling
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_plast_cost_analysis():
+    """3-panel mechanism breakdown comparing Mut ON / Plast OFF vs
+    Mut ON / Plast ON to explain why plasticity hurts mutation when combined.
+
+    (a) Genome-behavior distance over time — measures how much expressed
+        diverges from genome. Plast ON shows larger gap, meaning selection
+        pressure on genome is diluted (expressed fitness ≠ genome fitness).
+    (b) Mean learning cost vs mean mother energy — direct metabolic burden
+        of plasticity maintenance on the agent energy budget.
+    (c) Genome care weight trajectory comparison — shows that mut_ON/plast_ON
+        still drifts toward care but at a slower rate than mut_ON/plast_OFF,
+        confirming selection decoupling (not absence of selection).
+    """
+    cond_compare = [
+        ("mut_on_plast_off", "block2_main_mut_on_plast_off"),
+        ("mut_on_plast_on",  "block2_main_mut_on_plast_on"),
+    ]
+
+    frames = {}
+    for cond, folder in cond_compare:
+        df = pd.read_csv(BASE / f"outputs/phase5_evolution/{folder}/snapshots.csv")
+        frames[cond] = df[df["n_mothers"] > 0]
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(14, 5), constrained_layout=True)
+
+        # ── (a) Genome-behavior distance — selection decoupling ───────────────
+        ax = axes[0]
+        for cond, folder in cond_compare:
+            df = frames[cond]
+            agg = df.groupby("tick")["genome_behavior_distance"].agg(["mean", "sem"]).reset_index()
+            ax.plot(agg["tick"] / 1000, agg["mean"],
+                    color=COND_COLORS[cond], lw=2.0, label=COND_LABELS[cond])
+            ax.fill_between(agg["tick"] / 1000,
+                            (agg["mean"] - agg["sem"]).clip(0),
+                            agg["mean"] + agg["sem"],
+                            color=COND_COLORS[cond], alpha=0.18)
+        ax.set_xlabel("Tick (x10³)"); ax.set_ylabel("Genome-behavior distance")
+        ax.set_ylim(bottom=0)
+        ax.legend(fontsize=9, loc="upper right")
+        ax.text(0.01, 0.97, "(a)", transform=ax.transAxes,
+                va="top", ha="left", fontsize=11, fontweight="bold")
+        ax.set_title("Genome–expressed decoupling\n(larger gap → weaker selection on genome)", fontsize=10)
+
+        # ── (b) Learning cost drain on mother energy ─────────────────────────
+        ax = axes[1]
+        for cond, folder in cond_compare:
+            df = frames[cond]
+            agg_e = df.groupby("tick")["mean_mother_energy"].agg(["mean", "sem"]).reset_index()
+            agg_c = df.groupby("tick")["mean_learning_cost"].agg(["mean", "sem"]).reset_index()
+            col = COND_COLORS[cond]
+            ax.plot(agg_e["tick"] / 1000, agg_e["mean"],
+                    color=col, lw=2.0, label=f"{COND_LABELS[cond]}\n  — energy")
+            ax.plot(agg_c["tick"] / 1000, agg_c["mean"],
+                    color=col, lw=1.5, linestyle=":",
+                    alpha=0.75, label=f"{COND_LABELS[cond]}\n  — learning cost")
+        ax.set_xlabel("Tick (x10³)"); ax.set_ylabel("Energy / learning cost (0–1)")
+        ax.set_ylim(bottom=0)
+        ax.legend(fontsize=7.5, loc="upper right")
+        ax.text(0.01, 0.97, "(b)", transform=ax.transAxes,
+                va="top", ha="left", fontsize=11, fontweight="bold")
+        ax.set_title("Plasticity tax: learning cost\nvs. mother energy budget", fontsize=10)
+
+        # ── (c) Genome care weight drift — slower in plast_ON ─────────────────
+        ax = axes[2]
+        for cond, folder in cond_compare:
+            df = frames[cond]
+            agg = df.groupby("tick")["mean_genome_care"].agg(["mean", "sem"]).reset_index()
+            ax.plot(agg["tick"] / 1000, agg["mean"],
+                    color=COND_COLORS[cond], lw=2.0, label=COND_LABELS[cond])
+            ax.fill_between(agg["tick"] / 1000,
+                            agg["mean"] - 1.96 * agg["sem"],
+                            agg["mean"] + 1.96 * agg["sem"],
+                            color=COND_COLORS[cond], alpha=0.18)
+        ax.axhline(1/3, color="#aaaaaa", linestyle=":", lw=1.0, label="Neutral (1/3)")
+        ax.set_xlabel("Tick (x10³)"); ax.set_ylabel("Mean genome care weight")
+        ax.legend(fontsize=9, loc="upper left")
+        ax.text(0.01, 0.97, "(c)", transform=ax.transAxes,
+                va="top", ha="left", fontsize=11, fontweight="bold")
+        ax.set_title("Genome care drift — same direction,\nslower rate when plasticity is ON", fontsize=10)
+
+        fig.suptitle(
+            "Why Mut ON / Plast ON < Mut ON / Plast OFF?\n"
+            "Learning Cost Overhead + Selection Pressure Decoupling",
+            fontsize=13, fontweight="bold")
+    savefig(fig, "fig22_plast_cost_analysis.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RUN ALL
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
@@ -1718,6 +1986,7 @@ if __name__ == "__main__":
     fig_ph5_genome_care_4cond()
     fig_ph5_expressed_vs_genome()
     fig_ph5_expressed_vs_genome_all()
+    fig_ph5_expressed_vs_genome_4cond()
     fig_ph5_child_survival_4cond()
     fig_birth_scatter_sensitivity()
     fig_ph5_plasticity_4cond()
@@ -1730,4 +1999,6 @@ if __name__ == "__main__":
     fig_lens2_overtime()
     fig_lens3_baldwin()
     fig_lens3_bottleneck()
+    fig_extinction_mechanism()
+    fig_plast_cost_analysis()
     print("All figures saved to outputs/report_figures/")

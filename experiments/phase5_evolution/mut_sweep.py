@@ -52,7 +52,7 @@ NEUTRAL = 1.0 / 3.0
 
 def _worker(args: tuple) -> dict:
     """Worker for ProcessPoolExecutor — returns snapshots CSV rows."""
-    seed, mutation_rate, mutation_sigma, tau, max_ticks, checkpoint, relax_ecology = args
+    seed, mutation_rate, mutation_sigma, tau, max_ticks, checkpoint = args
 
     import sys as _sys
     from pathlib import Path as _Path
@@ -75,8 +75,6 @@ def _worker(args: tuple) -> dict:
         seeds=1,
         seed_start=seed,
         workers=1,
-        relax_ecology=relax_ecology,
-        ecology_relaxation_factor=1.2,
         checkpoint=checkpoint,
         headless=True,
     )
@@ -91,8 +89,6 @@ def _worker(args: tuple) -> dict:
         mutation_rate=mutation_rate,
         mutation_sigma=mutation_sigma,
         max_ticks=max_ticks,
-        relax_ecology=relax_ecology,
-        ecology_relaxation_factor=1.2,
     )
     cfg.softmax_tau = tau
 
@@ -216,7 +212,6 @@ def _run_axis(
     max_ticks: int,
     workers: int,
     checkpoint: int,
-    relax_ecology: bool,
     out: Path,
 ) -> list[dict]:
     out.mkdir(parents=True, exist_ok=True)
@@ -227,7 +222,7 @@ def _run_axis(
         sigma = pval if param_key == "mutation_sigma" else fixed_sigma
         tau   = pval if param_key == "tau"            else fixed_tau
         for seed in range(42, 42 + seeds):
-            jobs.append((seed, rate, sigma, tau, max_ticks, checkpoint, relax_ecology))
+            jobs.append((seed, rate, sigma, tau, max_ticks, checkpoint))
 
     results: list[dict] = []
 
@@ -263,7 +258,6 @@ def run(
     max_ticks: int = 20_000,
     workers: int = 4,
     checkpoint: int = 100,
-    relax_ecology: bool = True,
     output_dir: Path | None = None,
 ) -> Path:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -271,8 +265,7 @@ def run(
     out.mkdir(parents=True, exist_ok=True)
 
     print("[phase5_mutation_sweep]")
-    print("  seeds=%d  ticks=%d  workers=%d  relax_ecology=%s" % (
-        seeds, max_ticks, workers, relax_ecology))
+    print("  seeds=%d  ticks=%d  workers=%d" % (seeds, max_ticks, workers))
     print("  mutation_rate values: %s" % RATE_VALUES)
     print("  mutation_sigma values: %s" % SIGMA_VALUES)
     print("  tau values: %s" % TAU_VALUES)
@@ -283,7 +276,7 @@ def run(
         "mutation_rate", "mutation_rate", RATE_VALUES,
         fixed_rate=0.5, fixed_sigma=0.02, fixed_tau=0.10,
         seeds=seeds, max_ticks=max_ticks, workers=workers,
-        checkpoint=checkpoint, relax_ecology=relax_ecology,
+        checkpoint=checkpoint,
         out=out / "rate_sweep",
     )
 
@@ -292,7 +285,7 @@ def run(
         "mutation_sigma", "mutation_sigma", SIGMA_VALUES,
         fixed_rate=0.5, fixed_sigma=0.02, fixed_tau=0.10,
         seeds=seeds, max_ticks=max_ticks, workers=workers,
-        checkpoint=checkpoint, relax_ecology=relax_ecology,
+        checkpoint=checkpoint,
         out=out / "sigma_sweep",
     )
 
@@ -301,7 +294,7 @@ def run(
         "tau", "tau", TAU_VALUES,
         fixed_rate=0.5, fixed_sigma=0.02, fixed_tau=0.10,
         seeds=seeds, max_ticks=max_ticks, workers=workers,
-        checkpoint=checkpoint, relax_ecology=relax_ecology,
+        checkpoint=checkpoint,
         out=out / "tau_sweep",
     )
 
@@ -315,11 +308,6 @@ def main() -> None:
     parser.add_argument("--ticks",   type=int,   default=20_000)
     parser.add_argument("--workers", type=int,   default=4)
     parser.add_argument("--checkpoint", type=int, default=100)
-    parser.add_argument(
-        "--relax-ecology",
-        type=lambda x: x.lower() == "true",
-        default=True,
-    )
     parser.add_argument("--output-dir", type=str, default=None)
     args = parser.parse_args()
 
@@ -328,7 +316,6 @@ def main() -> None:
         max_ticks=args.ticks,
         workers=max(1, args.workers),
         checkpoint=args.checkpoint,
-        relax_ecology=args.relax_ecology,
         output_dir=Path(args.output_dir) if args.output_dir else None,
     )
 
