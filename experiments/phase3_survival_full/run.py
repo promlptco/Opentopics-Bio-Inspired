@@ -95,6 +95,10 @@ class Phase3Simulation:
         self.child_energy_history     = []
         self.child_population_history = []
 
+        # Original-mother tracking (generation==0 only — excludes matured children)
+        self.orig_mother_pop_history    = []  # count of alive generation-0 mothers per tick
+        self.orig_mother_energy_history = []  # mean energy of alive generation-0 mothers per tick
+
         # Spatial heatmap (mother positions accumulated)
         self.spatial_heatmap = np.zeros(
             (config.height, config.width), dtype=float
@@ -129,6 +133,12 @@ class Phase3Simulation:
             self.population_history.append(len(alive_m))
             self.child_energy_history.append(child_energy)
             self.child_population_history.append(len(alive_c))
+
+            orig_m = [m for m in alive_m if m.generation == 0]
+            self.orig_mother_pop_history.append(len(orig_m))
+            self.orig_mother_energy_history.append(
+                float(np.mean([m.energy for m in orig_m])) if orig_m else float("nan")
+            )
             self.food_history.append({
                 "food_available": len(sim.world.food_positions),
                 "alive": len(alive_m),
@@ -326,6 +336,10 @@ class Phase3Simulation:
             "self_pct":               self_pct,
             "child_energy_history":    self.child_energy_history,
             "child_population_history": self.child_population_history,
+
+            # Original-mother-only histories
+            "orig_mother_pop_history":    self.orig_mother_pop_history,
+            "orig_mother_energy_history": self.orig_mother_energy_history,
         }
 
 

@@ -48,18 +48,15 @@ from config import Config
 ALPHA_LEVELS: list[tuple[float, str, str]] = [
     (0.00, "F0", "Uniform 1:1 (alpha=0)"),
     (0.01, "F1", "Shannon alpha=0.01"),
-    (0.05, "F2", "Shannon alpha=0.05"),
-    (0.10, "F3", "Shannon alpha=0.10"),
+    (0.02, "F2", "Shannon alpha=0.02"),
+    (0.05, "F3", "Shannon alpha=0.05"),
 ]
 
-_ECOLOGY_PATH = (
-    PROJECT_ROOT
-    / "outputs/phase4_weight_sweep/phase4b_20260510_111325/selected_ecology.json"
-)
-_FALLBACK_ECOLOGY: dict = {
-    "init_food": 300,
-    "eat_gain": 0.70,
-    "move_cost": 0.005,
+# Phase 2 BALANCED selected ecology (init_food=40, eat_gain=0.50, move_cost=0.02).
+PHASE2_ECOLOGY: dict = {
+    "init_food": 40,
+    "eat_gain": 0.50,
+    "move_cost": 0.02,
     "rest_recovery": 0.005,
     "perception_radius": 8,
     "food_perception_radius": 8,
@@ -84,15 +81,7 @@ CONDITION_COLORS = {
 # ---------------------------------------------------------------------------
 
 def load_ecology() -> dict:
-    if _ECOLOGY_PATH.exists():
-        try:
-            data = json.loads(_ECOLOGY_PATH.read_text())
-            return data.get("BEST_CALIBRATED", data)
-        except Exception as exc:
-            print("Warning: could not parse ecology JSON: %s" % exc)
-    else:
-        print("Warning: %s not found — using fallback ecology" % _ECOLOGY_PATH)
-    return _FALLBACK_ECOLOGY.copy()
+    return PHASE2_ECOLOGY.copy()
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +89,7 @@ def load_ecology() -> dict:
 # ---------------------------------------------------------------------------
 
 def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -> Config:
-    """Build a Phase 3 Config: Phase 4b ecology + children + unbiased weights + given alpha."""
+    """Build a Phase 3 Config: Phase 2 BALANCED ecology + children + unbiased weights + given alpha."""
     cfg = Config()
     cfg.max_ticks = max_ticks
     cfg.seed = seed
@@ -111,10 +100,10 @@ def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -
     cfg.init_mothers = 15
     cfg.initial_energy = 1.0
 
-    # Phase 4b BEST_CALIBRATED ecology
-    cfg.init_food = int(eco.get("init_food", 300))
-    cfg.eat_gain = eco.get("eat_gain", 0.70)
-    cfg.move_cost = eco.get("move_cost", 0.005)
+    # Phase 2 BALANCED ecology
+    cfg.init_food = int(eco.get("init_food", 40))
+    cfg.eat_gain = eco.get("eat_gain", 0.50)
+    cfg.move_cost = eco.get("move_cost", 0.02)
     cfg.rest_recovery = eco.get("rest_recovery", 0.005)
     cfg.perception_radius = int(eco.get("perception_radius", 8))
     cfg.food_perception_radius = int(eco.get("food_perception_radius", 8))
@@ -128,7 +117,7 @@ def make_comparison_config(alpha: float, seed: int, max_ticks: int, eco: dict) -
     cfg.food_entropy_alpha = alpha
     cfg.food_entropy_beta = 0.01
     cfg.food_entropy_gamma = 0.01
-    cfg.food_patch_prior = cfg.init_food / (cfg.width * cfg.height)  # 0.12
+    cfg.food_patch_prior = cfg.init_food / (cfg.width * cfg.height)  # 40/2500 = 0.016
 
     # Unbiased genome weights (Phase 3 research question: can equal weights support care?)
     cfg.care_weight = 1.0
@@ -253,8 +242,11 @@ def aggregate(seed_results: list[dict], max_ticks: int) -> dict:
     child_pop_mean = _mean("child_population_history")
     child_pop_std = _std("child_population_history")
 
+    orig_pop_mean    = _mean("orig_mother_pop_history")
+    orig_energy_mean = _mean("orig_mother_energy_history")
+
     return {
-        # Mother time-series (Phase 2 compatible)
+        # Mother time-series (Phase 2 compatible — all alive mothers)
         "energy_mean": energy_mean,
         "energy_std": energy_std,
         "pop_mean": pop_mean,
@@ -264,15 +256,28 @@ def aggregate(seed_results: list[dict], max_ticks: int) -> dict:
         "child_energy_std": child_energy_std,
         "child_pop_mean": child_pop_mean,
         "child_pop_std": child_pop_std,
+        # Original-mother-only time-series (generation==0, excludes matured children)
+        "orig_mother_pop_mean":    orig_pop_mean,
+        "orig_mother_energy_mean": orig_energy_mean,
         # Food
         "food_avail_mean": _mean_food_key("food_available"),
         # Scalar summaries — active window avoids NaN from post-max_age population collapse
         "tail_mean_energy": float(np.nanmean(energy_mean[ACTIVE_START:ACTIVE_END])) if len(energy_mean) > ACTIVE_START else float("nan"),
         "tail_mean_pop":    float(np.nanmean(pop_mean[ACTIVE_START:ACTIVE_END]))    if len(pop_mean) > ACTIVE_START else float("nan"),
+        # Original-mother scalars (tail window: same ACTIVE_START:ACTIVE_END)
+        "orig_tail_pop":    float(np.nanmean(orig_pop_mean[ACTIVE_START:ACTIVE_END]))    if len(orig_pop_mean) > ACTIVE_START else float("nan"),
+        "orig_tail_energy": float(np.nanmean(orig_energy_mean[ACTIVE_START:ACTIVE_END])) if len(orig_energy_mean) > ACTIVE_START else float("nan"),
+        "orig_tail_pop_sd": float(np.nanstd([float(np.nanmean(_pad(r["orig_mother_pop_history"], n)[ACTIVE_START:ACTIVE_END])) for r in seed_results])),
+        "orig_tail_energy_sd": float(np.nanstd([float(np.nanmean(_pad(r["orig_mother_energy_history"], n)[ACTIVE_START:ACTIVE_END])) for r in seed_results])),
         "child_maturation_rate_mean": float(np.nanmean([r["child_maturation_rate"] for r in seed_results])),
         "child_maturation_rate_sd": float(np.nanstd([r["child_maturation_rate"] for r in seed_results])),
         "child_death_tick_mean": float(np.nanmean([r["child_death_tick_mean"] for r in seed_results])),
-        "care_pct_mean": float(np.nanmean([r["care_pct"] for r in seed_results])),
+        "care_pct_mean":   float(np.nanmean([r["care_pct"]   for r in seed_results])),
+        "care_pct_sd":     float(np.nanstd( [r["care_pct"]   for r in seed_results])),
+        "forage_pct_mean": float(np.nanmean([r["forage_pct"] for r in seed_results])),
+        "forage_pct_sd":   float(np.nanstd( [r["forage_pct"] for r in seed_results])),
+        "self_pct_mean":   float(np.nanmean([r["self_pct"]   for r in seed_results])),
+        "self_pct_sd":     float(np.nanstd( [r["self_pct"]   for r in seed_results])),
         "final_pop_mean": float(np.nanmean([r["final_pop"] for r in seed_results])),
         "final_pop_sd": float(np.nanstd([r["final_pop"] for r in seed_results])),
         "n_seeds": len(seed_results),
@@ -284,9 +289,10 @@ def aggregate(seed_results: list[dict], max_ticks: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def run(
-    seeds: int = 5,
-    max_ticks: int = 2000,
+    seeds: int = 10,
+    max_ticks: int = 3000,
     workers: int = 1,
+    repeats: int = 3,
     output_dir: Path | None = None,
 ) -> Path:
     eco = load_ecology()
@@ -294,16 +300,19 @@ def run(
     out = output_dir or (PROJECT_ROOT / "outputs" / "phase3_food_comparison" / f"exp_{ts}")
     out.mkdir(parents=True, exist_ok=True)
 
-    print("[phase3_food_comparison]")
-    print("  ecology : init_food=%d  eat_gain=%.2f  move_cost=%.4f  ISM=%.1f" % (
-        eco.get("init_food", 300), eco.get("eat_gain", 0.7),
-        eco.get("move_cost", 0.005), eco.get("infant_starvation_multiplier", 1.0),
+    print("\n[phase3_food_comparison]")
+    print("  ecology : init_food=%d  eat_gain=%.2f  move_cost=%.4f  ISM=%.1f  (Phase 2 BALANCED)" % (
+        eco.get("init_food", 40), eco.get("eat_gain", 0.5),
+        eco.get("move_cost", 0.02), eco.get("infant_starvation_multiplier", 1.0),
     ))
     print("  weights : care=1.0  forage=1.0  self=1.0  (unbiased — tests care-trap)")
-    print("  seeds=%d  ticks=%d  workers=%d" % (seeds, max_ticks, workers))
+    print("  seeds=%d  repeats=%d  total_runs_per_cond=%d  ticks=%d  workers=%d" % (
+        seeds, repeats, seeds * repeats, max_ticks, workers))
     print("  output  : %s" % out)
 
-    seed_list = list(range(42, 42 + seeds))
+    # 10 base seeds × 3 repeats → 30 independent runs per condition.
+    # Each run gets a unique seed derived from base_seed and repeat index.
+    seed_list = [base * 1000 + rep for base in range(42, 42 + seeds) for rep in range(repeats)]
     jobs = [(alpha, seed, max_ticks, eco) for alpha, _, _ in ALPHA_LEVELS for seed in seed_list]
 
     seed_results_by_alpha: dict[float, list[dict]] = {alpha: [] for alpha, _, _ in ALPHA_LEVELS}
@@ -312,8 +321,9 @@ def run(
         for job in jobs:
             r = _worker(job)
             seed_results_by_alpha[r["alpha"]].append(r)
-            print("  [ok] alpha=%.2f  seed=%d  pop=%d  c_matr=%.2f" % (
-                r["alpha"], r["seed"], r["final_pop"], r["child_maturation_rate"]))
+            print("  [ok] alpha=%.2f  seed=%d  pop=%d  c_matr=%.2f  forage=%.2f  care=%.2f  self=%.2f" % (
+                r["alpha"], r["seed"], r["final_pop"], r["child_maturation_rate"],
+                r["forage_pct"], r["care_pct"], r["self_pct"]))
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(_worker, job): job for job in jobs}
@@ -322,8 +332,9 @@ def run(
                 try:
                     r = future.result()
                     seed_results_by_alpha[r["alpha"]].append(r)
-                    print("  [ok] alpha=%.2f  seed=%d  pop=%d  c_matr=%.2f" % (
-                        r["alpha"], r["seed"], r["final_pop"], r["child_maturation_rate"]))
+                    print("  [ok] alpha=%.2f  seed=%d  pop=%d  c_matr=%.2f  forage=%.2f  care=%.2f  self=%.2f" % (
+                        r["alpha"], r["seed"], r["final_pop"], r["child_maturation_rate"],
+                        r["forage_pct"], r["care_pct"], r["self_pct"]))
                 except Exception as exc:
                     print("  [FAIL] alpha=%.2f  seed=%d: %s" % (job[0], job[1], exc))
 
@@ -336,30 +347,40 @@ def run(
             continue
         agg = aggregate(results, max_ticks)
         aggregates[label] = {"alpha": alpha, "label": label, "desc": desc, **agg}
-        print("  %s %-28s  tail_E=%.3f  tail_pop=%.1f  c_matr=%.2f  care_pct=%.2f" % (
+        print("  %s %-28s  tail_E=%.3f  orig_pop=%.1f  c_matr=%.2f  forage=%.2f  care=%.2f  self=%.2f" % (
             label, desc,
-            agg["tail_mean_energy"], agg["tail_mean_pop"],
-            agg["child_maturation_rate_mean"], agg["care_pct_mean"],
+            agg["orig_tail_energy"], agg["orig_tail_pop"],
+            agg["child_maturation_rate_mean"],
+            agg["forage_pct_mean"], agg["care_pct_mean"], agg["self_pct_mean"],
         ))
 
     # Save scalar summary
     scalar_summary = {
         "ecology": {k: eco.get(k) for k in ("init_food", "eat_gain", "move_cost", "rest_recovery", "infant_starvation_multiplier")},
-        "run_params": {"seeds": seeds, "max_ticks": max_ticks},
+        "run_params": {"base_seeds": seeds, "repeats": repeats, "total_runs_per_cond": seeds * repeats, "max_ticks": max_ticks},
         "genome": {"care_weight": 1.0, "forage_weight": 1.0, "self_weight": 1.0},
         "conditions": {
             label: {
                 "alpha": v["alpha"],
                 "desc": v["desc"],
-                "tail_mean_energy": v["tail_mean_energy"],
-                "tail_mean_pop": v["tail_mean_pop"],
+                "tail_mean_energy":    v["tail_mean_energy"],
+                "tail_mean_pop":       v["tail_mean_pop"],
+                "orig_tail_pop":       v["orig_tail_pop"],
+                "orig_tail_pop_sd":    v["orig_tail_pop_sd"],
+                "orig_tail_energy":    v["orig_tail_energy"],
+                "orig_tail_energy_sd": v["orig_tail_energy_sd"],
                 "child_maturation_rate_mean": v["child_maturation_rate_mean"],
-                "child_maturation_rate_sd": v["child_maturation_rate_sd"],
+                "child_maturation_rate_sd":   v["child_maturation_rate_sd"],
                 "child_death_tick_mean": v["child_death_tick_mean"],
-                "care_pct_mean": v["care_pct_mean"],
-                "final_pop_mean": v["final_pop_mean"],
-                "final_pop_sd": v["final_pop_sd"],
-                "n_seeds": v["n_seeds"],
+                "forage_pct_mean": v["forage_pct_mean"],
+                "forage_pct_sd":   v["forage_pct_sd"],
+                "care_pct_mean":   v["care_pct_mean"],
+                "care_pct_sd":     v["care_pct_sd"],
+                "self_pct_mean":   v["self_pct_mean"],
+                "self_pct_sd":     v["self_pct_sd"],
+                "final_pop_mean":  v["final_pop_mean"],
+                "final_pop_sd":    v["final_pop_sd"],
+                "n_runs":          v["n_seeds"],
             }
             for label, v in aggregates.items()
         },
@@ -381,9 +402,10 @@ def run(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Phase 3 Food Mechanism Comparison (with children)")
-    parser.add_argument("--seeds", type=int, default=5)
-    parser.add_argument("--ticks", type=int, default=2000)
-    parser.add_argument("--workers", type=int, default=1, help="Parallel workers (0=cpu_count)")
+    parser.add_argument("--seeds",    type=int, default=10, help="Base seeds (default 10)")
+    parser.add_argument("--repeats",  type=int, default=3,  help="Repeats per seed (default 3 → 30 runs/cond)")
+    parser.add_argument("--ticks",    type=int, default=3000)
+    parser.add_argument("--workers",  type=int, default=1,  help="Parallel workers (0=cpu_count)")
     parser.add_argument("--output-dir", type=str, default=None)
     args = parser.parse_args()
 
@@ -394,6 +416,7 @@ def main() -> None:
     )
     run(
         seeds=args.seeds,
+        repeats=args.repeats,
         max_ticks=args.ticks,
         workers=w,
         output_dir=Path(args.output_dir) if args.output_dir else None,

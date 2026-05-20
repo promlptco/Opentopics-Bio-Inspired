@@ -378,13 +378,13 @@ The **Balanced** ecology was selected as the standard for all subsequent phases:
 
 #### OVAT Sensitivity Analysis
 
-To confirm which parameters govern the survival baseline, a one-variable-at-a-time (OVAT) sweep varied each parameter individually while holding all others fixed at the pipeline anchor (init\_food = 190, move\_cost = 0.005, eat\_gain = 0.20, **α = 0.0**).
+After the Balanced ecology was selected, a one-variable-at-a-time (OVAT) sweep validated its parameter sensitivity. Each parameter was varied individually while all others were held fixed at the Balanced operating point (init\_food = 40, move\_cost = 0.02, eat\_gain = 0.50, α = 0.02). The selected Balanced value is marked by a dashed reference line in each panel.
 
 ![Figure 2b](outputs/report_figures/fig02b_ph2_ovat.png)
 
-*Figure 2b. OVAT sensitivity for self-only stability. Food mechanism, eat gain, movement cost, and food patchiness all affect population persistence; eat gain and patchiness are the strongest practical levers.*
+*Figure 2b. OVAT sensitivity around the Balanced operating point. Each panel varies one parameter while all others remain at the Balanced values. Dashed lines mark the selected Balanced value per parameter. The selected values sit within the viable zone for all four parameters, not at collapse boundaries.*
 
-The OVAT results confirm that **eat\_gain** is the highest-sensitivity parameter, followed by **movement cost**. Panel (a) explicitly compares the two food mechanisms: under uniform respawn (α = 0.0), food abundance below init\_food ≈ 100 fails to sustain the population, while Shannon entropy (α = 0.02) supports stable populations at much lower init\_food values — the food *mechanism type* can dominate the food *quantity* effect. Panel (d) shows that the population benefit of spatial patchiness saturates quickly: the steepest gain occurs between α = 0.0 and α ≈ 0.02, with diminishing returns above that threshold. The three ecological baselines were selected from a full multi-parameter grid using population stability and mean energy as the sole criteria — not from the OVAT directly. Single-variable effects of each parameter are read from this figure; cross-ecology parameter comparisons are not meaningful.
+Three findings emerge from this sweep. First, **eat\_gain** is the highest-sensitivity parameter: population collapses entirely below eat\_gain ≈ 0.25 and rises monotonically above it, confirming that the Balanced value of 0.50 is well within the viable zone with room above and below. Second, **movement cost** produces a gradual decline from high survival (0.94 at move\_cost = 0.001) through the Balanced operating point (0.68 at move\_cost = 0.02) to collapse above move\_cost ≈ 0.05 — the selected value lies at the shoulder of the curve, imposing genuine but non-catastrophic foraging pressure as intended. Third, **food patchiness α** is not merely a tuning parameter but an essential enabler: at α = 0.0 (uniform respawn) survival drops to 0.02 even when eat\_gain = 0.50 and move\_cost = 0.02 are both at Balanced values, confirming that Shannon entropy spatial dynamics are load-bearing for the ecology to function. Panel (a) further reveals that init\_food exhibits a non-monotonic response — survival peaks near init\_food = 40–60 and declines at higher values due to density-dependent food depletion — placing the Balanced value precisely at the peak.
 
 #### Failed Forage: Mechanism and Ecological Source
 
@@ -416,36 +416,52 @@ The failed forage rate in Figure 2(c) shows a counterintuitive ordering — Bala
 |---|---|
 | **Objective** | Identify the food distribution mechanism that makes maternal care fitness-positive — the ecological condition under which offspring provisioning consistently improves child survival. |
 | **Hypothesis** | Shannon entropy food spawning will increase child maturation rate compared to uniform respawn, because spatial patchiness creates local food scarcity that makes maternal energy transfer more critical for offspring survival than independent foraging. |
-| **Independent variable** | Food spawning mechanism and entropy coefficient α: F0 (uniform, α = 0.00), F1 (entropy, α = 0.01), F2 (entropy, α = 0.05), F3 (entropy, α = 0.10). |
-| **Dependent variable** | Child maturation rate, care action rate, mean agent energy, and population size at the end of each run. |
-| **Control variable** | Genome weights fixed at care = forage = self = 1.0; birth scatter radius = 2; Balanced ecology parameters from Phase 2; 10 seeds per condition. |
+| **Independent variable** | Food spawning mechanism and entropy coefficient α: F0 (uniform, α = 0.00), F1 (entropy, α = 0.01), F2 (entropy, α = 0.02), F3 (entropy, α = 0.05). |
+| **Dependent variable** | Child maturation rate, motivation action distribution (forage / care / self), mean agent energy, and original mother survival. |
+| **Control variable** | Genome weights fixed at care = forage = self = 1.0; birth scatter radius = 2; Phase 2 BALANCED ecology (init\_food = 40, eat\_gain = 0.50, move\_cost = 0.02); 10 seeds × 3 repeats (30 runs per condition); 3,000 ticks. |
 
 Food is not merely a resource in this simulation — it is the ecological pressure dial. The question is not just "how much food?" but "how is food distributed?" Real ecological systems do not distribute food uniformly. Savanna grasslands have patchy grass density driven by rainfall variance. Tropical forests have seasonal fruit clusters. Coral reefs show non-uniform prey distribution driven by current patterns and shelter structure.
 
-We tested four food spawning conditions against two populations — self-only agents (Phase 2) and full mother-child pairs (Phase 3):
+We tested four food spawning conditions using full mother-child pairs (15 mothers + 15 children, care enabled, genome weights fixed at care = forage = self = 1.0, reproduction disabled). Four outcomes were measured per condition: original mother survival count, original mother mean energy, motivation action distribution (forage / care / self fraction), and child maturation rate. Survival and energy are reported for the active window (ticks 100–350); action fractions and maturation are cumulative across the run. All results use Phase 2 BALANCED ecology across 30 runs per condition.
 
-| Condition | Mechanism | α | Phase 2 Pop — self-only (tail) | Phase 3 Pop — with care (tail) | Care Action Rate | Child Maturation Rate |
-| --- | --- | --- | --- | --- | --- | --- |
-| F0 | Uniform 1:1 | 0.00 | 11.7 ± 0.9 | 16.9 | 28.2% | **28.7%** ± 10.8% |
-| F1 | Entropy | 0.01 | 8.8 ± 1.7 | 22.0 | 28.6% | **49.3%** ± 13.7% |
-| F2 | Entropy | 0.05 | 7.6 ± 2.0 | 29.1 | **33.8%** | **94.0%** ± 6.3% |
-| F3 | Entropy | 0.10 | 6.8 ± 2.0 | 29.4 | **33.1%** | **96.0%** ± 5.3% |
+| Condition | Mechanism | α | Orig. Mothers Alive (of 15) | Mother Energy | Forage % | Care % | Self % | Child Maturation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| F0 | Uniform 1:1 | 0.00 | **1.7 ± 1.0** | 0.595 ± 0.112 | 53.1% | 26.2% | 20.7% | **0.0%** |
+| F1 | Entropy | 0.01 | 15.0 ± 0.2 | 0.917 ± 0.002 | 52.2% | 29.8% | 18.0% | **56.2% ± 11.2%** |
+| F2 | Entropy | 0.02 | **15.0 ± 0.0** | 0.921 ± 0.003 | 50.0% | 32.8% | 17.2% | **80.9% ± 10.4%** |
+| F3 | Entropy | 0.05 | **15.0 ± 0.0** | 0.928 ± 0.002 | 49.6% | 33.2% | 17.1% | **95.6% ± 4.0%** |
 
 Shannon entropy food spawning works as a **stochastic per-patch Bernoulli process**: each food-free cell spawns food independently with probability proportional to `α · ln(2)` per tick. Unlike uniform spawning, it produces spatial heterogeneity — some zones remain rich, others become depleted, creating a landscape of scarcity and abundance that shifts stochastically over time.
 
 ![Figure 3](outputs/report_figures/fig03_food_mechanism.png)
 
-*Figure 3. Food replenishment controls child maturation. Higher α increases child survival strongly, while the self-only baseline responds differently because it has no care burden.*
+*Figure 3. Three outcomes across four food conditions using Phase 2 BALANCED ecology (30 runs per condition): (a) original mother survival — 88.8% of mothers die under uniform respawn (F0); all 15 survive under Shannon entropy (F1–F3); (b) original mother mean energy — rises from 0.595 (F0, near-starvation) to 0.928 (F3); (c) child maturation rate — rises from 0% (F0, complete failure) to 95.6% (F3).*
+
+#### Motivation Domain Analysis
+
+A key question is whether the improvement in child outcomes is driven by mothers spending *more time* caring, or by each care action becoming *more effective*. Figure 3a answers this directly.
+
+![Figure 3a](outputs/report_figures/fig03a_food_motivation.png)
+
+*Figure 3a. Motivation domain winner fraction across food conditions (30 runs per condition, genome weights care=forage=self=1.0). FORAGE consistently wins the plurality at ~50%, well above the equal-share reference (dashed, 1/3). CARE rises modestly from 26.2% (F0) to 33.2% (F3). SELF declines as ecology becomes more supportive.*
+
+Three findings emerge from the motivation data:
+
+**Forage dominates in every condition.** With equal genome weights (care = forage = self = 1.0), FORAGE captures approximately 50–53% of all decisions across all four conditions — well above the equal-share baseline of 33%. This is the baseline behavioral reality: mothers forage more than they care, regardless of food distribution. The "care-trap" is not a bias in the motivation system; it is the ecological default.
+
+**Care rises only modestly with α.** The care fraction increases from 26.2% (F0) to 33.2% (F3) — a 7-percentage-point rise across the full α range. Yet child maturation rises from 0% to 95.6% over the same range. The care fraction alone cannot explain the 95-percentage-point improvement in child outcomes.
+
+**The mechanism is care delivery efficiency, not care frequency.** Under uniform respawn (F0), each forage trip yields small, spatially scattered food items — mothers arrive at care interactions with low held\_food, transferring insufficient energy to sustain a child independently. Under Shannon entropy spawning (F1–F3), patchy food concentrations allow mothers to accumulate more food per forage trip. Each care event then delivers enough energy to genuinely sustain the child through periods of local depletion that an unprovisioned juvenile cannot survive alone. **It is not that mothers care more — it is that each act of care delivers more.** This distinction is essential: it means the food mechanism changes the *fitness value of care*, not the *probability of caring*.
+
+The decline in SELF motivation (20.7% → 17.1%) as α increases reflects that mothers need fewer rest events when food-per-foraging-trip is higher, consistent with less energetic stress in richer ecological conditions.
 
 #### The Predator-Prey Analogy
 
-The agent-food relationship mirrors Lotka-Volterra predator-prey dynamics structurally: agents consume food (acting as predators), food regenerates stochastically (acting as prey with growth), and agents cluster near food concentrations — creating local depletion cycles exactly as predator packs deplete local prey. Under uniform spawning (F0), the system behaves like a well-mixed chemostat: food is always equally accessible, so foraging is never difficult. The agents remain at high population (11.7) but children experience low maturation (28.7%) because mothers and children compete spatially for the same patches.
+The agent-food relationship mirrors Lotka-Volterra predator-prey dynamics structurally: agents consume food (acting as predators), food regenerates stochastically (acting as prey with growth), and agents cluster near food concentrations — creating local depletion cycles exactly as predator packs deplete local prey. Under uniform spawning (F0) with Phase 2 BALANCED ecology, the system behaves like a well-mixed chemostat under genuine resource pressure: food is always equally sparse and equally accessible. The result is catastrophic — 88.8% of original mothers die during the active window and zero children reach maturity. Mothers forage 53% of the time but still cannot accumulate enough surplus energy to sustain themselves and a child simultaneously. Care collapses not because mothers refuse to care but because each care event delivers too little to matter.
 
-Under Shannon entropy (F2, α=0.05), stochastic patchiness creates boom-bust food zones. Agents must travel further for food, local depletion is real, and the energetic cost of simultaneously foraging and maintaining care for a child is genuinely high. **Yet child maturation jumps to 94%.** When food is patchy and uncertain, a mother who cares for her child — positioning herself near the child and transferring food — protects the child from the local depletion cycle that would kill a foraging-alone juvenile. Care becomes an emergent cooperative foraging solution. This mirrors real nature: biparental or extended maternal care is more common in environments with patchy, unpredictable food sources.
+Under Shannon entropy (F2, α = 0.02), stochastic patchiness creates boom-bust food zones. Foraging becomes locally efficient — mothers find concentrations, accumulate food rapidly, and arrive at care interactions with genuine energy reserves. **Child maturation reaches 80.9% and ALL 15 original mothers survive with mean energy 0.921.** When food is patchy and uncertain, a mother who provisions her child protects it from the local depletion cycles that would kill a foraging-alone juvenile, while the richer spatial dynamics provide enough energy for both. Care becomes an emergent cooperative foraging solution that is mutually beneficial rather than costly. This mirrors real nature: biparental or extended maternal care is more common in environments with patchy, unpredictable food sources (Lack, 1968; Clutton-Brock, 1991).
 
-Critically, all four conditions use identical genome weights (care = forage = self = 1.0) — no genetic instruction favors care over foraging. Yet the care action rate rises from 28.2% (F0) to 33.8% (F2) purely as a function of food patchiness. The rise in mean agent energy (0.95 → 1.82) shows that patchier food produces more food overall, giving mothers the energy surplus needed to allocate time to care without starving. **The behavior is not programmed — it is selected in real time by the ecology.** This is the operational definition of emergence used throughout this study.
-
-Note the inversion: the ecology that hurts the individual (lower self-only population) rewards the pair (higher child maturation). This is the exact signature of care paying off under pressure.
+Critically, all four conditions use identical genome weights (care = forage = self = 1.0) — no genetic instruction favors care over foraging. The care action rate rises from 26.2% (F0) to 33.2% (F3) purely as a function of food patchiness, and the rise in original mother energy (0.595 → 0.928) confirms that patchier food provides sufficient energy surplus for care allocation without depleting maternal reserves. **The behavior is not programmed — it is selected in real time by the ecology.** This is the operational definition of emergence used throughout this study.
 
 ![Figure 3b](outputs/report_figures/fig03b_predator_prey_vl.png)
 
@@ -465,7 +481,7 @@ A subsequent experiment revealed a critical interaction between food distributio
 
 This is analogous to natal philopatry: offspring born too far from the mother's territory cannot be efficiently provisioned. Our simulation exhibits the same hard threshold behavior — the care-forage loop integrity collapses at radius = 3.
 
-**Finding:** Shannon entropy food distribution at α = 0.01 (mild heterogeneity) was selected as the Phase 5 evolutionary baseline. It imposes genuine ecological pressure (49.3% maturation under fixed care behavior) without being so harsh that it prevents population establishment. The food mechanism is not background infrastructure — it is the primary selection pressure that makes care evolutionarily meaningful.
+**Finding:** Shannon entropy food distribution at α = 0.02 (F2, moderate heterogeneity) was selected as the Phase 5 evolutionary baseline. Under Phase 2 BALANCED ecology it produces 80.9% child maturation while all 15 original mothers survive with mean energy 0.921 — genuine care-positive selection pressure without maternal cost, and without being so rich that it removes all ecological challenge. Uniform respawn (F0) is catastrophic at this ecology: 88.8% of mothers die and zero children mature. The food mechanism is not background infrastructure — it is the primary selection pressure that makes care evolutionarily meaningful. Motivation analysis confirms that forage dominates (~50%) across all conditions; the decisive variable is not how often mothers care but how much energy each care event delivers — a quantity controlled entirely by food spatial dynamics.
 
 ---
 
@@ -478,14 +494,16 @@ This is analogous to natal philopatry: offspring born too far from the mother's 
 | Calibrated parameter | Selected value |
 |---|---|
 | Food mechanism | Shannon entropy spawning |
-| Food entropy `α` | 0.01 |
+| Food entropy `α` | 0.02 (F2) |
 | `birth_scatter_radius` | 2 |
 | Genome weights during food test | care = forage = self = 1.0 |
 | Children / care | ON |
-| Child maturation at selected baseline | 49.3% ± 13.7% |
-| Reason selected | Real care pressure without collapse; radius > 2 caused rapid extinction |
+| Runs per condition | 10 seeds × 3 repeats = 30 |
+| Child maturation at selected baseline | 80.9% ± 10.4% |
+| Motivation split at selected baseline | forage 50.0%, care 32.8%, self 17.2% |
+| Reason selected | Genuine care pressure (>80% maturation, all mothers survive) without the ecology being so rich that evolutionary challenge disappears; radius > 2 caused rapid extinction |
 
-**Phase 3 Conclusion:** Shannon entropy α = 0.01 was selected as the evolutionary baseline for Phase 5. It produces a child maturation rate of 49.3% ± 13.7%, providing genuine care-positive selection pressure without causing population collapse. Birth scatter radius = 2 was confirmed as the hard provisioning boundary; all seeds went extinct when the radius was increased to 3.
+**Phase 3 Conclusion:** Shannon entropy α = 0.02 (F2) was selected as the evolutionary baseline for Phase 5. All 15 original mothers survived with mean energy 0.921, and the child maturation rate was 80.9% ± 10.4% across 30 runs — care is effective and non-costly to mothers under this condition. Under uniform respawn (F0, same Phase 2 BALANCED ecology), 88.8% of original mothers died and zero children matured, confirming that food spatial distribution rather than quantity is the decisive variable. Motivation domain analysis reveals that FORAGE wins ~50% of decisions in all conditions, and the care-improvement gradient across F0–F3 is driven by per-event delivery efficiency, not care frequency. Birth scatter radius = 2 was confirmed as the hard provisioning boundary; all seeds went extinct when the radius was increased to 3.
 
 #### Phase 4 — Full Ecology Baseline & Genome Weight Sweep
 
@@ -505,6 +523,16 @@ A genome weight sweep (Phase 4) over the care/forage/self space under the calibr
 |---|---|---|---|---|---|
 | Viable Minimum | 0.5 | 1.0 | 1.0 | 28.9% | 1.06× |
 | **Optimal** | **1.5** | **2.0** | **1.0** | **69.1%** | **1.53×** |
+
+The same configurations expressed as normalized inputs (each weight divided by the sum), with the Phase 5 evolutionary starting genome shown for reference:
+
+| Configuration | care (g_c / Σ) | forage (g_f / Σ) | self (g_s / Σ) | Σ | Child Maturation | Adult pool ratio |
+| --- | --- | --- | --- | --- | --- | --- |
+| Viable Minimum | 0.200 | 0.400 | 0.400 | 2.5 | 28.9% | 1.06× |
+| **Optimal** | **0.333** | **0.444** | **0.222** | **4.5** | **69.1%** | **1.53×** |
+| Phase 5 start (neutral) | 0.333 | 0.333 | 0.333 | 3.0 | — | — |
+
+The normalized view clarifies the structural difference between configurations. The Viable Minimum has equal forage and self shares (0.40 each) and a suppressed care share (0.20); mothers prioritize self-maintenance at the expense of care. The Optimal configuration elevates forage to the highest share (0.444) while bringing care to exact parity with the Phase 5 neutral starting point (0.333); the critical change is not that care is increased in isolation, but that forage rises enough to fund the energetic cost of care without maternal depletion. The Phase 5 neutral genome (all weights equal = 0.333) sits at the same normalized care level as the Optimal — meaning natural selection from this starting point must increase forage weight to unlock the Optimal configuration, rather than increase care weight directly.
 
 ![Figure 4](outputs/report_figures/fig04_ph4_weight_sweep.png)
 

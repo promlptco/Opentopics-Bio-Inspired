@@ -85,19 +85,18 @@ BALANCED_BASELINE = {
     # not a free Phase 2 tuning parameter.
     "hunger_rate": 1.0 / 35.0,
 
-    # Provisional values. They make the first scan interpretable, but they
-    # are not treated as final calibrated values.
-    "move_cost": 0.005,
-    "eat_gain": 0.20,
-    "init_food": 80,
+    # Calibrated values selected by Phase 2 multi-parameter validation grid.
+    # These are the actual Balanced ecology operating point, not provisional anchors.
+    "move_cost": 0.02,
+    "eat_gain": 0.50,
+    "init_food": 40,
 
     # REST is fatigue recovery only. It is held fixed in Phase 2 calibration
     # and later used as a sanity check through REST action rate.
     "rest_recovery": 0.005,
 
-    # Shannon entropy food model — disabled at baseline (0.0 = 1:1 replacement).
-    # Calibrated value locked by Phase 2 sweep (Set D).
-    "food_entropy_alpha": 0.0,
+    # Shannon entropy food model — calibrated value from Phase 2 Set D sweep.
+    "food_entropy_alpha": 0.02,
 
     **BASELINE_GENOME_WEIGHTS,
 }
@@ -113,22 +112,29 @@ SENSITIVITY_SWEEPS = {
     "A": {
         "label": "init_food",
         "key": "init_food",
-        "values": [10, 20, 40, 80, 150],
+        # Sweep centered around the selected value (40). With Shannon entropy
+        # α=0.02 and eat_gain=0.50, low init_food is viable — range starts at 5.
+        "values": [5, 10, 20, 30, 40, 60, 80, 120, 180, 250],
     },
     "B": {
         "label": "eat_gain",
         "key": "eat_gain",
-        "values": [0.05, 0.10, 0.20, 0.50, 0.80],
+        # Selected value = 0.50. Threshold expected around 0.20–0.30 given
+        # move_cost=0.02 and typical food search distances in a 50×50 grid.
+        "values": [0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80],
     },
     "C": {
         "label": "move_cost",
         "key": "move_cost",
-        "values": [0.005, 0.01, 0.02, 0.05, 0.10],
+        # Selected value = 0.02. Breakeven distance = eat_gain/move_cost = 0.50/0.02 = 25.
+        # Range extended below and above so 0.02 appears well inside viable zone.
+        "values": [0.001, 0.005, 0.010, 0.015, 0.020, 0.030, 0.040, 0.060, 0.080, 0.100],
     },
     "D": {
         "label": "food_entropy_alpha",
         "key":   "food_entropy_alpha",
-        "values": [0.0],
+        # Selected value = 0.02. α=0 is the uniform-respawn baseline for comparison.
+        "values": [0.000, 0.005, 0.010, 0.015, 0.020, 0.030, 0.040, 0.050],
     },
 }
 

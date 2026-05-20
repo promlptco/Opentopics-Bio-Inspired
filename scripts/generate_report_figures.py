@@ -228,74 +228,50 @@ def fig_ph2_baseline():
 # FIGURE 2b ── Phase 2 OVAT Sensitivity Analysis (4 parameters)
 # ─────────────────────────────────────────────────────────────────────────────
 def fig_ph2_ovat():
-    PH2_OVAT = PH2_DIR / "sensitivity_ovat"
+    # OVAT swept from the calibrated Balanced operating point:
+    # init_food=40, eat_gain=0.50, move_cost=0.02, α=0.02
+    PH2_OVAT = Path("outputs/phase2_survival_minimal/sensitivity/20260520_141958")
+
+    # Balanced reference values for vertical marker lines
+    BALANCED = {"init_food": 40, "eat_gain": 0.50, "move_cost": 0.02, "food_entropy_alpha": 0.02}
+    REF_COLOR = "#C44E52"
+
+    panels = [
+        ("set_A_init_food.csv",          "init_food",          "Initial food cells",    "(a) Food abundance (init_food)"),
+        ("set_B_eat_gain.csv",           "eat_gain",           "Energy gain per food",  "(b) Energy per food (eat_gain)"),
+        ("set_C_move_cost.csv",          "move_cost",          "Energy cost per move",  "(c) Movement cost (move_cost)"),
+        ("set_D_food_entropy_alpha.csv", "food_entropy_alpha", "Entropy parameter α",   "(d) Food patchiness (α)"),
+    ]
+
+    xcol = "param_value"
 
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(2, 2, figsize=(11, 7), constrained_layout=True)
 
-        # ── Panel (a): init_food — two lines: α=0.0 vs α=0.02 ────────────────
-        ax = axes[0, 0]
-        xcol = "param_value"
+        for ax, (fname, key, xlabel, title) in zip(axes.flat, panels):
+            df = pd.read_csv(PH2_OVAT / fname)
+            x  = df[xcol].values
+            y  = df["tail_pop_mean"].values
+            sd = df["tail_pop_sd"].values
 
-        df_a0 = pd.read_csv(PH2_OVAT / "set_A_fine_alpha0_init_food.csv")
-        x0, y0, sd0 = df_a0[xcol].values, df_a0["tail_pop_mean"].values, df_a0["tail_pop_sd"].values
-        ax.plot(x0, y0, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
-                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8,
-                label="α = 0.0 (uniform respawn)")
-        ax.fill_between(x0, np.maximum(0, y0 - sd0), y0 + sd0, color="#4C72B0", alpha=0.18)
+            ax.plot(x, y, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
+                    markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
+            ax.fill_between(x, np.maximum(0, y - sd), y + sd, color="#4C72B0", alpha=0.18)
 
-        df_a2 = pd.read_csv(PH2_OVAT / "set_A_fine_alpha02_init_food.csv")
-        x2, y2, sd2 = df_a2[xcol].values, df_a2["tail_pop_mean"].values, df_a2["tail_pop_sd"].values
-        ax.plot(x2, y2, "s-", color="#C44E52", linewidth=1.8, markersize=6,
-                markerfacecolor="#C44E52", markeredgecolor="white", markeredgewidth=0.8,
-                label="α = 0.02 (Shannon entropy ON)")
-        ax.fill_between(x2, np.maximum(0, y2 - sd2), y2 + sd2, color="#C44E52", alpha=0.15)
+            # Vertical reference line at the selected Balanced value
+            ref = BALANCED[key]
+            ax.axvline(ref, color=REF_COLOR, linewidth=1.4, linestyle="--", alpha=0.85,
+                       label=f"Balanced = {ref}")
+            ax.legend(loc="lower right", fontsize=8.5)
 
-        ymax_a = float(np.max(np.concatenate([y0 + sd0, y2 + sd2])))
-        ax.set_ylim(0, ymax_a + 1.5)
-        ax.set_xlabel("Initial food cells")
-        ax.set_ylabel("Tail-window population (mean ± SD)")
-        ax.set_title("(a) Food abundance (init_food)")
-        ax.legend(loc="upper left", fontsize=8.5)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel("Tail-window population (mean ± SD)")
+            ax.set_title(title)
+            ax.set_ylim(bottom=0)
 
-        # ── Panel (b): eat_gain ───────────────────────────────────────────────
-        ax = axes[0, 1]
-        df_b = pd.read_csv(PH2_OVAT / "set_B_fine_eat_gain.csv")
-        xb, yb, sdb = df_b[xcol].values, df_b["tail_pop_mean"].values, df_b["tail_pop_sd"].values
-        ax.plot(xb, yb, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
-                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
-        ax.fill_between(xb, np.maximum(0, yb - sdb), yb + sdb, color="#4C72B0", alpha=0.18)
-        ax.set_xlabel("Energy gain per food")
-        ax.set_ylabel("Tail-window population (mean ± SD)")
-        ax.set_title("(b) Energy per food (eat_gain)")
-        ax.set_ylim(bottom=0)
-
-        # ── Panel (c): move_cost ──────────────────────────────────────────────
-        ax = axes[1, 0]
-        df_c = pd.read_csv(PH2_OVAT / "set_C_fine_move_cost.csv")
-        xc, yc, sdc = df_c[xcol].values, df_c["tail_pop_mean"].values, df_c["tail_pop_sd"].values
-        ax.plot(xc, yc, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
-                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
-        ax.fill_between(xc, np.maximum(0, yc - sdc), yc + sdc, color="#4C72B0", alpha=0.18)
-        ax.set_xlabel("Energy cost per move")
-        ax.set_ylabel("Tail-window population (mean ± SD)")
-        ax.set_title("(c) Movement cost (move_cost)")
-        ax.set_ylim(bottom=0)
-
-        # ── Panel (d): food patchiness α — single solid line ─────────────────
-        ax = axes[1, 1]
-        df_d = pd.read_csv(PH2_OVAT / "set_D_fine_food_entropy_alpha.csv")
-        xd, yd, sdd = df_d[xcol].values, df_d["tail_pop_mean"].values, df_d["tail_pop_sd"].values
-        ax.plot(xd, yd, "o-", color="#4C72B0", linewidth=1.8, markersize=6,
-                markerfacecolor="#4C72B0", markeredgecolor="white", markeredgewidth=0.8)
-        ax.fill_between(xd, np.maximum(0, yd - sdd), yd + sdd, color="#4C72B0", alpha=0.18)
-        ax.set_xlabel("Entropy parameter α")
-        ax.set_ylabel("Tail-window population (mean ± SD)")
-        ax.set_title("(d) Food patchiness (α)")
-        ax.set_ylim(bottom=0)
-
-        fig.suptitle("OVAT Sensitivity: Parameter Effect on Population Stability",
-                     fontsize=13, fontweight="bold")
+        fig.suptitle("OVAT Sensitivity: Parameter Effect on Population Stability\n"
+                     "(all other parameters held at Balanced operating point)",
+                     fontsize=12, fontweight="bold")
     savefig(fig, "fig02b_ph2_ovat.png")
 
 
@@ -431,69 +407,125 @@ def fig_ph2_failed_forage():
 # FIGURE 3 ── Food Mechanism: Phase 2 vs Phase 3 population + child maturation
 # ─────────────────────────────────────────────────────────────────────────────
 def fig_food_mechanism():
-    PH3_JSON = Path("outputs/phase3_food_comparison/exp_20260516_011140/summary.json")
+    PH3_JSON = Path("outputs/phase3_food_comparison/exp_20260520_150834/summary.json")
     with open(PH3_JSON) as f:
         ph3 = json.load(f)["conditions"]
 
-    alpha_labels = ["F0\n(α=0.00)", "F1\n(α=0.01)", "F2\n(α=0.05)", "F3\n(α=0.10)"]
-    conds = ["F0", "F1", "F2", "F3"]
+    alpha_labels = ["F0\n(α=0.00)", "F1\n(α=0.01)", "F2\n(α=0.02)", "F3\n(α=0.05)"]
+    conds  = ["F0", "F1", "F2", "F3"]
+    colors = ["#4C72B0", "#55A868", "#DD8452", "#C44E52"]
 
-    # Phase 2 self-only (hardcoded from validated Phase 2 runs)
-    p2_pop = [11.7, 8.8,  7.6,  6.8]
-    p2_sd  = [0.9,  1.66, 2.01, 1.99]
+    orig_pop    = [ph3[c]["orig_tail_pop"]          for c in conds]
+    orig_pop_sd = [ph3[c]["orig_tail_pop_sd"]       for c in conds]
+    orig_nrg    = [ph3[c]["orig_tail_energy"]       for c in conds]
+    orig_nrg_sd = [ph3[c]["orig_tail_energy_sd"]    for c in conds]
+    matr        = [ph3[c]["child_maturation_rate_mean"] for c in conds]
+    matr_sd     = [ph3[c]["child_maturation_rate_sd"]   for c in conds]
 
-    # Phase 3 — mothers + mature children, care enabled, reproduction disabled
-    p3_pop  = [ph3[c]["tail_mean_pop"]              for c in conds]
-    p3_matr = [ph3[c]["child_maturation_rate_mean"] for c in conds]
-    p3_sd   = [ph3[c]["child_maturation_rate_sd"]   for c in conds]
-
-    x   = np.arange(4)
-    w   = 0.35
-    C2  = "#4C72B0"   # Phase 2 blue
-    C3  = "#55A868"   # Phase 3 green
+    x = np.arange(4)
+    w = 0.60
 
     with plt.rc_context(STYLE):
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
 
-        # ── (a) Phase 2 vs Phase 3 population grouped bars ───────────────────
-        b2 = ax1.bar(x - w/2, p2_pop, w, yerr=p2_sd, color=C2, alpha=0.80,
-                     capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"),
-                     label="Phase 2 — self-only (mothers, care OFF)")
-        b3 = ax1.bar(x + w/2, p3_pop, w, color=C3, alpha=0.80,
-                     label="Phase 3 — with care (mothers + children)")
+        ekw = dict(capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"))
 
-        for bar, v in zip(b2, p2_pop):
-            ax1.text(bar.get_x() + bar.get_width()/2, v + 0.4, f"{v:.1f}",
-                     ha="center", va="bottom", fontsize=9.5, color=C2)
-        for bar, v in zip(b3, p3_pop):
-            ax1.text(bar.get_x() + bar.get_width()/2, v + 0.4, f"{v:.1f}",
-                     ha="center", va="bottom", fontsize=9.5, color=C3)
+        # ── (a) Original mother survival count ───────────────────────────────
+        ax = axes[0]
+        bars = ax.bar(x, orig_pop, w, yerr=orig_pop_sd, color=colors, alpha=0.82, **ekw)
+        ax.axhline(15, color="#888888", linestyle="--", linewidth=1.0, label="Initial 15 mothers")
+        for bar, v, sd in zip(bars, orig_pop, orig_pop_sd):
+            ax.text(bar.get_x() + bar.get_width()/2, v + sd + 0.3, f"{v:.1f}",
+                    ha="center", va="bottom", fontsize=10)
+        ax.set_xticks(x); ax.set_xticklabels(alpha_labels)
+        ax.set_ylabel("Mean alive original mothers (tail window)")
+        ax.set_xlabel("Food distribution condition")
+        ax.set_title("(a) Original mother survival")
+        ax.set_ylim(0, 18)
+        ax.legend(fontsize=8.5, loc="lower right")
 
-        ax1.set_xticks(x); ax1.set_xticklabels(alpha_labels)
-        ax1.set_ylabel("Mean alive agents (tail window)")
-        ax1.set_xlabel("Food distribution condition")
-        ax1.set_title("(a) Population: Phase 2 vs Phase 3")
-        ax1.set_ylim(0, 36)
-        ax1.legend(fontsize=8.5, loc="upper left")
+        # ── (b) Original mother mean energy ──────────────────────────────────
+        ax = axes[1]
+        bars = ax.bar(x, orig_nrg, w, yerr=orig_nrg_sd, color=colors, alpha=0.82, **ekw)
+        ax.axhline(1.0, color="#888888", linestyle="--", linewidth=0.9)
+        for bar, v, sd in zip(bars, orig_nrg, orig_nrg_sd):
+            ax.text(bar.get_x() + bar.get_width()/2, v + sd + 0.01, f"{v:.3f}",
+                    ha="center", va="bottom", fontsize=10)
+        ax.set_xticks(x); ax.set_xticklabels(alpha_labels)
+        ax.set_ylabel("Mean energy of original mothers (tail window)")
+        ax.set_xlabel("Food distribution condition")
+        ax.set_title("(b) Original mother energy")
+        ax.set_ylim(0, 1.15)
 
-        # ── (b) Phase 3 child maturation rate ────────────────────────────────
-        bar_col = ["#4C72B0", "#55A868", "#DD8452", "#C44E52"]
-        bars2 = ax2.bar(x, p3_matr, 0.6, yerr=p3_sd, color=bar_col, alpha=0.82,
-                        capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"))
-        for bar, v in zip(bars2, p3_matr):
-            ax2.text(bar.get_x() + bar.get_width()/2, v + 0.02, f"{v:.3f}",
-                     ha="center", va="bottom", fontsize=11)
-        ax2.set_xticks(x); ax2.set_xticklabels(alpha_labels)
-        ax2.set_ylabel("Child maturation rate (fraction)")
-        ax2.set_xlabel("Food distribution condition")
-        ax2.set_title("(b) Child maturation rate (Phase 3)")
-        ax2.set_ylim(0, 1.22)
-        ax2.axhline(1.0, color="#999999", linestyle="--", linewidth=0.9)
+        # ── (c) Child maturation rate ─────────────────────────────────────────
+        ax = axes[2]
+        bars = ax.bar(x, matr, w, yerr=matr_sd, color=colors, alpha=0.82, **ekw)
+        ax.axhline(1.0, color="#999999", linestyle="--", linewidth=0.9)
+        for bar, v, sd in zip(bars, matr, matr_sd):
+            ax.text(bar.get_x() + bar.get_width()/2, v + sd + 0.02, f"{v:.3f}",
+                    ha="center", va="bottom", fontsize=10)
+        ax.set_xticks(x); ax.set_xticklabels(alpha_labels)
+        ax.set_ylabel("Child maturation rate (fraction)")
+        ax.set_xlabel("Food distribution condition")
+        ax.set_title("(c) Child maturation rate")
+        ax.set_ylim(0, 1.22)
 
         fig.suptitle(
-            "Effect of Food Replenishment Rate (α) on Population and Child Maturation",
-            fontsize=13, fontweight="bold")
+            "Effect of Food Replenishment Rate (α): Original Mother Survival, Energy, and Child Maturation",
+            fontsize=12, fontweight="bold")
     savefig(fig, "fig03_food_mechanism.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIGURE 3a ── Motivation Domain Winner per Food Condition
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_food_motivation():
+    PH3_JSON = Path("outputs/phase3_food_comparison/exp_20260520_150834/summary.json")
+    with open(PH3_JSON) as f:
+        ph3 = json.load(f)["conditions"]
+
+    conds        = ["F0", "F1", "F2", "F3"]
+    alpha_labels = ["F0\n(α=0.00)", "F1\n(α=0.01)", "F2\n(α=0.02)", "F3\n(α=0.05)"]
+    x = np.arange(4)
+    w = 0.60
+    ekw = dict(capsize=4, error_kw=dict(elinewidth=1.2, ecolor="black"))
+
+    forage_m = [ph3[c]["forage_pct_mean"] for c in conds]
+    forage_s = [ph3[c]["forage_pct_sd"]   for c in conds]
+    care_m   = [ph3[c]["care_pct_mean"]   for c in conds]
+    care_s   = [ph3[c]["care_pct_sd"]     for c in conds]
+    self_m   = [ph3[c]["self_pct_mean"]   for c in conds]
+    self_s   = [ph3[c]["self_pct_sd"]     for c in conds]
+
+    panels = [
+        (forage_m, forage_s, "(a) Forage motivation", "Fraction of decisions won by FORAGE", "#DD8452"),
+        (care_m,   care_s,   "(b) Care motivation",   "Fraction of decisions won by CARE",   "#55A868"),
+        (self_m,   self_s,   "(c) Self motivation",   "Fraction of decisions won by SELF",   "#8172B2"),
+    ]
+
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(13, 4.8), constrained_layout=True)
+        fig.suptitle(
+            "Effect of Food Replenishment Rate (α): Motivation Domain Winner\n"
+            "Phase 2 BALANCED ecology · Unbiased genome (care=forage=self=1.0)",
+            fontsize=12,
+        )
+        for ax, (vals, sds, title, ylabel, color) in zip(axes, panels):
+            bars = ax.bar(x, vals, w, yerr=sds, color=color, alpha=0.85, edgecolor="white", **ekw)
+            top = max(vals) * 1.25 if max(vals) > 0 else 0.5
+            for bar, v, sd in zip(bars, vals, sds):
+                ax.text(bar.get_x() + bar.get_width() / 2, v + sd + top * 0.025,
+                        f"{v:.3f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
+            ax.axhline(1 / 3, color="#888888", linestyle="--", linewidth=1.0, alpha=0.7,
+                       label="Equal share (1/3)")
+            ax.set_title(title)
+            ax.set_ylabel(ylabel)
+            ax.set_xlabel("Food distribution condition")
+            ax.set_xticks(x)
+            ax.set_xticklabels(alpha_labels)
+            ax.set_ylim(0, min(1.0, top * 1.15))
+            ax.legend(fontsize=9)
+    savefig(fig, "fig03a_food_motivation.png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1710,6 +1742,7 @@ if __name__ == "__main__":
     fig_ph2_ovat()
     fig_ph2_failed_forage()
     fig_food_mechanism()
+    fig_food_motivation()
     fig_predator_prey_vl()
     fig_predator_prey_simulation()
     fig_ph4_weight_sweep()

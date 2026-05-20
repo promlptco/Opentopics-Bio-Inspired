@@ -1,0 +1,88 @@
+{
+  "ecology": {
+    "init_food": 300,
+    "eat_gain": 0.7,
+    "move_cost": 0.005,
+    "rest_recovery": 0.005,
+    "infant_starvation_multiplier": 1.0
+  },
+  "run_params": {
+    "seeds": 10,
+    "max_ticks": 2000
+  },
+  "genome": {
+    "care_weight": 1.0,
+    "forage_weight": 1.0,
+    "self_weight": 1.0
+  },
+  "conditions": {
+    "F0": {
+      "alpha": 0.0,
+      "desc": "Uniform 1:1 (alpha=0)",
+      "tail_mean_energy": 0.9490418737142856,
+      "tail_mean_pop": 16.8792,
+      "orig_tail_pop": 12.9256,
+      "orig_tail_pop_sd": 1.0359138188092676,
+      "orig_tail_energy": 0.8321237779900418,
+      "orig_tail_energy_sd": 0.012943754542236407,
+      "child_maturation_rate_mean": 0.2866666666666667,
+      "child_maturation_rate_sd": 0.10770329614269009,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.28238095238095234,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F1": {
+      "alpha": 0.01,
+      "desc": "Shannon alpha=0.01",
+      "tail_mean_energy": 1.7186876615238094,
+      "tail_mean_pop": 27.6,
+      "orig_tail_pop": 15.0,
+      "orig_tail_pop_sd": 0.0,
+      "orig_tail_energy": 0.9256313003809523,
+      "orig_tail_energy_sd": 0.0026296069854179534,
+      "child_maturation_rate_mean": 0.8400000000000001,
+      "child_maturation_rate_sd": 0.07423685817106698,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.33285714285714285,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F2": {
+      "alpha": 0.05,
+      "desc": "Shannon alpha=0.05",
+      "tail_mean_energy": 1.8494572131428573,
+      "tail_mean_pop": 29.4,
+      "orig_tail_pop": 15.0,
+      "orig_tail_pop_sd": 0.0,
+      "orig_tail_energy": 0.9380152948571429,
+      "orig_tail_energy_sd": 0.0008626390618105757,
+      "child_maturation_rate_mean": 0.96,
+      "child_maturation_rate_sd": 0.03265986323710903,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.33324913733609385,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    },
+    "F3": {
+      "alpha": 0.1,
+      "desc": "Shannon alpha=0.10",
+      "tail_mean_energy": 1.8878411148571426,
+      "tail_mean_pop": 29.9,
+      "orig_tail_pop": 15.0,
+      "orig_tail_pop_sd": 0.0,
+      "orig_tail_energy": 0.9425412177142857,
+      "orig_tail_energy_sd": 0.0008450213511925944,
+      "child_maturation_rate_mean": 0.9933333333333334,
+      "child_maturation_rate_sd": 0.019999999999999997,
+      "child_death_tick_mean": 2000.0,
+      "care_pct_mean": 0.3253250517598344,
+      "final_pop_mean": 0.0,
+      "final_pop_sd": 0.0,
+      "n_seeds": 10
+    }
+  }
+}
